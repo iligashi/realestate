@@ -62,6 +62,11 @@ function App() {
               <PropertyFormPage />
             </ProtectedRoute>
           } />
+          <Route path="/properties/create" element={
+            <ProtectedRoute>
+              <PropertyFormPage />
+            </ProtectedRoute>
+          } />
           <Route path="/properties/:id/edit" element={
             <ProtectedRoute>
               <PropertyFormPage />
