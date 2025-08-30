@@ -11,12 +11,38 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Parse FRONTEND_URL environment variable to get allowed origins
+const getAllowedOrigins = () => {
+  const frontendUrl = process.env.FRONTEND_URL;
+  if (!frontendUrl) {
+    return ['http://localhost:3000']; // Default fallback
+  }
+  
+  // Split by comma and trim whitespace
+  return frontendUrl.split(',').map(url => url.trim());
+};
+
+const allowedOrigins = getAllowedOrigins();
+console.log('Allowed CORS origins:', allowedOrigins);
+
 // Middleware
 app.use(helmet());
 app.use(compression());
 app.use(morgan('combined'));
+
+// CORS configuration with multiple origin support
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
@@ -66,6 +92,7 @@ app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`);
 });
 
 module.exports = app;
