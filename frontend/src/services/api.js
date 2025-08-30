@@ -3,9 +3,7 @@ import axios from 'axios';
 // Create axios instance
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // Removed default Content-Type header to allow FormData to work properly
 });
 
 // Request interceptor to add auth token
@@ -41,7 +39,23 @@ export const authAPI = {
   getProfile: (token) => api.get('/auth/profile', {
     headers: { Authorization: `Bearer ${token}` }
   }),
-  updateProfile: (userData) => api.put('/auth/profile', userData),
+  updateProfile: (profileData, token) => {
+    const config = {
+      headers: { Authorization: `Bearer ${token}` }
+    };
+    
+    // Explicitly set Content-Type based on data type
+    if (profileData instanceof FormData) {
+      // For FormData (file uploads), let the browser set the Content-Type with boundary
+      console.log('Sending FormData for profile update');
+    } else {
+      // For JSON data, set Content-Type explicitly
+      config.headers['Content-Type'] = 'application/json';
+      console.log('Sending JSON for profile update');
+    }
+    
+    return api.put('/auth/profile', profileData, config);
+  },
   changePassword: (passwordData) => api.put('/auth/change-password', passwordData),
   logout: () => api.post('/auth/logout'),
 };

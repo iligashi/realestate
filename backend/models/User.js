@@ -29,9 +29,22 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  
+  // Profile Picture & Avatar
+  profilePicture: {
+    type: String,
+    default: null
+  },
   avatar: {
     type: String,
     default: null
+  },
+  
+  // Bio & Personal Information
+  bio: {
+    type: String,
+    trim: true,
+    maxlength: 500
   },
   
   // User Type & Role
@@ -64,6 +77,20 @@ const userSchema = new mongoose.Schema({
     }
   },
   
+  // Professional Information (for agents and admins)
+  company: {
+    type: String,
+    trim: true
+  },
+  licenseNumber: {
+    type: String,
+    trim: true
+  },
+  specialties: [{
+    type: String,
+    trim: true
+  }],
+  
   // Location & Preferences
   location: {
     city: String,
@@ -95,10 +122,12 @@ const userSchema = new mongoose.Schema({
   },
   lastLogin: Date,
   
-  // Social & Verification
+  // Enhanced Social Links
   socialLinks: {
+    website: String,
     linkedin: String,
-    website: String
+    twitter: String,
+    facebook: String
   },
   documents: [{
     type: String,

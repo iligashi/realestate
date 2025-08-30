@@ -125,7 +125,67 @@ const getProfile = async (req, res) => {
 // Update User Profile
 const updateProfile = async (req, res) => {
   try {
-    const updates = req.body;
+    console.log('=== UPDATE PROFILE DEBUG ===');
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('Body keys:', Object.keys(req.body));
+    console.log('File:', req.file);
+    console.log('===========================');
+    
+    let updates = {};
+    
+    // Handle FormData vs JSON
+    if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
+      // Handle FormData (profile picture upload)
+      const formData = req.body;
+      
+      // Extract text fields - be very careful with profilePicture
+      Object.keys(formData).forEach(key => {
+        console.log(`Processing key: ${key}, value:`, formData[key], 'type:', typeof formData[key]);
+        
+        // Handle profilePicture field very carefully
+        if (key === 'profilePicture') {
+          console.log('Found profilePicture field in formData');
+          
+          // If it's a string and looks like a path, it might be the existing path
+          if (typeof formData[key] === 'string' && formData[key].trim() !== '') {
+            console.log('profilePicture is a non-empty string, keeping existing path');
+            // Don't update profilePicture if it's just the existing path
+          } else {
+            console.log('profilePicture field is empty or invalid, ignoring');
+          }
+          return; // Skip this field
+        }
+        
+        if (key === 'socialLinks' || key === 'specialties') {
+          try {
+            updates[key] = JSON.parse(formData[key]);
+          } catch (e) {
+            updates[key] = formData[key];
+          }
+        } else {
+          updates[key] = formData[key];
+        }
+      });
+      
+      // Handle profile picture file from multer - ONLY if file exists and is valid
+      if (req.file && req.file.path && typeof req.file.path === 'string') {
+        console.log('Adding NEW profile picture from req.file:', req.file.path);
+        updates.profilePicture = req.file.path;
+      } else {
+        console.log('No valid profile picture file uploaded');
+      }
+    } else {
+      // Handle JSON data
+      updates = req.body;
+      
+      // For JSON requests, don't allow profilePicture updates (security)
+      if (updates.profilePicture !== undefined) {
+        console.log('Removing profilePicture from JSON update for security');
+        delete updates.profilePicture;
+      }
+    }
+    
+    console.log('Processed updates:', updates);
     
     // Remove sensitive fields that shouldn't be updated
     delete updates.password;
@@ -134,12 +194,44 @@ const updateProfile = async (req, res) => {
     delete updates.isVerified;
     delete updates.isActive;
     delete updates.isBlocked;
+    delete updates._id;
+    delete updates.__v;
+
+    // Validate and sanitize updates
+    const allowedFields = [
+      'firstName', 'lastName', 'phone', 'bio', 'location', 'company', 
+      'licenseNumber', 'specialties', 'socialLinks', 'profilePicture',
+      'preferences', 'notificationSettings'
+    ];
+
+    const sanitizedUpdates = {};
+    Object.keys(updates).forEach(key => {
+      if (allowedFields.includes(key) && updates[key] !== undefined && updates[key] !== null) {
+        // Additional validation for profilePicture
+        if (key === 'profilePicture') {
+          if (typeof updates[key] === 'string' && updates[key].trim() !== '') {
+            sanitizedUpdates[key] = updates[key];
+            console.log('Valid profilePicture path added:', updates[key]);
+          } else {
+            console.log('Invalid profilePicture value, skipping:', updates[key]);
+          }
+        } else {
+          sanitizedUpdates[key] = updates[key];
+        }
+      }
+    });
+
+    console.log('Sanitized updates:', sanitizedUpdates);
 
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { $set: updates },
+      { $set: sanitizedUpdates },
       { new: true, runValidators: true }
     ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
 
     res.json({
       message: 'Profile updated successfully',

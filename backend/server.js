@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -28,6 +29,9 @@ app.use('/api/', limiter);
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Static file serving for profile pictures
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Import database connection
 const connectDB = require('./config/database');
