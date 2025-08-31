@@ -15,7 +15,12 @@ const PORT = process.env.PORT || 5000;
 const getAllowedOrigins = () => {
   const frontendUrl = process.env.FRONTEND_URL;
   if (!frontendUrl) {
-    return ['http://localhost:3000', 'http://localhost:3001']; // Default fallback with both ports
+    return [
+      'http://localhost:3000', 
+      'http://localhost:3001',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001'
+    ]; // Default fallback with both ports and IP variants
   }
   
   // Split by comma and trim whitespace
@@ -26,7 +31,9 @@ const allowedOrigins = getAllowedOrigins();
 console.log('Allowed CORS origins:', allowedOrigins);
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(compression());
 app.use(morgan('combined'));
 
@@ -36,14 +43,25 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
+    // Log all origins for debugging
+    console.log('Request origin:', origin);
+    
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       console.log('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+      // During development, be more permissive
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Allowing blocked origin in development mode');
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Rate limiting
@@ -94,6 +112,7 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 module.exports = app;

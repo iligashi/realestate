@@ -9,7 +9,9 @@ import {
   HomeIcon,
   BuildingOfficeIcon,
   UserGroupIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
+  BuildingOffice2Icon,
+  HomeModernIcon
 } from '@heroicons/react/24/outline';
 
 const Header = () => {
@@ -26,12 +28,10 @@ const Header = () => {
   };
 
   const navigation = [
-    { name: 'Home', href: '/', icon: HomeIcon },
-    { name: 'Properties', href: '/properties', icon: BuildingOfficeIcon },
-    ...(isAuthenticated && user?.userType === 'admin' 
-      ? [{ name: 'Admin', href: '/admin', icon: UserGroupIcon }] 
-      : []
-    ),
+    { name: 'All Properties', href: '/properties', icon: HomeIcon },
+    { name: 'Apartments', href: '/properties?type=apartment', icon: BuildingOfficeIcon },
+    { name: 'Houses', href: '/properties?type=house', icon: HomeModernIcon },
+    { name: 'Offices', href: '/properties?type=office', icon: BuildingOffice2Icon },
   ];
 
   // Helper function to get profile picture URL
@@ -71,64 +71,40 @@ const Header = () => {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <nav className="mx-auto flex max-w-7xl items-center justify-between p-6 lg:px-8" aria-label="Global">
-        {/* Logo and User Info */}
-        <div className="flex items-center space-x-4">
-          <Link to="/" className="-m-1.5 p-1.5">
-            <span className="text-2xl font-bold text-blue-600">RealEstate</span>
-          </Link>
-          
-          {/* User Profile Display (when logged in) */}
-          {isAuthenticated && user && (
-            <div className="hidden lg:flex items-center space-x-3 bg-gray-50 rounded-lg px-3 py-2">
-              {/* Profile Picture */}
-              <div className="relative">
-                {user.profilePicture ? (
-                  <img
-                    src={getProfilePictureUrl(user.profilePicture)}
-                    alt={`${user.firstName} ${user.lastName}`}
-                    className="h-8 w-8 rounded-full object-cover border-2 border-blue-200"
-                  />
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-semibold">
-                    {getInitials(user.firstName, user.lastName)}
-                  </div>
-                )}
-              </div>
-              
-              {/* User Info */}
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-gray-900">
-                  {user.firstName} {user.lastName}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {getRoleDisplayName(user.userType)}
-                </span>
-              </div>
+        {/* Logo */}
+        <div className="flex items-center">
+          <Link to="/" className="-m-1.5 p-1.5 flex items-center space-x-2">
+            <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
             </div>
-          )}
+            <span className="text-2xl font-bold text-green-600">RealEstate</span>
+          </Link>
         </div>
 
-        {/* Desktop Navigation */}
-        <div className="hidden lg:flex lg:gap-x-12">
+        {/* Desktop Navigation - Center */}
+        <div className="hidden lg:flex lg:gap-x-8">
           {navigation.map((item) => (
             <Link
               key={item.name}
               to={item.href}
-              className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors"
+              className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-green-600 transition-colors"
             >
-              {item.name}
+              <item.icon className="h-5 w-5" />
+              <span>{item.name}</span>
             </Link>
           ))}
         </div>
 
-        {/* Desktop Auth */}
-        <div className="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4">
+        {/* Desktop Auth - Right End */}
+        <div className="hidden lg:flex lg:items-center lg:gap-x-4">
           {isAuthenticated ? (
             <div className="relative">
               {/* Profile Dropdown */}
               <button
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className="flex items-center space-x-2 text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors"
+                className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-green-600 transition-colors"
               >
                 <span>Account</span>
                 <ChevronDownIcon className="h-4 w-4" />
@@ -144,7 +120,7 @@ const Header = () => {
                     <p className="text-sm text-gray-500">
                       {user?.email}
                     </p>
-                    <p className="text-xs text-blue-600 font-medium mt-1">
+                    <p className="text-xs text-green-600 font-medium mt-1">
                       {getRoleDisplayName(user?.userType)}
                     </p>
                   </div>
@@ -187,13 +163,13 @@ const Header = () => {
             <>
               <Link
                 to="/login"
-                className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors"
+                className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors"
               >
                 Log in
               </Link>
               <Link
                 to="/register"
-                className="btn-primary"
+                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
               >
                 Sign up
               </Link>
@@ -220,8 +196,13 @@ const Header = () => {
           <div className="fixed inset-0 z-50" />
           <div className="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-white px-6 py-6 sm:max-w-sm sm:ring-1 sm:ring-gray-900/10">
             <div className="flex items-center justify-between">
-              <Link to="/" className="-m-1.5 p-1.5">
-                <span className="text-2xl font-bold text-blue-600">RealEstate</span>
+              <Link to="/" className="-m-1.5 p-1.5 flex items-center space-x-2">
+                <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
+                <span className="text-2xl font-bold text-green-600">RealEstate</span>
               </Link>
               <button
                 type="button"
@@ -241,10 +222,10 @@ const Header = () => {
                     <img
                       src={getProfilePictureUrl(user.profilePicture)}
                       alt={`${user.firstName} ${user.lastName}`}
-                      className="h-12 w-12 rounded-full object-cover border-2 border-blue-200"
+                      className="h-12 w-12 rounded-full object-cover border-2 border-green-200"
                     />
                   ) : (
-                    <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-white text-lg font-semibold">
+                    <div className="h-12 w-12 rounded-full bg-green-600 flex items-center justify-center text-white text-lg font-semibold">
                       {getInitials(user.firstName, user.lastName)}
                     </div>
                   )}
@@ -267,10 +248,11 @@ const Header = () => {
                     <Link
                       key={item.name}
                       to={item.href}
-                      className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
+                      className="-mx-3 block rounded-lg px-3 py-2 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      {item.name}
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.name}</span>
                     </Link>
                   ))}
                 </div>
@@ -279,14 +261,14 @@ const Header = () => {
                     <div className="space-y-2">
                       <Link
                         to="/dashboard"
-                        className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
+                        className="-mx-3 block rounded-lg px-3 py-2 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Dashboard
                       </Link>
                       <Link
                         to="/profile"
-                        className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
+                        className="-mx-3 block rounded-lg px-3 py-2 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Edit Profile
@@ -294,7 +276,7 @@ const Header = () => {
                       {user?.userType === 'admin' && (
                         <Link
                           to="/admin"
-                          className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
+                          className="-mx-3 block rounded-lg px-3 py-2 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50"
                           onClick={() => setMobileMenuOpen(false)}
                         >
                           Admin Panel
@@ -305,7 +287,7 @@ const Header = () => {
                           handleLogout();
                           setMobileMenuOpen(false);
                         }}
-                        className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 w-full text-left"
+                        className="-mx-3 block rounded-lg px-3 py-2 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50 w-full text-left"
                       >
                         Sign out
                       </button>
@@ -314,14 +296,14 @@ const Header = () => {
                     <div className="space-y-2">
                       <Link
                         to="/login"
-                        className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
+                        className="-mx-3 block rounded-lg px-3 py-2 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Log in
                       </Link>
                       <Link
                         to="/register"
-                        className="btn-primary block text-center"
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg text-base font-medium hover:bg-green-700 transition-colors block text-center"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Sign up

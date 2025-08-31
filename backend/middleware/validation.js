@@ -64,7 +64,7 @@ const validateProperty = [
     .isFloat({ min: 0 })
     .withMessage('Price must be a positive number'),
   body('propertyType')
-    .isIn(['house', 'apartment', 'condo', 'townhouse', 'land', 'commercial', 'industrial', 'office', 'retail', 'warehouse'])
+    .isIn(['house', 'apartment', 'office'])
     .withMessage('Invalid property type'),
   body('listingType')
     .isIn(['sale', 'rent', 'auction', 'pre-construction'])

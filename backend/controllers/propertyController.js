@@ -35,8 +35,8 @@ const getProperties = async (req, res) => {
       if (maxPrice) filter.price.$lte = parseInt(maxPrice);
     }
 
-    // Only show active properties
-    filter.status = 'active';
+    // Only show active and sold properties
+    filter.status = { $in: ['active', 'sold'] };
 
     const options = {
       page: parseInt(page),

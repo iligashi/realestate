@@ -1,19 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import PropertyCard from '../../components/PropertyCard';
 import { getProperties } from '../../services/propertyService';
 import { toast } from 'react-hot-toast';
 
 const PropertyListPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
-    propertyType: '',
+    propertyType: searchParams.get('type') || '',
     minPrice: '',
     maxPrice: '',
     city: '',
     bedrooms: ''
   });
+
+  // Update filters when URL params change
+  useEffect(() => {
+    const typeFromUrl = searchParams.get('type');
+    if (typeFromUrl && typeFromUrl !== filters.propertyType) {
+      setFilters(prev => ({
+        ...prev,
+        propertyType: typeFromUrl
+      }));
+    }
+  }, [searchParams, filters.propertyType]);
 
   useEffect(() => {
     fetchProperties();
@@ -33,20 +45,48 @@ const PropertyListPage = () => {
   };
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({
-      ...prev,
+    const newFilters = {
+      ...filters,
       [key]: value
-    }));
+    };
+    setFilters(newFilters);
+    
+    // Update URL params when property type changes
+    if (key === 'propertyType') {
+      if (value) {
+        setSearchParams({ type: value });
+      } else {
+        setSearchParams({});
+      }
+    }
   };
 
   const clearFilters = () => {
-    setFilters({
+    const clearedFilters = {
       propertyType: '',
       minPrice: '',
       maxPrice: '',
       city: '',
       bedrooms: ''
-    });
+    };
+    setFilters(clearedFilters);
+    setSearchParams({}); // Clear URL params
+  };
+
+  // Get page title based on property type filter
+  const getPageTitle = () => {
+    if (filters.propertyType) {
+      return `${filters.propertyType.charAt(0).toUpperCase() + filters.propertyType.slice(1)}s`;
+    }
+    return 'All Properties';
+  };
+
+  // Get page description based on property type filter
+  const getPageDescription = () => {
+    if (filters.propertyType) {
+      return `Browse our selection of ${filters.propertyType}s`;
+    }
+    return 'Find your perfect property';
   };
 
   if (loading) {
@@ -66,8 +106,8 @@ const PropertyListPage = () => {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Properties</h1>
-            <p className="text-gray-600 mt-2">Find your perfect property</p>
+            <h1 className="text-3xl font-bold text-gray-900">{getPageTitle()}</h1>
+            <p className="text-gray-600 mt-2">{getPageDescription()}</p>
           </div>
           <Link
             to="/properties/create"
@@ -93,10 +133,7 @@ const PropertyListPage = () => {
                 <option value="">All Types</option>
                 <option value="apartment">Apartment</option>
                 <option value="house">House</option>
-                <option value="condo">Condo</option>
-                <option value="townhouse">Townhouse</option>
-                <option value="land">Land</option>
-                <option value="commercial">Commercial</option>
+                <option value="office">Office</option>
               </select>
             </div>
 
@@ -177,7 +214,12 @@ const PropertyListPage = () => {
               </svg>
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No properties found</h3>
-            <p className="text-gray-600 mb-6">Try adjusting your filters or add a new property.</p>
+            <p className="text-gray-600 mb-6">
+              {filters.propertyType 
+                ? `No ${filters.propertyType}s found with the current filters.` 
+                : 'Try adjusting your filters or add a new property.'
+              }
+            </p>
             <Link
               to="/properties/create"
               className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 font-medium"
@@ -190,6 +232,14 @@ const PropertyListPage = () => {
             {properties.map((property) => (
               <PropertyCard key={property._id} property={property} />
             ))}
+          </div>
+        )}
+
+        {/* Results Count */}
+        {properties.length > 0 && (
+          <div className="mt-6 text-center text-gray-600">
+            Showing {properties.length} {properties.length === 1 ? 'property' : 'properties'}
+            {filters.propertyType && ` of type ${filters.propertyType}`}
           </div>
         )}
       </div>
