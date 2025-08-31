@@ -581,12 +581,17 @@ const AdminDashboard = () => {
                     </div>
                     <div className="ml-4">
                       <div className="text-sm font-medium text-gray-900">{listing.title}</div>
-                      <div className="text-sm text-gray-500">{listing.address}</div>
+                      <div className="text-sm text-gray-500">
+                        {listing.address?.street && `${listing.address.street}, `}
+                        {listing.address?.city && `${listing.address.city}, `}
+                        {listing.address?.state && `${listing.address.state} `}
+                        {listing.address?.zipCode && `${listing.address.zipCode}`}
+                      </div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {listing.owner?.firstName} {listing.owner?.lastName}
+                  {listing.owner ? `${listing.owner.firstName || ''} ${listing.owner.lastName || ''}`.trim() : 'N/A'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -599,7 +604,7 @@ const AdminDashboard = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  ${listing.price?.toLocaleString()}
+                  ${listing.price ? listing.price.toLocaleString() : 'N/A'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex space-x-2">
@@ -923,7 +928,34 @@ const AdminDashboard = () => {
   const PlatformSettings = () => {
     const { platformSettings } = useSelector(state => state.admin);
     const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState(platformSettings);
+    const [formData, setFormData] = useState(platformSettings || {
+      general: {},
+      appearance: {},
+      business: {},
+      features: {},
+      security: {},
+      notifications: {},
+      maintenance: {}
+    });
+
+    // Update formData when platformSettings changes
+    useEffect(() => {
+      if (platformSettings) {
+        setFormData(platformSettings);
+      }
+    }, [platformSettings]);
+
+    // Show loading state if platformSettings is not loaded yet
+    if (!platformSettings) {
+      return (
+        <div className="space-y-6">
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+            <p className="mt-2 text-sm text-gray-500">Loading platform settings...</p>
+          </div>
+        </div>
+      );
+    }
 
     const handleSave = async () => {
       try {
@@ -985,10 +1017,10 @@ const AdminDashboard = () => {
                 <label className="block text-sm font-medium text-gray-700">Site Name</label>
                 <input
                   type="text"
-                  value={formData.general.siteName}
+                  value={formData?.general?.siteName || ''}
                   onChange={(e) => setFormData({
                     ...formData,
-                    general: { ...formData.general, siteName: e.target.value }
+                    general: { ...formData.general || {}, siteName: e.target.value }
                   })}
                   disabled={!isEditing}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 disabled:bg-gray-100"
@@ -997,10 +1029,10 @@ const AdminDashboard = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Site Description</label>
                 <textarea
-                  value={formData.general.siteDescription}
+                  value={formData?.general?.siteDescription || ''}
                   onChange={(e) => setFormData({
                     ...formData,
-                    general: { ...formData.general, siteDescription: e.target.value }
+                    general: { ...formData.general || {}, siteDescription: e.target.value }
                   })}
                   disabled={!isEditing}
                   rows={3}
@@ -1011,10 +1043,10 @@ const AdminDashboard = () => {
                 <label className="block text-sm font-medium text-gray-700">Contact Email</label>
                 <input
                   type="email"
-                  value={formData.general.contactEmail}
+                  value={formData?.general?.contactEmail || ''}
                   onChange={(e) => setFormData({
                     ...formData,
-                    general: { ...formData.general, contactEmail: e.target.value }
+                    general: { ...formData.general || {}, contactEmail: e.target.value }
                   })}
                   disabled={!isEditing}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 disabled:bg-gray-100"
@@ -1032,10 +1064,10 @@ const AdminDashboard = () => {
                   min="0"
                   max="100"
                   step="0.1"
-                  value={formData.business.commissionRate}
+                  value={formData?.business?.commissionRate || 0}
                   onChange={(e) => setFormData({
                     ...formData,
-                    business: { ...formData.business, commissionRate: parseFloat(e.target.value) }
+                    business: { ...formData.business || {}, commissionRate: parseFloat(e.target.value) }
                   })}
                   disabled={!isEditing}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 disabled:bg-gray-100"
@@ -1047,10 +1079,10 @@ const AdminDashboard = () => {
                   type="number"
                   min="0"
                   step="0.01"
-                  value={formData.business.featuredListingPrice}
+                  value={formData?.business?.featuredListingPrice || 0}
                   onChange={(e) => setFormData({
                     ...formData,
-                    business: { ...formData.business, featuredListingPrice: parseFloat(e.target.value) }
+                    business: { ...formData.business || {}, featuredListingPrice: parseFloat(e.target.value) }
                   })}
                   disabled={!isEditing}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 disabled:bg-gray-100"
@@ -1076,20 +1108,20 @@ const AdminDashboard = () => {
             <p className="text-gray-600">Manage premium and highlighted property listings</p>
           </div>
           <div className="text-sm text-gray-500">
-            Total Featured: {featuredListings.total}
+            Total Featured: {featuredListings?.total || 0}
           </div>
         </div>
 
         {/* Featured Listings Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredListings.list.length === 0 ? (
+          {!featuredListings?.list || featuredListings.list.length === 0 ? (
             <div className="col-span-full text-center py-12">
               <StarIcon className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No featured listings</h3>
               <p className="mt-1 text-sm text-gray-500">Start featuring listings to highlight premium properties.</p>
             </div>
           ) : (
-            featuredListings.list.map((listing) => (
+            (featuredListings?.list || []).map((listing) => (
               <div key={listing._id} className="bg-white rounded-lg shadow overflow-hidden">
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
@@ -1098,9 +1130,13 @@ const AdminDashboard = () => {
                       Featured
                     </span>
                   </div>
-                  <p className="text-gray-600 mb-4">{listing.description.substring(0, 100)}...</p>
+                  <p className="text-gray-600 mb-4">
+                    {listing.description ? listing.description.substring(0, 100) + '...' : 'No description available'}
+                  </p>
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-900">${listing.price}</span>
+                    <span className="text-lg font-bold text-gray-900">
+                      ${listing.price ? listing.price.toLocaleString() : 'N/A'}
+                    </span>
                     <button className="text-indigo-600 hover:text-indigo-900 text-sm font-medium">
                       Manage
                     </button>
