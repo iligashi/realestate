@@ -1,93 +1,105 @@
 import api from './api';
 
-// Admin API service for all admin operations
 export const adminAPI = {
-  // ==================== DASHBOARD & ANALYTICS ====================
-  
-  // Get dashboard analytics
+  // Dashboard Analytics
   getDashboardAnalytics: (token) => api.get('/admin/dashboard', {
     headers: { Authorization: `Bearer ${token}` }
   }),
 
-  // ==================== USER MANAGEMENT ====================
-  
-  // Get all users with filters
+  // User Management
   getAllUsers: (params, token) => api.get('/admin/users', {
     params,
     headers: { Authorization: `Bearer ${token}` }
   }),
-
-  // Update user (role, status, etc.)
   updateUser: (userId, userData, token) => api.patch(`/admin/users/${userId}`, userData, {
     headers: { Authorization: `Bearer ${token}` }
   }),
-
-  // Delete user
   deleteUser: (userId, token) => api.delete(`/admin/users/${userId}`, {
     headers: { Authorization: `Bearer ${token}` }
   }),
 
-  // ==================== LISTING MANAGEMENT ====================
-  
-  // Get all listings with filters
+  // Listing Management
   getAllListings: (params, token) => api.get('/admin/listings', {
     params,
     headers: { Authorization: `Bearer ${token}` }
   }),
-
-  // Update listing status (approve/reject)
   updateListingStatus: (listingId, statusData, token) => api.patch(`/admin/listings/${listingId}/status`, statusData, {
     headers: { Authorization: `Bearer ${token}` }
   }),
-
-  // Delete listing
   deleteListing: (listingId, token) => api.delete(`/admin/listings/${listingId}`, {
     headers: { Authorization: `Bearer ${token}` }
   }),
 
-  // ==================== REPORTS & MODERATION ====================
-  
-  // Get all reports with filters
+  // Reports & Moderation
   getAllReports: (params, token) => api.get('/admin/reports', {
     params,
     headers: { Authorization: `Bearer ${token}` }
   }),
-
-  // Resolve report
   resolveReport: (reportId, resolutionData, token) => api.patch(`/admin/reports/${reportId}/resolve`, resolutionData, {
     headers: { Authorization: `Bearer ${token}` }
   }),
 
-  // ==================== UTILITY FUNCTIONS ====================
-  
-  // Helper to format API parameters
+  // NEW: Platform Settings
+  getPlatformSettings: (token) => api.get('/admin/settings', {
+    headers: { Authorization: `Bearer ${token}` }
+  }),
+  updatePlatformSettings: (settingsData, token) => api.put('/admin/settings', settingsData, {
+    headers: { Authorization: `Bearer ${token}` }
+  }),
+
+  // NEW: Featured Listings
+  getFeaturedListings: (token) => api.get('/admin/listings/featured', {
+    headers: { Authorization: `Bearer ${token}` }
+  }),
+  updateFeaturedListing: (listingId, featuredData, token) => api.patch(`/admin/listings/${listingId}/featured`, featuredData, {
+    headers: { Authorization: `Bearer ${token}` }
+  }),
+
+  // NEW: System Announcements
+  getAnnouncements: (token) => api.get('/admin/announcements', {
+    headers: { Authorization: `Bearer ${token}` }
+  }),
+  createAnnouncement: (announcementData, token) => api.post('/admin/announcements', announcementData, {
+    headers: { Authorization: `Bearer ${token}` }
+  }),
+  updateAnnouncement: (announcementId, announcementData, token) => api.put(`/admin/announcements/${announcementId}`, announcementData, {
+    headers: { Authorization: `Bearer ${token}` }
+  }),
+  deleteAnnouncement: (announcementId, token) => api.delete(`/admin/announcements/${announcementId}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  }),
+
+  // NEW: Revenue Analytics
+  getRevenueAnalytics: (params, token) => api.get('/admin/analytics/revenue', {
+    params,
+    headers: { Authorization: `Bearer ${token}` }
+  }),
+
+  // NEW: Enhanced Analytics
+  getEnhancedAnalytics: (params, token) => api.get('/admin/analytics/enhanced', {
+    params,
+    headers: { Authorization: `Bearer ${token}` }
+  }),
+
+  // Helper functions
   formatParams: (filters) => {
     const params = {};
-    
-    if (filters.page) params.page = filters.page;
-    if (filters.limit) params.limit = filters.limit;
-    if (filters.search) params.search = filters.search;
-    if (filters.status) params.status = filters.status;
-    if (filters.role) params.role = filters.role;
-    if (filters.type) params.type = filters.type;
-    if (filters.propertyType) params.propertyType = filters.propertyType;
-    
+    Object.keys(filters).forEach(key => {
+      if (filters[key] !== '' && filters[key] !== null && filters[key] !== undefined) {
+        params[key] = filters[key];
+      }
+    });
     return params;
   },
 
-  // Helper to handle API responses
   handleResponse: (response) => {
-    if (response.data) {
-      return response.data;
-    }
-    throw new Error('No data received from API');
+    return response.data;
   },
 
-  // Helper to handle API errors
   handleError: (error) => {
     if (error.response?.data?.error) {
-      throw new Error(error.response.data.error);
+      return error.response.data.error;
     }
-    throw new Error(error.message || 'An error occurred');
+    return error.message || 'An error occurred';
   }
 };

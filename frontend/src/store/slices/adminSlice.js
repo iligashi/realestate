@@ -99,6 +99,141 @@ export const deleteListing = createAsyncThunk(
   }
 );
 
+// ==================== NEW: PLATFORM SETTINGS ====================
+export const fetchPlatformSettings = createAsyncThunk(
+  'admin/fetchPlatformSettings',
+  async (_, { rejectWithValue, getState }) => {
+    try {
+      const { token } = getState().auth;
+      const response = await adminAPI.getPlatformSettings(token);
+      return adminAPI.handleResponse(response);
+    } catch (error) {
+      return rejectWithValue(adminAPI.handleError(error));
+    }
+  }
+);
+
+export const updatePlatformSettings = createAsyncThunk(
+  'admin/updatePlatformSettings',
+  async (settingsData, { rejectWithValue, getState }) => {
+    try {
+      const { token } = getState().auth;
+      const response = await adminAPI.updatePlatformSettings(settingsData, token);
+      return adminAPI.handleResponse(response);
+    } catch (error) {
+      return rejectWithValue(adminAPI.handleError(error));
+    }
+  }
+);
+
+// ==================== NEW: FEATURED LISTINGS ====================
+export const fetchFeaturedListings = createAsyncThunk(
+  'admin/fetchFeaturedListings',
+  async (_, { rejectWithValue, getState }) => {
+    try {
+      const { token } = getState().auth;
+      const response = await adminAPI.getFeaturedListings(token);
+      return adminAPI.handleResponse(response);
+    } catch (error) {
+      return rejectWithValue(adminAPI.handleError(error));
+    }
+  }
+);
+
+export const updateFeaturedListing = createAsyncThunk(
+  'admin/updateFeaturedListing',
+  async ({ listingId, featuredData }, { rejectWithValue, getState }) => {
+    try {
+      const { token } = getState().auth;
+      const response = await adminAPI.updateFeaturedListing(listingId, featuredData, token);
+      return adminAPI.handleResponse(response);
+    } catch (error) {
+      return rejectWithValue(adminAPI.handleError(error));
+    }
+  }
+);
+
+// ==================== NEW: SYSTEM ANNOUNCEMENTS ====================
+export const fetchAnnouncements = createAsyncThunk(
+  'admin/fetchAnnouncements',
+  async (_, { rejectWithValue, getState }) => {
+    try {
+      const { token } = getState().auth;
+      const response = await adminAPI.getAnnouncements(token);
+      return adminAPI.handleResponse(response);
+    } catch (error) {
+      return rejectWithValue(adminAPI.handleError(error));
+    }
+  }
+);
+
+export const createAnnouncement = createAsyncThunk(
+  'admin/createAnnouncement',
+  async (announcementData, { rejectWithValue, getState }) => {
+    try {
+      const { token } = getState().auth;
+      const response = await adminAPI.createAnnouncement(announcementData, token);
+      return adminAPI.handleResponse(response);
+    } catch (error) {
+      return rejectWithValue(adminAPI.handleError(error));
+    }
+  }
+);
+
+export const updateAnnouncement = createAsyncThunk(
+  'admin/updateAnnouncement',
+  async ({ announcementId, announcementData }, { rejectWithValue, getState }) => {
+    try {
+      const { token } = getState().auth;
+      const response = await adminAPI.updateAnnouncement(announcementId, announcementData, token);
+      return adminAPI.handleResponse(response);
+    } catch (error) {
+      return rejectWithValue(adminAPI.handleError(error));
+    }
+  }
+);
+
+export const deleteAnnouncement = createAsyncThunk(
+  'admin/deleteAnnouncement',
+  async (announcementId, { rejectWithValue, getState }) => {
+    try {
+      const { token } = getState().auth;
+      await adminAPI.deleteAnnouncement(announcementId, token);
+      return announcementId;
+    } catch (error) {
+      return rejectWithValue(adminAPI.handleError(error));
+    }
+  }
+);
+
+// ==================== NEW: ENHANCED ANALYTICS ====================
+export const fetchEnhancedAnalytics = createAsyncThunk(
+  'admin/fetchEnhancedAnalytics',
+  async (_, { rejectWithValue, getState }) => {
+    try {
+      const { token } = getState().auth;
+      const response = await adminAPI.getEnhancedAnalytics(token);
+      return adminAPI.handleResponse(response);
+    } catch (error) {
+      return rejectWithValue(adminAPI.handleError(error));
+    }
+  }
+);
+
+// ==================== NEW: REVENUE ANALYTICS ====================
+export const fetchRevenueAnalytics = createAsyncThunk(
+  'admin/fetchRevenueAnalytics',
+  async (_, { rejectWithValue, getState }) => {
+    try {
+      const { token } = getState().auth;
+      const response = await adminAPI.getRevenueAnalytics(token);
+      return adminAPI.handleResponse(response);
+    } catch (error) {
+      return rejectWithValue(adminAPI.handleError(error));
+    }
+  }
+);
+
 // Reports & Moderation
 export const fetchAllReports = createAsyncThunk(
   'admin/fetchAllReports',
@@ -127,54 +262,84 @@ export const resolveReport = createAsyncThunk(
   }
 );
 
+
+
 // ==================== INITIAL STATE ====================
 
 const initialState = {
-  // Dashboard Analytics
+  // Analytics
   analytics: {
-    users: {},
-    listings: {},
-    reports: {}
+    users: { total: 0, active: 0, blocked: 0 },
+    listings: { total: 0, pending: 0, approved: 0, rejected: 0 },
+    reports: { total: 0, pending: 0, resolved: 0 }
   },
-  
-  // User Management
+
+  // Users
   users: {
     list: [],
-    total: 0,
-    totalPages: 0,
-    currentPage: 1,
     filters: {
       search: '',
       role: '',
-      status: ''
-    }
+      status: '',
+      page: 1,
+      limit: 10
+    },
+    total: 0
   },
-  
-  // Listing Management
+
+  // Listings
   listings: {
     list: [],
-    total: 0,
-    totalPages: 0,
-    currentPage: 1,
     filters: {
       search: '',
       status: '',
-      propertyType: ''
-    }
+      propertyType: '',
+      page: 1,
+      limit: 10
+    },
+    total: 0
   },
-  
-  // Reports & Moderation
+
+  // Reports
   reports: {
     list: [],
-    total: 0,
-    totalPages: 0,
-    currentPage: 1,
     filters: {
+      search: '',
       status: '',
-      type: ''
-    }
+      type: '',
+      priority: '',
+      page: 1,
+      limit: 10
+    },
+    total: 0
   },
-  
+
+  // NEW: Platform Settings
+  platformSettings: null,
+
+  // NEW: Featured Listings
+  featuredListings: {
+    list: [],
+    total: 0
+  },
+
+  // NEW: System Announcements
+  announcements: {
+    list: [],
+    total: 0
+  },
+
+  // NEW: Enhanced Analytics
+  enhancedAnalytics: null,
+
+  // NEW: Revenue Analytics
+  revenueAnalytics: {
+    totalRevenue: 0,
+    monthlyRevenue: [],
+    commissionEarnings: 0,
+    featuredListingRevenue: 0
+  },
+
   // UI State
   loading: false,
   error: null,
@@ -364,6 +529,159 @@ const adminSlice = createSlice({
         state.successMessage = action.payload.message;
       })
       .addCase(resolveReport.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+
+
+      // ==================== PLATFORM SETTINGS ====================
+      .addCase(fetchPlatformSettings.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchPlatformSettings.fulfilled, (state, action) => {
+        state.loading = false;
+        state.platformSettings = action.payload;
+      })
+      .addCase(fetchPlatformSettings.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(updatePlatformSettings.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updatePlatformSettings.fulfilled, (state, action) => {
+        state.loading = false;
+        state.platformSettings = action.payload;
+        state.successMessage = 'Platform settings updated successfully';
+      })
+      .addCase(updatePlatformSettings.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // ==================== FEATURED LISTINGS ====================
+      .addCase(fetchFeaturedListings.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchFeaturedListings.fulfilled, (state, action) => {
+        state.loading = false;
+        state.featuredListings.list = action.payload.listings;
+        state.featuredListings.total = action.payload.total;
+      })
+      .addCase(fetchFeaturedListings.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // ==================== SYSTEM ANNOUNCEMENTS ====================
+      .addCase(fetchAnnouncements.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchAnnouncements.fulfilled, (state, action) => {
+        state.loading = false;
+        state.announcements.list = action.payload.announcements;
+        state.announcements.total = action.payload.total;
+      })
+      .addCase(fetchAnnouncements.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(createAnnouncement.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createAnnouncement.fulfilled, (state, action) => {
+        state.loading = false;
+        state.announcements.list.unshift(action.payload.announcement);
+        state.announcements.total += 1;
+        state.successMessage = 'Announcement created successfully';
+      })
+      .addCase(createAnnouncement.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(updateAnnouncement.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateAnnouncement.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.announcements.list.findIndex(announcement => announcement._id === action.payload.announcement._id);
+        if (index !== -1) {
+          state.announcements.list[index] = action.payload.announcement;
+        }
+        state.successMessage = 'Announcement updated successfully';
+      })
+      .addCase(updateAnnouncement.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(deleteAnnouncement.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteAnnouncement.fulfilled, (state, action) => {
+        state.loading = false;
+        state.announcements.list = state.announcements.list.filter(announcement => announcement._id !== action.payload);
+        state.announcements.total -= 1;
+        state.successMessage = 'Announcement deleted successfully';
+      })
+      .addCase(deleteAnnouncement.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(updateFeaturedListing.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateFeaturedListing.fulfilled, (state, action) => {
+        state.loading = false;
+        // Update listing in the featured list
+        const index = state.featuredListings.list.findIndex(listing => listing._id === action.payload.listing._id);
+        if (index !== -1) {
+          state.featuredListings.list[index] = action.payload.listing;
+        }
+        state.successMessage = 'Featured listing updated successfully';
+      })
+      .addCase(updateFeaturedListing.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // ==================== ENHANCED ANALYTICS ====================
+      .addCase(fetchEnhancedAnalytics.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchEnhancedAnalytics.fulfilled, (state, action) => {
+        state.loading = false;
+        state.enhancedAnalytics = action.payload;
+      })
+      .addCase(fetchEnhancedAnalytics.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // ==================== REVENUE ANALYTICS ====================
+      .addCase(fetchRevenueAnalytics.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchRevenueAnalytics.fulfilled, (state, action) => {
+        state.loading = false;
+        state.revenueAnalytics = action.payload;
+      })
+      .addCase(fetchRevenueAnalytics.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

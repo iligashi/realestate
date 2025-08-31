@@ -98,6 +98,18 @@ const propertySchema = new mongoose.Schema({
   amenities: [String],
   appliances: [String],
   heating: String,
+  
+  // Featured Listing
+  isFeatured: {
+    type: Boolean,
+    default: false
+  },
+  featuredAt: Date,
+  featuredUntil: Date,
+  featuredPrice: {
+    type: Number,
+    min: 0
+  },
   cooling: String,
   utilities: [String],
   

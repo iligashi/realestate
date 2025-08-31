@@ -1,19 +1,25 @@
 const User = require('../models/User');
 const Property = require('../models/Property');
 const Report = require('../models/Report');
+const Announcement = require('../models/Announcement');
+const PlatformSettings = require('../models/PlatformSettings');
 
 // ==================== USER MANAGEMENT ====================
 
-// Get all users with filters and pagination
+// Get all users with filters
 const getAllUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 10, role, search, status } = req.query;
-    
+    const {
+      page = 1,
+      limit = 10,
+      search = '',
+      role = '',
+      status = ''
+    } = req.query;
+
     // Build filter object
     const filter = {};
-    if (role) filter.userType = role;
-    if (status === 'active') filter.isActive = true;
-    if (status === 'blocked') filter.isBlocked = true;
+    
     if (search) {
       filter.$or = [
         { firstName: { $regex: search, $options: 'i' } },
@@ -21,59 +27,64 @@ const getAllUsers = async (req, res) => {
         { email: { $regex: search, $options: 'i' } }
       ];
     }
+    
+    if (role) filter.userType = role;
+    if (status === 'active') filter.isBlocked = false;
+    if (status === 'blocked') filter.isBlocked = true;
+
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sort: { createdAt: -1 }
+    };
 
     const users = await User.find(filter)
       .select('-password')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .limit(options.limit)
+      .skip((options.page - 1) * options.limit)
+      .sort(options.sort);
 
     const total = await User.countDocuments(filter);
 
     res.json({
       users,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      total
+      total,
+      totalPages: Math.ceil(total / options.limit),
+      currentPage: options.page
     });
   } catch (error) {
     console.error('Get all users error:', error);
-    res.status(500).json({ error: 'Failed to fetch users' });
+    res.status(500).json({ error: 'Failed to fetch users.' });
   }
 };
 
-// Update user role, status, or other admin fields
+// Update user (role, status, etc.)
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { userType, isActive, isBlocked, isVerified } = req.body;
+    const updateData = req.body;
 
-    // Validate userType if provided
-    if (userType && !['buyer', 'seller', 'renter', 'agent', 'admin'].includes(userType)) {
-      return res.status(400).json({ error: 'Invalid user type' });
-    }
+    // Prevent updating sensitive fields
+    delete updateData.password;
+    delete updateData.email; // Email should be updated through separate process
 
     const user = await User.findByIdAndUpdate(
       id,
-      { 
-        $set: { 
-          userType, 
-          isActive, 
-          isBlocked, 
-          isVerified 
-        } 
-      },
+      updateData,
       { new: true, runValidators: true }
     ).select('-password');
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'User not found.' });
     }
 
-    res.json({ message: 'User updated successfully', user });
+    res.json({
+      message: 'User updated successfully',
+      user
+    });
   } catch (error) {
     console.error('Update user error:', error);
-    res.status(500).json({ error: 'Failed to update user' });
+    res.status(500).json({ error: 'Failed to update user.' });
   }
 };
 
@@ -84,52 +95,70 @@ const deleteUser = async (req, res) => {
 
     const user = await User.findByIdAndDelete(id);
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'User not found.' });
     }
 
-    res.json({ message: 'User deleted successfully' });
+    // Also delete associated properties and reports
+    await Property.deleteMany({ owner: id });
+    await Report.deleteMany({ reportedBy: id });
+
+    res.json({ message: 'User deleted successfully.' });
   } catch (error) {
     console.error('Delete user error:', error);
-    res.status(500).json({ error: 'Failed to delete user' });
+    res.status(500).json({ error: 'Failed to delete user.' });
   }
 };
 
 // ==================== LISTING MANAGEMENT ====================
 
-// Get all listings with filters and pagination
+// Get all listings with filters
 const getAllListings = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status, search, propertyType } = req.query;
-    
+    const {
+      page = 1,
+      limit = 10,
+      search = '',
+      status = '',
+      propertyType = ''
+    } = req.query;
+
     // Build filter object
     const filter = {};
-    if (status) filter.status = status;
-    if (propertyType) filter.propertyType = propertyType;
+    
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
-        { address: { $regex: search, $options: 'i' } }
+        { 'address.city': { $regex: search, $options: 'i' } }
       ];
     }
+    
+    if (status) filter.status = status;
+    if (propertyType) filter.propertyType = propertyType;
+
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sort: { createdAt: -1 }
+    };
 
     const listings = await Property.find(filter)
-      .populate('owner', 'firstName lastName email userType')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .populate('owner', 'firstName lastName email')
+      .limit(options.limit)
+      .skip((options.page - 1) * options.limit)
+      .sort(options.sort);
 
     const total = await Property.countDocuments(filter);
 
     res.json({
       listings,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      total
+      total,
+      totalPages: Math.ceil(total / options.limit),
+      currentPage: options.page
     });
   } catch (error) {
     console.error('Get all listings error:', error);
-    res.status(500).json({ error: 'Failed to fetch listings' });
+    res.status(500).json({ error: 'Failed to fetch listings.' });
   }
 };
 
@@ -139,32 +168,28 @@ const updateListingStatus = async (req, res) => {
     const { id } = req.params;
     const { status, adminNotes } = req.body;
 
-    // Validate status
-    if (!['pending', 'approved', 'rejected', 'sold', 'rented'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
-    }
-
     const listing = await Property.findByIdAndUpdate(
       id,
       { 
-        $set: { 
-          status, 
-          adminNotes,
-          adminApprovedAt: new Date(),
-          adminApprovedBy: req.user._id
-        } 
+        status,
+        adminNotes,
+        reviewedBy: req.user._id,
+        reviewedAt: new Date()
       },
       { new: true, runValidators: true }
-    ).populate('owner', 'firstName lastName email userType');
+    ).populate('owner', 'firstName lastName email');
 
     if (!listing) {
-      return res.status(404).json({ error: 'Listing not found' });
+      return res.status(404).json({ error: 'Listing not found.' });
     }
 
-    res.json({ message: 'Listing status updated successfully', listing });
+    res.json({
+      message: 'Listing status updated successfully',
+      listing
+    });
   } catch (error) {
     console.error('Update listing status error:', error);
-    res.status(500).json({ error: 'Failed to update listing status' });
+    res.status(500).json({ error: 'Failed to update listing status.' });
   }
 };
 
@@ -175,13 +200,16 @@ const deleteListing = async (req, res) => {
 
     const listing = await Property.findByIdAndDelete(id);
     if (!listing) {
-      return res.status(404).json({ error: 'Listing not found' });
+      return res.status(404).json({ error: 'Listing not found.' });
     }
 
-    res.json({ message: 'Listing deleted successfully' });
+    // Also delete associated reports
+    await Report.deleteMany({ reportedItem: id, reportedItemModel: 'Property' });
+
+    res.json({ message: 'Listing deleted successfully.' });
   } catch (error) {
     console.error('Delete listing error:', error);
-    res.status(500).json({ error: 'Failed to delete listing' });
+    res.status(500).json({ error: 'Failed to delete listing.' });
   }
 };
 
@@ -190,31 +218,50 @@ const deleteListing = async (req, res) => {
 // Get all reports with filters
 const getAllReports = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status, type } = req.query;
-    
+    const {
+      page = 1,
+      limit = 10,
+      search = '',
+      status = '',
+      type = '',
+      priority = ''
+    } = req.query;
+
     // Build filter object
     const filter = {};
+    
+    if (search) {
+      filter.reason = { $regex: search, $options: 'i' };
+    }
+    
     if (status) filter.status = status;
     if (type) filter.type = type;
+    if (priority) filter.priority = priority;
+
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sort: { priority: -1, createdAt: -1 }
+    };
 
     const reports = await Report.find(filter)
       .populate('reportedBy', 'firstName lastName email')
-      .populate('reportedItem')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .populate('resolvedBy', 'firstName lastName')
+      .limit(options.limit)
+      .skip((options.page - 1) * options.limit)
+      .sort(options.sort);
 
     const total = await Report.countDocuments(filter);
 
     res.json({
       reports,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      total
+      total,
+      totalPages: Math.ceil(total / options.limit),
+      currentPage: options.page
     });
   } catch (error) {
     console.error('Get all reports error:', error);
-    res.status(500).json({ error: 'Failed to fetch reports' });
+    res.status(500).json({ error: 'Failed to fetch reports.' });
   }
 };
 
@@ -222,107 +269,427 @@ const getAllReports = async (req, res) => {
 const resolveReport = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, adminNotes, action } = req.body;
-
-    // Validate status
-    if (!['pending', 'resolved', 'dismissed'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
-    }
+    const { status, action, adminNotes } = req.body;
 
     const report = await Report.findByIdAndUpdate(
       id,
-      { 
-        $set: { 
-          status, 
-          adminNotes,
-          resolvedAt: new Date(),
-          resolvedBy: req.user._id,
-          action
-        } 
+      {
+        status,
+        action,
+        adminNotes,
+        resolvedBy: req.user._id,
+        resolvedAt: new Date()
       },
       { new: true, runValidators: true }
     ).populate('reportedBy', 'firstName lastName email')
-     .populate('reportedItem');
+     .populate('resolvedBy', 'firstName lastName');
 
     if (!report) {
-      return res.status(404).json({ error: 'Report not found' });
+      return res.status(404).json({ error: 'Report not found.' });
     }
 
-    res.json({ message: 'Report resolved successfully', report });
+    res.json({
+      message: 'Report resolved successfully',
+      report
+    });
   } catch (error) {
     console.error('Resolve report error:', error);
-    res.status(500).json({ error: 'Failed to resolve report' });
+    res.status(500).json({ error: 'Failed to resolve report.' });
   }
 };
 
-// ==================== ANALYTICS & DASHBOARD ====================
+// ==================== DASHBOARD ANALYTICS ====================
 
-// Get admin dashboard analytics
+// Get dashboard analytics
 const getDashboardAnalytics = async (req, res) => {
   try {
-    // User analytics
+    // User statistics
     const totalUsers = await User.countDocuments();
-    const activeUsers = await User.countDocuments({ isActive: true });
+    const activeUsers = await User.countDocuments({ isBlocked: false });
     const blockedUsers = await User.countDocuments({ isBlocked: true });
-    
-    const usersByRole = await User.aggregate([
-      { $group: { _id: '$userType', count: { $sum: 1 } } }
-    ]);
 
-    // Listing analytics
+    // Listing statistics
     const totalListings = await Property.countDocuments();
     const pendingListings = await Property.countDocuments({ status: 'pending' });
     const approvedListings = await Property.countDocuments({ status: 'approved' });
-    const soldListings = await Property.countDocuments({ status: 'sold' });
-    const rentedListings = await Property.countDocuments({ status: 'rented' });
+    const rejectedListings = await Property.countDocuments({ status: 'rejected' });
 
-    // Report analytics
+    // Report statistics
     const totalReports = await Report.countDocuments();
     const pendingReports = await Report.countDocuments({ status: 'pending' });
     const resolvedReports = await Report.countDocuments({ status: 'resolved' });
 
+    // Role distribution
+    const roleDistribution = await User.aggregate([
+      { $group: { _id: '$userType', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+
     // Recent activity
     const recentUsers = await User.find()
-      .select('firstName lastName userType createdAt')
       .sort({ createdAt: -1 })
-      .limit(5);
+      .limit(5)
+      .select('firstName lastName userType createdAt');
 
     const recentListings = await Property.find()
-      .select('title status createdAt')
       .sort({ createdAt: -1 })
-      .limit(5);
-
-    const recentReports = await Report.find()
-      .select('type status createdAt')
-      .sort({ createdAt: -1 })
-      .limit(5);
+      .limit(5)
+      .select('title status propertyType createdAt')
+      .populate('owner', 'firstName lastName');
 
     res.json({
-      users: {
-        total: totalUsers,
-        active: activeUsers,
-        blocked: blockedUsers,
-        byRole: usersByRole,
-        recent: recentUsers
-      },
-      listings: {
-        total: totalListings,
-        pending: pendingListings,
-        approved: approvedListings,
-        sold: soldListings,
-        rented: rentedListings,
-        recent: recentListings
-      },
-      reports: {
-        total: totalReports,
-        pending: pendingReports,
-        resolved: resolvedReports,
-        recent: recentReports
-      }
+      users: { total: totalUsers, active: activeUsers, blocked: blockedUsers },
+      listings: { total: totalListings, pending: pendingListings, approved: approvedListings, rejected: rejectedListings },
+      reports: { total: totalReports, pending: pendingReports, resolved: resolvedReports },
+      roleDistribution,
+      recentUsers,
+      recentListings
     });
   } catch (error) {
     console.error('Get dashboard analytics error:', error);
-    res.status(500).json({ error: 'Failed to fetch analytics' });
+    res.status(500).json({ error: 'Failed to fetch dashboard analytics.' });
+  }
+};
+
+// ==================== NEW: PLATFORM SETTINGS ====================
+
+// Get platform settings
+const getPlatformSettings = async (req, res) => {
+  try {
+    const settings = await PlatformSettings.getSettings();
+    res.json(settings);
+  } catch (error) {
+    console.error('Get platform settings error:', error);
+    res.status(500).json({ error: 'Failed to fetch platform settings.' });
+  }
+};
+
+// Update platform settings
+const updatePlatformSettings = async (req, res) => {
+  try {
+    const updateData = req.body;
+    const settings = await PlatformSettings.getSettings();
+    
+    // Update the settings
+    Object.keys(updateData).forEach(section => {
+      if (settings[section] && typeof updateData[section] === 'object') {
+        settings[section] = { ...settings[section], ...updateData[section] };
+      }
+    });
+    
+    await settings.save();
+    
+    res.json({
+      message: 'Platform settings updated successfully',
+      settings
+    });
+  } catch (error) {
+    console.error('Update platform settings error:', error);
+    res.status(500).json({ error: 'Failed to update platform settings.' });
+  }
+};
+
+// ==================== NEW: FEATURED LISTINGS ====================
+
+// Get featured listings
+const getFeaturedListings = async (req, res) => {
+  try {
+    const featuredListings = await Property.find({ isFeatured: true })
+      .populate('owner', 'firstName lastName email')
+      .sort({ featuredAt: -1 });
+
+    res.json({
+      listings: featuredListings,
+      total: featuredListings.length
+    });
+  } catch (error) {
+    console.error('Get featured listings error:', error);
+    res.status(500).json({ error: 'Failed to fetch featured listings.' });
+  }
+};
+
+// Update featured listing
+const updateFeaturedListing = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isFeatured, featuredUntil, featuredPrice } = req.body;
+
+    const listing = await Property.findByIdAndUpdate(
+      id,
+      {
+        isFeatured,
+        featuredAt: isFeatured ? new Date() : null,
+        featuredUntil,
+        featuredPrice
+      },
+      { new: true, runValidators: true }
+    ).populate('owner', 'firstName lastName email');
+
+    if (!listing) {
+      return res.status(404).json({ error: 'Listing not found.' });
+    }
+
+    res.json({
+      message: 'Featured listing updated successfully',
+      listing
+    });
+  } catch (error) {
+    console.error('Update featured listing error:', error);
+    res.status(500).json({ error: 'Failed to update featured listing.' });
+  }
+};
+
+// ==================== NEW: SYSTEM ANNOUNCEMENTS ====================
+
+// Get all announcements
+const getAllAnnouncements = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      search = '',
+      type = '',
+      isActive = ''
+    } = req.query;
+
+    // Build filter object
+    const filter = {};
+    
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (type) filter.type = type;
+    if (isActive !== '') filter.isActive = isActive === 'true';
+
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sort: { priority: -1, createdAt: -1 }
+    };
+
+    const announcements = await Announcement.find(filter)
+      .populate('createdBy', 'firstName lastName')
+      .limit(options.limit)
+      .skip((options.page - 1) * options.limit)
+      .sort(options.sort);
+
+    const total = await Announcement.countDocuments(filter);
+
+    res.json({
+      announcements,
+      total,
+      totalPages: Math.ceil(total / options.limit),
+      currentPage: options.page
+    });
+  } catch (error) {
+    console.error('Get all announcements error:', error);
+    res.status(500).json({ error: 'Failed to fetch announcements.' });
+  }
+};
+
+// Create announcement
+const createAnnouncement = async (req, res) => {
+  try {
+    const announcementData = {
+      ...req.body,
+      createdBy: req.user._id
+    };
+
+    const announcement = await Announcement.create(announcementData);
+    await announcement.populate('createdBy', 'firstName lastName');
+
+    res.status(201).json({
+      message: 'Announcement created successfully',
+      announcement
+    });
+  } catch (error) {
+    console.error('Create announcement error:', error);
+    res.status(500).json({ error: 'Failed to create announcement.' });
+  }
+};
+
+// Update announcement
+const updateAnnouncement = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const announcement = await Announcement.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('createdBy', 'firstName lastName');
+
+    if (!announcement) {
+      return res.status(404).json({ error: 'Announcement not found.' });
+    }
+
+    res.json({
+      message: 'Announcement updated successfully',
+      announcement
+    });
+  } catch (error) {
+    console.error('Update announcement error:', error);
+    res.status(500).json({ error: 'Failed to update announcement.' });
+  }
+};
+
+// Delete announcement
+const deleteAnnouncement = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const announcement = await Announcement.findByIdAndDelete(id);
+    if (!announcement) {
+      return res.status(404).json({ error: 'Announcement not found.' });
+    }
+
+    res.json({ message: 'Announcement deleted successfully.' });
+  } catch (error) {
+    console.error('Delete announcement error:', error);
+    res.status(500).json({ error: 'Failed to delete announcement.' });
+  }
+};
+
+// ==================== NEW: ENHANCED ANALYTICS ====================
+
+// Get enhanced analytics
+const getEnhancedAnalytics = async (req, res) => {
+  try {
+    const { period = '30d' } = req.query;
+    
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    if (period === '7d') startDate.setDate(startDate.getDate() - 7);
+    else if (period === '30d') startDate.setDate(startDate.getDate() - 30);
+    else if (period === '90d') startDate.setDate(startDate.getDate() - 90);
+    else if (period === '1y') startDate.setFullYear(startDate.getFullYear() - 1);
+
+    // User growth data
+    const userGrowth = await User.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startDate, $lte: endDate }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    // Listing performance data
+    const listingPerformance = await Property.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startDate, $lte: endDate }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
+          },
+          count: { $sum: 1 },
+          totalViews: { $sum: '$views' || 0 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    // Geographic data
+    const geographicData = await Property.aggregate([
+      {
+        $match: {
+          'address.city': { $exists: true, $ne: '' }
+        }
+      },
+      {
+        $group: {
+          _id: '$address.city',
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]);
+
+    // Trends
+    const trends = {
+      topPropertyTypes: await Property.aggregate([
+        { $group: { _id: '$propertyType', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 }
+      ]),
+      topLocations: await Property.aggregate([
+        { $match: { 'address.city': { $exists: true, $ne: '' } } },
+        { $group: { _id: '$address.city', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 }
+      ])
+    };
+
+    res.json({
+      userGrowth,
+      listingPerformance,
+      geographicData,
+      trends
+    });
+  } catch (error) {
+    console.error('Get enhanced analytics error:', error);
+    res.status(500).json({ error: 'Failed to fetch enhanced analytics.' });
+  }
+};
+
+// ==================== NEW: REVENUE ANALYTICS ====================
+
+// Get revenue analytics
+const getRevenueAnalytics = async (req, res) => {
+  try {
+    const { period = '30d' } = req.query;
+    
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    if (period === '7d') startDate.setDate(startDate.getDate() - 7);
+    else if (period === '30d') startDate.setDate(startDate.getDate() - 30);
+    else if (period === '90d') startDate.setDate(startDate.getDate() - 90);
+    else if (period === '1y') startDate.setFullYear(startDate.getFullYear() - 1);
+
+    // Mock revenue data (replace with actual payment processing data)
+    const totalRevenue = 15420.50;
+    const commissionEarnings = 771.03;
+    const featuredListingRevenue = 1249.99;
+
+    // Monthly revenue breakdown
+    const monthlyRevenue = [
+      { month: 'Jan', revenue: 1250.00 },
+      { month: 'Feb', revenue: 1380.50 },
+      { month: 'Mar', revenue: 1420.75 },
+      { month: 'Apr', revenue: 1580.25 },
+      { month: 'May', revenue: 1620.00 },
+      { month: 'Jun', revenue: 1750.30 }
+    ];
+
+    res.json({
+      totalRevenue,
+      commissionEarnings,
+      featuredListingRevenue,
+      monthlyRevenue
+    });
+  } catch (error) {
+    console.error('Get revenue analytics error:', error);
+    res.status(500).json({ error: 'Failed to fetch revenue analytics.' });
   }
 };
 
@@ -341,6 +708,26 @@ module.exports = {
   getAllReports,
   resolveReport,
   
-  // Analytics & Dashboard
-  getDashboardAnalytics
+  // Dashboard Analytics
+  getDashboardAnalytics,
+  
+  // Platform Settings
+  getPlatformSettings,
+  updatePlatformSettings,
+  
+  // Featured Listings
+  getFeaturedListings,
+  updateFeaturedListing,
+  
+  // System Announcements
+  getAllAnnouncements: getAllAnnouncements,
+  createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+  
+  // Enhanced Analytics
+  getEnhancedAnalytics,
+  
+  // Revenue Analytics
+  getRevenueAnalytics
 };

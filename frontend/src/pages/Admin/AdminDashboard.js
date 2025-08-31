@@ -17,7 +17,21 @@ import {
   updateReportFilters,
   resetUserFilters,
   resetListingFilters,
-  resetReportFilters
+  resetReportFilters,
+  // NEW: Platform Settings
+  fetchPlatformSettings,
+  updatePlatformSettings,
+  // NEW: Featured Listings
+  fetchFeaturedListings,
+  updateFeaturedListing,
+  // NEW: System Announcements
+  fetchAnnouncements,
+  createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+  // NEW: Enhanced Analytics
+  fetchEnhancedAnalytics,
+  fetchRevenueAnalytics
 } from '../../store/slices/adminSlice';
 import { 
   UsersIcon, 
@@ -27,7 +41,12 @@ import {
   EyeIcon,
   PencilIcon,
   TrashIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  // NEW: Additional icons
+  Cog6ToothIcon,
+  StarIcon,
+  MegaphoneIcon,
+  CurrencyDollarIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
@@ -56,6 +75,12 @@ const AdminDashboard = () => {
       dispatch(fetchAllUsers());
       dispatch(fetchAllListings());
       dispatch(fetchAllReports());
+      // NEW: Load additional data
+      dispatch(fetchPlatformSettings());
+      dispatch(fetchFeaturedListings());
+      dispatch(fetchAnnouncements());
+      dispatch(fetchEnhancedAnalytics());
+      dispatch(fetchRevenueAnalytics());
     }
   }, [dispatch, user]);
 
@@ -225,25 +250,40 @@ const AdminDashboard = () => {
   );
 
   // User Management Component
-  const UserManagement = () => (
-    <div className="bg-white rounded-lg shadow">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-          <div className="flex flex-col space-y-1">
+  const UserManagement = () => {
+    // Add null checks for users data
+    if (!users || !users.list) {
+      return (
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-medium text-gray-900">User Management</h3>
-            <div className="text-sm text-gray-500">
-              {users.total} users found
-              {(users.filters.search || users.filters.role || users.filters.status) && (
-                <span className="ml-2">
-                  • Filters active: {[
-                    users.filters.search && `Search: "${users.filters.search}"`,
-                    users.filters.role && `Role: ${users.filters.role}`,
-                    users.filters.status && `Status: ${users.filters.status}`
-                  ].filter(Boolean).join(', ')}
-                </span>
-              )}
-            </div>
           </div>
+          <div className="text-center py-8">
+            <p className="text-gray-500">Loading users...</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+            <div className="flex flex-col space-y-1">
+              <h3 className="text-lg font-medium text-gray-900">User Management</h3>
+              <div className="text-sm text-gray-500">
+                {users.total || 0} users found
+                {(users.filters?.search || users.filters?.role || users.filters?.status) && (
+                  <span className="ml-2">
+                    • Filters active: {[
+                      users.filters.search && `Search: "${users.filters.search}"`,
+                      users.filters.role && `Role: ${users.filters.role}`,
+                      users.filters.status && `Status: ${users.filters.status}`
+                    ].filter(Boolean).join(', ')}
+                  </span>
+                )}
+              </div>
+            </div>
           <div className="flex flex-wrap gap-2">
             <input
               type="text"
@@ -449,24 +489,40 @@ const AdminDashboard = () => {
       )}
     </div>
   );
+  };
 
   // Listing Management Component
-  const ListingManagement = () => (
-    <div className="bg-white rounded-lg shadow">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">Listing Management</h3>
-          <div className="text-sm text-gray-500">
-            {listings.total} listings found
-            {(listings.filters.search || listings.filters.status) && (
-              <span className="ml-2">
-                • Filters active: {[
-                  listings.filters.search && `Search: "${listings.filters.search}"`,
-                  listings.filters.status && `Status: ${listings.filters.status}`
-                ].filter(Boolean).join(', ')}
-              </span>
-            )}
+  const ListingManagement = () => {
+    // Add null checks for listings data
+    if (!listings || !listings.list) {
+      return (
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">Listing Management</h3>
           </div>
+          <div className="text-center py-8">
+            <p className="text-gray-500">Loading listings...</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900">Listing Management</h3>
+            <div className="text-sm text-gray-500">
+              {listings.total || 0} listings found
+              {(listings.filters?.search || listings.filters?.status) && (
+                <span className="ml-2">
+                  • Filters active: {[
+                    listings.filters.search && `Search: "${listings.filters.search}"`,
+                    listings.filters.status && `Status: ${listings.filters.status}`
+                  ].filter(Boolean).join(', ')}
+                </span>
+              )}
+            </div>
           <div className="flex space-x-2">
             <input
               type="text"
@@ -626,24 +682,40 @@ const AdminDashboard = () => {
       )}
     </div>
   );
+  };
 
   // Reports Management Component
-  const ReportsManagement = () => (
-    <div className="bg-white rounded-lg shadow">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">Reports & Moderation</h3>
-          <div className="text-sm text-gray-500">
-            {reports.total} reports found
-            {(reports.filters.status || reports.filters.type) && (
-              <span className="ml-2">
-                • Filters active: {[
-                  reports.filters.status && `Status: ${reports.filters.status}`,
-                  reports.filters.type && `Type: ${reports.filters.type}`
-                ].filter(Boolean).join(', ')}
-              </span>
-            )}
+  const ReportsManagement = () => {
+    // Add null checks for reports data
+    if (!reports || !reports.list) {
+      return (
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">Reports & Moderation</h3>
           </div>
+          <div className="text-center py-8">
+            <p className="text-gray-500">Loading reports...</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900">Reports & Moderation</h3>
+            <div className="text-sm text-gray-500">
+              {reports.total || 0} reports found
+              {(reports.filters?.status || reports.filters?.type) && (
+                <span className="ml-2">
+                  • Filters active: {[
+                    reports.filters.status && `Status: ${reports.filters.status}`,
+                    reports.filters.type && `Type: ${reports.filters.type}`
+                  ].filter(Boolean).join(', ')}
+                </span>
+              )}
+            </div>
           <div className="flex space-x-2">
             <select
               className="px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -845,6 +917,516 @@ const AdminDashboard = () => {
       )}
     </div>
   );
+  };
+
+  // NEW: Platform Settings Component
+  const PlatformSettings = () => {
+    const { platformSettings } = useSelector(state => state.admin);
+    const [isEditing, setIsEditing] = useState(false);
+    const [formData, setFormData] = useState(platformSettings);
+
+    const handleSave = async () => {
+      try {
+        await dispatch(updatePlatformSettings(formData)).unwrap();
+        setIsEditing(false);
+        toast.success('Platform settings updated successfully');
+      } catch (error) {
+        toast.error(error || 'Failed to update platform settings');
+      }
+    };
+
+    const handleCancel = () => {
+      setFormData(platformSettings);
+      setIsEditing(false);
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Platform Settings</h2>
+            <p className="text-gray-600">Manage site-wide configuration and appearance</p>
+          </div>
+          <div className="flex space-x-3">
+            {!isEditing ? (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
+              >
+                Edit Settings
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleSave}
+                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                >
+                  Save Changes
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Settings Form */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* General Settings */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">General Settings</h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Site Name</label>
+                <input
+                  type="text"
+                  value={formData.general.siteName}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    general: { ...formData.general, siteName: e.target.value }
+                  })}
+                  disabled={!isEditing}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 disabled:bg-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Site Description</label>
+                <textarea
+                  value={formData.general.siteDescription}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    general: { ...formData.general, siteDescription: e.target.value }
+                  })}
+                  disabled={!isEditing}
+                  rows={3}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 disabled:bg-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Contact Email</label>
+                <input
+                  type="email"
+                  value={formData.general.contactEmail}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    general: { ...formData.general, contactEmail: e.target.value }
+                  })}
+                  disabled={!isEditing}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 disabled:bg-gray-100"
+                />
+              </div>
+            </div>
+
+            {/* Business Settings */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">Business Settings</h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Commission Rate (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={formData.business.commissionRate}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    business: { ...formData.business, commissionRate: parseFloat(e.target.value) }
+                  })}
+                  disabled={!isEditing}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 disabled:bg-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Featured Listing Price</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.business.featuredListingPrice}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    business: { ...formData.business, featuredListingPrice: parseFloat(e.target.value) }
+                  })}
+                  disabled={!isEditing}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 disabled:bg-gray-100"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // NEW: Featured Listings Component
+  const FeaturedListings = () => {
+    const { featuredListings } = useSelector(state => state.admin);
+
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Featured Listings</h2>
+            <p className="text-gray-600">Manage premium and highlighted property listings</p>
+          </div>
+          <div className="text-sm text-gray-500">
+            Total Featured: {featuredListings.total}
+          </div>
+        </div>
+
+        {/* Featured Listings Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {featuredListings.list.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <StarIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No featured listings</h3>
+              <p className="mt-1 text-sm text-gray-500">Start featuring listings to highlight premium properties.</p>
+            </div>
+          ) : (
+            featuredListings.list.map((listing) => (
+              <div key={listing._id} className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium text-gray-900">{listing.title}</h3>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      Featured
+                    </span>
+                  </div>
+                  <p className="text-gray-600 mb-4">{listing.description.substring(0, 100)}...</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-bold text-gray-900">${listing.price}</span>
+                    <button className="text-indigo-600 hover:text-indigo-900 text-sm font-medium">
+                      Manage
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // NEW: System Announcements Component
+  const SystemAnnouncements = () => {
+    const { announcements } = useSelector(state => state.admin);
+    const [isCreating, setIsCreating] = useState(false);
+    const [editingAnnouncement, setEditingAnnouncement] = useState(null);
+
+    const handleCreate = async (announcementData) => {
+      try {
+        await dispatch(createAnnouncement(announcementData)).unwrap();
+        setIsCreating(false);
+        toast.success('Announcement created successfully');
+      } catch (error) {
+        toast.error(error || 'Failed to create announcement');
+      }
+    };
+
+    const handleUpdate = async (announcementId, announcementData) => {
+      try {
+        await dispatch(updateAnnouncement({ announcementId, announcementData })).unwrap();
+        setEditingAnnouncement(null);
+        toast.success('Announcement updated successfully');
+      } catch (error) {
+        toast.error(error || 'Failed to update announcement');
+      }
+    };
+
+    const handleDelete = async (announcementId) => {
+      if (window.confirm('Are you sure you want to delete this announcement?')) {
+        try {
+          await dispatch(deleteAnnouncement(announcementId)).unwrap();
+          toast.success('Announcement deleted successfully');
+        } catch (error) {
+          toast.error(error || 'Failed to delete announcement');
+        }
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">System Announcements</h2>
+            <p className="text-gray-600">Manage platform-wide notifications and announcements</p>
+          </div>
+          <button
+            onClick={() => setIsCreating(true)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
+          >
+            New Announcement
+          </button>
+        </div>
+
+        {/* Announcements List */}
+        <div className="space-y-4">
+          {announcements.list.length === 0 ? (
+            <div className="text-center py-12">
+              <MegaphoneIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No announcements</h3>
+              <p className="mt-1 text-sm text-gray-500">Create your first announcement to notify users.</p>
+            </div>
+          ) : (
+            announcements.list.map((announcement) => (
+              <div key={announcement._id} className="bg-white rounded-lg shadow p-6">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-medium text-gray-900">{announcement.title}</h3>
+                    <p className="text-gray-600 mt-2">{announcement.content}</p>
+                    <div className="flex items-center mt-4 text-sm text-gray-500">
+                      <span>Created: {new Date(announcement.createdAt).toLocaleDateString()}</span>
+                      {announcement.isActive && (
+                        <span className="ml-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex space-x-2 ml-4">
+                    <button
+                      onClick={() => setEditingAnnouncement(announcement)}
+                      className="text-indigo-600 hover:text-indigo-900"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(announcement._id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Create/Edit Modal */}
+        {(isCreating || editingAnnouncement) && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                {isCreating ? 'Create Announcement' : 'Edit Announcement'}
+              </h3>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const announcementData = {
+                  title: formData.get('title'),
+                  content: formData.get('content'),
+                  isActive: formData.get('isActive') === 'true'
+                };
+                
+                if (isCreating) {
+                  handleCreate(announcementData);
+                } else {
+                  handleUpdate(editingAnnouncement._id, announcementData);
+                }
+              }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Title</label>
+                    <input
+                      type="text"
+                      name="title"
+                      defaultValue={editingAnnouncement?.title || ''}
+                      required
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Content</label>
+                    <textarea
+                      name="content"
+                      rows={4}
+                      defaultValue={editingAnnouncement?.content || ''}
+                      required
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Status</label>
+                    <select
+                      name="isActive"
+                      defaultValue={editingAnnouncement?.isActive?.toString() || 'true'}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    >
+                      <option value="true">Active</option>
+                      <option value="false">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-6 flex space-x-3">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
+                  >
+                    {isCreating ? 'Create' : 'Update'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCreating(false);
+                      setEditingAnnouncement(null);
+                    }}
+                    className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // NEW: Enhanced Analytics Component
+  const EnhancedAnalytics = () => {
+    const { enhancedAnalytics, revenueAnalytics, loading } = useSelector(state => state.admin);
+
+    // Show loading state while data is being fetched
+    if (loading) {
+      return (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Enhanced Analytics</h2>
+              <p className="text-gray-600">Comprehensive insights and performance metrics</p>
+            </div>
+          </div>
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading analytics data...</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Show message if no data is available
+    if (!enhancedAnalytics && !revenueAnalytics) {
+      return (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Enhanced Analytics</h2>
+              <p className="text-gray-600">Comprehensive insights and performance metrics</p>
+            </div>
+          </div>
+          <div className="text-center py-12">
+            <p className="text-gray-600">No analytics data available. Please try refreshing the page.</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Enhanced Analytics</h2>
+            <p className="text-gray-600">Comprehensive insights and performance metrics</p>
+          </div>
+        </div>
+
+        {/* Revenue Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <CurrencyDollarIcon className="h-8 w-8 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500">Total Revenue</p>
+                <p className="text-2xl font-bold text-gray-900">${(revenueAnalytics?.totalRevenue || 0).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <CurrencyDollarIcon className="h-8 w-8 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500">Commission Earnings</p>
+                <p className="text-2xl font-bold text-gray-900">${(revenueAnalytics?.commissionEarnings || 0).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <StarIcon className="h-8 w-8 text-yellow-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500">Featured Revenue</p>
+                <p className="text-2xl font-bold text-gray-900">${(revenueAnalytics?.featuredListingRevenue || 0).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <ChartBarIcon className="h-8 w-8 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500">Growth Rate</p>
+                <p className="text-2xl font-bold text-gray-900">+12.5%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Charts and Detailed Analytics */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Monthly Revenue Trend</h3>
+            <div className="h-64 bg-gray-50 rounded flex items-center justify-center">
+              <p className="text-gray-500">Chart placeholder - Monthly revenue data</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">User Growth</h3>
+            <div className="h-64 bg-gray-50 rounded flex items-center justify-center">
+              <p className="text-gray-500">Chart placeholder - User growth data</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Geographic Analytics */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Popular Locations</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {!enhancedAnalytics || !enhancedAnalytics.geographicData || enhancedAnalytics.geographicData.length === 0 ? (
+              <div className="col-span-full text-center py-8">
+                <p className="text-gray-500">No geographic data available</p>
+              </div>
+            ) : (
+              enhancedAnalytics.geographicData.map((location, index) => (
+                <div key={index} className="text-center p-4 border rounded-lg">
+                  <h4 className="font-medium text-gray-900">{location.city}</h4>
+                  <p className="text-2xl font-bold text-indigo-600">{location.count}</p>
+                  <p className="text-sm text-gray-500">listings</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // Main Component
   if (!user || user.userType !== 'admin') {
@@ -874,7 +1456,11 @@ const AdminDashboard = () => {
               { id: 'dashboard', name: 'Dashboard', icon: ChartBarIcon },
               { id: 'users', name: 'Users', icon: UsersIcon },
               { id: 'listings', name: 'Listings', icon: HomeIcon },
-              { id: 'reports', name: 'Reports', icon: FlagIcon }
+              { id: 'reports', name: 'Reports', icon: FlagIcon },
+              { id: 'platform-settings', name: 'Platform Settings', icon: Cog6ToothIcon },
+              { id: 'featured-listings', name: 'Featured Listings', icon: StarIcon },
+              { id: 'system-announcements', name: 'System Announcements', icon: MegaphoneIcon },
+              { id: 'enhanced-analytics', name: 'Enhanced Analytics', icon: CurrencyDollarIcon }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -898,6 +1484,10 @@ const AdminDashboard = () => {
           {activeTab === 'users' && <UserManagement />}
           {activeTab === 'listings' && <ListingManagement />}
           {activeTab === 'reports' && <ReportsManagement />}
+          {activeTab === 'platform-settings' && <PlatformSettings />}
+          {activeTab === 'featured-listings' && <FeaturedListings />}
+          {activeTab === 'system-announcements' && <SystemAnnouncements />}
+          {activeTab === 'enhanced-analytics' && <EnhancedAnalytics />}
         </div>
 
         {/* Loading State */}

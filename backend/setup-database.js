@@ -11,6 +11,9 @@ const Notification = require('./models/Notification');
 const Payment = require('./models/Payment');
 const Appointment = require('./models/Appointment');
 const Review = require('./models/Review');
+const Announcement = require('./models/Announcement');
+const PlatformSettings = require('./models/PlatformSettings');
+const Report = require('./models/Report');
 
 // Database connection
 const connectDB = async () => {
@@ -66,6 +69,18 @@ const createIndexes = async () => {
     // Review indexes
     await Review.createIndexes();
     console.log('✅ Review indexes created');
+    
+    // Announcement indexes
+    await Announcement.createIndexes();
+    console.log('✅ Announcement indexes created');
+    
+    // PlatformSettings indexes
+    await PlatformSettings.createIndexes();
+    console.log('✅ PlatformSettings indexes created');
+    
+    // Report indexes
+    await Report.createIndexes();
+    console.log('✅ Report indexes created');
     
   } catch (error) {
     console.error('❌ Error creating indexes:', error);
@@ -369,6 +384,45 @@ const createSampleData = async () => {
       console.log('ℹ️ Properties already exist, skipping property creation...');
     }
     
+    // Create sample platform settings
+    const settingsCount = await PlatformSettings.countDocuments();
+    if (settingsCount === 0) {
+      const platformSettings = new PlatformSettings({
+        general: {
+          siteName: 'Real Estate Marketplace',
+          siteDescription: 'Your trusted platform for real estate transactions',
+          contactEmail: 'contact@realestate.com',
+          contactPhone: '+1 (555) 123-4567'
+        },
+        business: {
+          commissionRate: 5.0,
+          featuredListingPrice: 29.99
+        }
+      });
+      await platformSettings.save();
+      console.log('✅ Platform settings created');
+    } else {
+      console.log('ℹ️ Platform settings already exist');
+    }
+    
+    // Create sample announcements
+    const announcementCount = await Announcement.countDocuments();
+    if (announcementCount === 0) {
+      const sampleAnnouncement = new Announcement({
+        title: 'Welcome to Our Platform!',
+        content: 'We\'re excited to launch our new real estate marketplace. Find your dream home or list your property with confidence.',
+        type: 'general',
+        priority: 'medium',
+        isActive: true,
+        targetAudience: ['all'],
+        createdBy: adminUser._id
+      });
+      await sampleAnnouncement.save();
+      console.log('✅ Sample announcement created');
+    } else {
+      console.log('ℹ️ Announcements already exist');
+    }
+    
     console.log('🎉 Sample data creation completed!');
     
   } catch (error) {
@@ -393,7 +447,10 @@ const setupDatabase = async () => {
     console.log('├── Notifications (multi-channel alerts)');
     console.log('├── Payments (with escrow and dispute handling)');
     console.log('├── Appointments (property viewings)');
-    console.log('└── Reviews (property, agent, neighborhood ratings)');
+    console.log('├── Reviews (property, agent, neighborhood ratings)');
+    console.log('├── Announcements (platform-wide notifications)');
+    console.log('├── PlatformSettings (site configuration)');
+    console.log('└── Reports (content moderation)');
     
     console.log('\n🔑 Sample Login Credentials:');
     console.log('├── Admin: admin@realestate.com / admin123456');

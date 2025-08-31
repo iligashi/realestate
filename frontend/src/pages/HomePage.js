@@ -1,11 +1,151 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   HomeIcon, 
   BuildingOfficeIcon, 
   UserGroupIcon,
-  MagnifyingGlassIcon 
+  MagnifyingGlassIcon,
+  MegaphoneIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
+
+// Enhanced Announcements Component
+const Announcements = () => {
+  const [announcements, setAnnouncements] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    // Fetch active announcements
+    const fetchAnnouncements = async () => {
+      try {
+        const response = await fetch('/api/announcements');
+        if (response.ok) {
+          const data = await response.json();
+          setAnnouncements(data.announcements || []);
+        }
+      } catch (error) {
+        console.log('No announcements to display');
+      }
+    };
+
+    fetchAnnouncements();
+  }, []);
+
+  useEffect(() => {
+    if (announcements.length > 1) {
+      const timer = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % announcements.length);
+      }, 6000); // Change announcement every 6 seconds
+
+      return () => clearInterval(timer);
+    }
+  }, [announcements.length]);
+
+  if (announcements.length === 0 || !isVisible) {
+    return null;
+  }
+
+  const currentAnnouncement = announcements[currentIndex];
+
+  // Get announcement type styling
+  const getTypeStyle = (type) => {
+    switch (type) {
+      case 'general':
+        return 'bg-blue-50 border-blue-200 text-blue-800';
+      case 'update':
+        return 'bg-green-50 border-green-200 text-green-800';
+      case 'promotion':
+        return 'bg-purple-50 border-purple-200 text-purple-800';
+      case 'maintenance':
+        return 'bg-orange-50 border-orange-200 text-orange-800';
+      case 'alert':
+        return 'bg-red-50 border-red-200 text-red-800';
+      default:
+        return 'bg-yellow-50 border-yellow-200 text-yellow-800';
+    }
+  };
+
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'general':
+        return '📢';
+      case 'update':
+        return '✨';
+      case 'promotion':
+        return '🎉';
+      case 'maintenance':
+        return '🔧';
+      case 'alert':
+        return '⚠️';
+      default:
+        return '📢';
+    }
+  };
+
+  return (
+    <div className={`${getTypeStyle(currentAnnouncement.type)} border-b transition-all duration-500 ease-in-out`}>
+      <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl">{getTypeIcon(currentAnnouncement.type)}</span>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-semibold uppercase tracking-wide">
+                  {currentAnnouncement.type === 'general' ? 'News' : 
+                   currentAnnouncement.type === 'update' ? 'Update' : 
+                   currentAnnouncement.type === 'promotion' ? 'Special Offer' : 
+                   currentAnnouncement.type === 'maintenance' ? 'Maintenance' :
+                   currentAnnouncement.type === 'alert' ? 'Alert' : 'Announcement'}
+                </span>
+                {announcements.length > 1 && (
+                  <span className="text-xs bg-white/50 px-2 py-1 rounded-full">
+                    {currentIndex + 1} of {announcements.length}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <h3 className="text-lg font-bold">{currentAnnouncement.title}</h3>
+              {currentAnnouncement.priority === 'high' && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                  Important
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            {announcements.length > 1 && (
+              <div className="flex space-x-1">
+                {announcements.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentIndex(index)}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      index === currentIndex ? 'bg-current' : 'bg-current/30'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => setIsVisible(false)}
+              className="hover:scale-110 transition-transform duration-200"
+              title="Dismiss announcement"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+        {currentAnnouncement.content && (
+          <p className="mt-2 text-sm opacity-90 max-w-4xl">
+            {currentAnnouncement.content}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const HomePage = () => {
   const features = [
@@ -33,6 +173,9 @@ const HomePage = () => {
 
   return (
     <div className="bg-white">
+      {/* Announcements Banner */}
+      <Announcements />
+      
       {/* Hero Section */}
       <div className="relative bg-gradient-to-r from-blue-600 to-blue-800">
         <div className="absolute inset-0">
