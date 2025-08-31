@@ -6,6 +6,9 @@ import LoginPage from './pages/Auth/LoginPage';
 import RegisterPage from './pages/Auth/RegisterPage';
 import ProfilePage from './pages/Profile/ProfilePage';
 import AdminDashboard from './pages/Admin/AdminDashboard';
+import PropertyListPage from './pages/Properties/PropertyListPage';
+import PropertyDetailPage from './pages/Properties/PropertyDetailPage';
+import PropertyFormPage from './pages/Properties/PropertyFormPage';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import AdminRoute from './components/Auth/AdminRoute';
 
@@ -30,6 +33,17 @@ function App() {
             <AdminRoute>
               <AdminDashboard />
             </AdminRoute>
+          } 
+        />
+        {/* Properties Routes */}
+        <Route path="/properties" element={<PropertyListPage />} />
+        <Route path="/properties/:id" element={<PropertyDetailPage />} />
+        <Route 
+          path="/properties/create" 
+          element={
+            <ProtectedRoute>
+              <PropertyFormPage />
+            </ProtectedRoute>
           } 
         />
       </Routes>
