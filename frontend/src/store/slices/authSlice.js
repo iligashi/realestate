@@ -9,7 +9,8 @@ export const registerUser = createAsyncThunk(
       const response = await authAPI.register(userData);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Registration failed');
+      console.log('Registration error details:', error.response?.data);
+      return rejectWithValue(error.response?.data?.error || error.response?.data?.details || 'Registration failed');
     }
   }
 );

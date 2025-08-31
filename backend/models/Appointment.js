@@ -238,7 +238,7 @@ appointmentSchema.methods.confirm = function(confirmedBy, method = 'platform') {
   return this.save();
 };
 
-appointmentSchema.methods.reschedule = function(newStartTime, newEndTime, reason, requestedBy) {
+appointmentSchema.methods.rescheduleAppointment = function(newStartTime, newEndTime, reason, requestedBy) {
   this.reschedule.originalStartTime = this.startTime;
   this.reschedule.originalEndTime = this.endTime;
   this.reschedule.reason = reason;

@@ -79,89 +79,199 @@ const createSampleData = async () => {
   try {
     // Check if sample data already exists
     const userCount = await User.countDocuments();
-    if (userCount > 0) {
+    const propertyCount = await Property.countDocuments();
+    
+    if (userCount > 0 && propertyCount > 0) {
       console.log('ℹ️ Sample data already exists, skipping...');
       return;
     }
     
+    if (userCount > 0) {
+      console.log('ℹ️ Users already exist, skipping user creation...');
+    }
+    
+    if (propertyCount > 0) {
+      console.log('ℹ️ Properties already exist, skipping property creation...');
+    }
+    
     // Create sample admin user
-    const adminUser = new User({
-      email: 'admin@realestate.com',
-      password: 'admin123456',
-      firstName: 'Admin',
-      lastName: 'User',
-      userType: 'admin',
-      isVerified: true,
-      verificationBadge: 'platinum',
-      phone: '+1234567890',
-      location: {
-        city: 'New York',
-        state: 'NY',
-        country: 'USA',
-        coordinates: [-74.006, 40.7128]
+    let adminUser;
+    if (userCount === 0) {
+      adminUser = new User({
+        email: 'admin@realestate.com',
+        password: 'admin123456',
+        firstName: 'Admin',
+        lastName: 'User',
+        userType: 'admin',
+        isVerified: true,
+        verificationBadge: 'platinum',
+        phone: '+1234567890',
+        location: {
+          city: 'New York',
+          state: 'NY',
+          country: 'USA',
+          coordinates: [-74.006, 40.7128]
+        }
+      });
+      await adminUser.save();
+      console.log('✅ Admin user created');
+    } else {
+      adminUser = await User.findOne({ email: 'admin@realestate.com' });
+      if (!adminUser) {
+        console.log('⚠️ Admin user not found, creating new one...');
+        adminUser = new User({
+          email: 'admin@realestate.com',
+          password: 'admin123456',
+          firstName: 'Admin',
+          lastName: 'User',
+          userType: 'admin',
+          isVerified: true,
+          verificationBadge: 'platinum',
+          phone: '+1234567890',
+          location: {
+            city: 'New York',
+            state: 'NY',
+            country: 'USA',
+            coordinates: [-74.006, 40.7128]
+          }
+        });
+        await adminUser.save();
+        console.log('✅ Admin user created');
+      } else {
+        console.log('ℹ️ Admin user already exists');
       }
-    });
-    await adminUser.save();
-    console.log('✅ Admin user created');
+    }
     
     // Create sample agent user
-    const agentUser = new User({
-      email: 'agent@realestate.com',
-      password: 'agent123456',
-      firstName: 'John',
-      lastName: 'Smith',
-      userType: 'agent',
-      isVerified: true,
-      verificationBadge: 'gold',
-      phone: '+1234567891',
-      agent: {
-        licenseNumber: 'AG123456',
-        agency: 'Smith Real Estate',
-        experience: 8,
-        specializations: ['residential', 'luxury'],
-        languages: ['English', 'Spanish'],
-        responseTime: 2,
-        rating: { average: 4.8, count: 45 }
-      },
-      location: {
-        city: 'New York',
-        state: 'NY',
-        country: 'USA',
-        coordinates: [-74.006, 40.7128]
+    let agentUser;
+    if (userCount === 0) {
+      agentUser = new User({
+        email: 'agent@realestate.com',
+        password: 'agent123456',
+        firstName: 'John',
+        lastName: 'Smith',
+        userType: 'agent',
+        isVerified: true,
+        verificationBadge: 'gold',
+        phone: '+1234567891',
+        agent: {
+          licenseNumber: 'AG123456',
+          agency: 'Smith Real Estate',
+          experience: 8,
+          specializations: ['residential', 'luxury'],
+          languages: ['English', 'Spanish'],
+          responseTime: 2,
+          rating: { average: 4.8, count: 45 }
+        },
+        location: {
+          city: 'New York',
+          state: 'NY',
+          country: 'USA',
+          coordinates: [-74.006, 40.7128]
+        }
+      });
+      await agentUser.save();
+      console.log('✅ Agent user created');
+    } else {
+      agentUser = await User.findOne({ email: 'agent@realestate.com' });
+      if (!agentUser) {
+        console.log('⚠️ Agent user not found, creating new one...');
+        agentUser = new User({
+          email: 'agent@realestate.com',
+          password: 'agent123456',
+          firstName: 'John',
+          lastName: 'Smith',
+          userType: 'agent',
+          isVerified: true,
+          verificationBadge: 'gold',
+          phone: '+1234567891',
+          agent: {
+            licenseNumber: 'AG123456',
+            agency: 'Smith Real Estate',
+            experience: 8,
+            specializations: ['residential', 'luxury'],
+            languages: ['English', 'Spanish'],
+            responseTime: 2,
+            rating: { average: 4.8, count: 45 }
+          },
+          location: {
+            city: 'New York',
+            state: 'NY',
+            country: 'USA',
+            coordinates: [-74.006, 40.7128]
+          }
+        });
+        await agentUser.save();
+        console.log('✅ Agent user created');
+      } else {
+        console.log('ℹ️ Agent user already exists');
       }
-    });
-    await agentUser.save();
-    console.log('✅ Agent user created');
+    }
     
     // Create sample buyer user
-    const buyerUser = new User({
-      email: 'buyer@realestate.com',
-      password: 'buyer123456',
-      firstName: 'Jane',
-      lastName: 'Doe',
-      userType: 'buyer',
-      isVerified: true,
-      verificationBadge: 'silver',
-      phone: '+1234567892',
-      preferences: {
-        propertyTypes: ['house', 'apartment'],
-        priceRange: { min: 200000, max: 800000 },
-        locations: ['Manhattan', 'Brooklyn'],
-        amenities: ['parking', 'gym', 'pool']
-      },
-      location: {
-        city: 'New York',
-        state: 'NY',
-        country: 'USA',
-        coordinates: [-74.006, 40.7128]
+    let buyerUser;
+    if (userCount === 0) {
+      buyerUser = new User({
+        email: 'buyer@realestate.com',
+        password: 'buyer123456',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        userType: 'buyer',
+        isVerified: true,
+        verificationBadge: 'silver',
+        phone: '+1234567892',
+        preferences: {
+          propertyTypes: ['house', 'apartment'],
+          priceRange: { min: 200000, max: 800000 },
+          locations: ['Manhattan', 'Brooklyn'],
+          amenities: ['parking', 'gym', 'pool']
+        },
+        location: {
+          city: 'New York',
+          state: 'NY',
+          country: 'USA',
+          coordinates: [-74.006, 40.7128]
+        }
+      });
+      await buyerUser.save();
+      console.log('✅ Buyer user created');
+    } else {
+      buyerUser = await User.findOne({ email: 'buyer@realestate.com' });
+      if (!buyerUser) {
+        console.log('⚠️ Buyer user not found, creating new one...');
+        buyerUser = new User({
+          email: 'buyer@realestate.com',
+          password: 'buyer123456',
+          firstName: 'Jane',
+          lastName: 'Doe',
+          userType: 'buyer',
+          isVerified: true,
+          verificationBadge: 'silver',
+          phone: '+1234567892',
+          preferences: {
+            propertyTypes: ['house', 'apartment'],
+            priceRange: { min: 200000, max: 800000 },
+            locations: ['Manhattan', 'Brooklyn'],
+            amenities: ['parking', 'gym', 'pool']
+          },
+          location: {
+            city: 'New York',
+            state: 'NY',
+            country: 'USA',
+            coordinates: [-74.006, 40.7128]
+          }
+        });
+        await buyerUser.save();
+        console.log('✅ Buyer user created');
+      } else {
+        console.log('ℹ️ Buyer user already exists');
       }
-    });
-    await buyerUser.save();
-    console.log('✅ Buyer user created');
+    }
     
     // Create sample property
-    const sampleProperty = new Property({
-      title: 'Luxury 3-Bedroom Apartment in Manhattan',
+    if (propertyCount === 0) {
+      const sampleProperty = new Property({
+        title: 'Luxury 3-Bedroom Apartment in Manhattan',
       description: 'Beautiful luxury apartment with stunning city views, modern amenities, and prime location in the heart of Manhattan.',
       propertyType: 'apartment',
       listingType: 'sale',
@@ -221,15 +331,6 @@ const createSampleData = async () => {
           medianIncome: 120000
         }
       },
-      schools: [
-        {
-          name: 'PS 59',
-          type: 'Public Elementary',
-          rating: 9,
-          distance: 0.3,
-          grades: 'K-5'
-        }
-      ],
       sustainability: {
         energyRating: 'A',
         solarPotential: 'High',
@@ -237,33 +338,36 @@ const createSampleData = async () => {
         energyEfficient: true,
         renewableEnergy: ['Solar Panels']
       }
-    });
-    await sampleProperty.save();
-    console.log('✅ Sample property created');
-    
-    // Create sample review
-    const sampleReview = new Review({
-      author: buyerUser._id,
-      targetType: 'property',
-      target: sampleProperty._id,
-      title: 'Amazing apartment in perfect location!',
-      content: 'This apartment exceeded all our expectations. The location is perfect, the amenities are top-notch, and the views are breathtaking. Highly recommend!',
-      ratings: {
-        overall: 5,
-        property: {
-          cleanliness: 5,
-          maintenance: 5,
-          value: 5,
-          location: 5,
-          amenities: 5
-        }
-      },
-      verified: true,
-      status: 'approved',
-      tags: ['luxury', 'manhattan', 'modern']
-    });
-    await sampleReview.save();
-    console.log('✅ Sample review created');
+      });
+      await sampleProperty.save();
+      console.log('✅ Sample property created');
+      
+      // Create sample review
+      const sampleReview = new Review({
+        author: buyerUser._id,
+        targetType: 'property',
+        target: sampleProperty._id,
+        title: 'Amazing apartment in perfect location!',
+        content: 'This apartment exceeded all our expectations. The location is perfect, the amenities are top-notch, and the views are breathtaking. Highly recommend!',
+        ratings: {
+          overall: 5,
+          property: {
+            cleanliness: 5,
+            maintenance: 5,
+            value: 5,
+            location: 5,
+            amenities: 5
+          }
+        },
+        verified: true,
+        status: 'approved',
+        tags: ['luxury', 'manhattan', 'modern']
+      });
+      await sampleReview.save();
+      console.log('✅ Sample review created');
+    } else {
+      console.log('ℹ️ Properties already exist, skipping property creation...');
+    }
     
     console.log('🎉 Sample data creation completed!');
     

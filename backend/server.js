@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 5000;
 const getAllowedOrigins = () => {
   const frontendUrl = process.env.FRONTEND_URL;
   if (!frontendUrl) {
-    return ['http://localhost:3000']; // Default fallback
+    return ['http://localhost:3000', 'http://localhost:3001']; // Default fallback with both ports
   }
   
   // Split by comma and trim whitespace

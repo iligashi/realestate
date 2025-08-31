@@ -55,6 +55,8 @@ const RegisterPage = () => {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
     }
 
     if (formData.password !== formData.confirmPassword) {
@@ -83,6 +85,11 @@ const RegisterPage = () => {
     e.preventDefault();
     if (validateForm()) {
       const { confirmPassword, ...userData } = formData;
+      // Remove empty phone field if not provided
+      if (!userData.phone.trim()) {
+        delete userData.phone;
+      }
+      console.log('Sending registration data:', userData);
       dispatch(registerUser(userData));
     }
   };
@@ -208,6 +215,9 @@ const RegisterPage = () => {
                 value={formData.password}
                 onChange={handleChange}
               />
+              <p className="mt-1 text-xs text-gray-500">
+                Password must be at least 8 characters with uppercase, lowercase, and number
+              </p>
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password}</p>
               )}
