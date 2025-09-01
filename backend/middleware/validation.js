@@ -52,32 +52,66 @@ const validateLogin = [
 
 // Validation rules for property creation
 const validateProperty = [
-  body('title')
-    .trim()
-    .isLength({ min: 10, max: 200 })
-    .withMessage('Title must be between 10 and 200 characters'),
-  body('description')
-    .trim()
-    .isLength({ min: 50, max: 5000 })
-    .withMessage('Description must be between 50 and 5000 characters'),
-  body('price')
-    .isFloat({ min: 0 })
-    .withMessage('Price must be a positive number'),
-  body('propertyType')
-    .isIn(['house', 'apartment', 'office'])
-    .withMessage('Invalid property type'),
-  body('listingType')
-    .isIn(['sale', 'rent', 'auction', 'pre-construction'])
-    .withMessage('Invalid listing type'),
-  body('address.city')
-    .trim()
-    .notEmpty()
-    .withMessage('City is required'),
-  body('address.country')
-    .trim()
-    .notEmpty()
-    .withMessage('Country is required'),
-  validate
+  (req, res, next) => {
+    console.log('=== validateProperty middleware ===');
+    console.log('Validating parsed body:', req.body);
+    
+    try {
+      const errors = [];
+      
+      // Check required fields
+      if (!req.body.title || req.body.title.trim().length < 10) {
+        errors.push('Title must be at least 10 characters long');
+      }
+      
+      if (!req.body.description || req.body.description.trim().length < 50) {
+        errors.push('Description must be at least 50 characters long');
+      }
+      
+      if (!req.body.propertyType || !['house', 'apartment', 'office'].includes(req.body.propertyType)) {
+        errors.push('Invalid property type');
+      }
+      
+      if (!req.body.listingType || !['sale', 'rent', 'auction', 'pre-construction'].includes(req.body.listingType)) {
+        errors.push('Invalid listing type');
+      }
+      
+      if (!req.body.price || req.body.price <= 0) {
+        errors.push('Price must be a positive number');
+      }
+      
+      if (!req.body.address || !req.body.address.city || req.body.address.city.trim() === '') {
+        errors.push('City is required');
+      }
+      
+      if (!req.body.address || !req.body.address.country || req.body.address.country.trim() === '') {
+        errors.push('Country is required');
+      }
+      
+      if (!req.body.location || !req.body.location.coordinates || !Array.isArray(req.body.location.coordinates)) {
+        errors.push('Location coordinates are required');
+      }
+      
+      if (errors.length > 0) {
+        console.log('Validation errors:', errors);
+        return res.status(400).json({
+          error: 'Validation failed',
+          details: errors
+        });
+      }
+      
+      console.log('Validation passed successfully');
+      console.log('=== End validateProperty middleware ===');
+      next();
+      
+    } catch (error) {
+      console.error('Error in validation middleware:', error);
+      res.status(500).json({
+        error: 'Validation error',
+        details: error.message
+      });
+    }
+  }
 ];
 
 module.exports = {

@@ -100,6 +100,85 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Test endpoint for debugging
+app.post('/test-upload', (req, res) => {
+  console.log('=== Test upload endpoint ===');
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  console.log('Files:', req.files);
+  res.json({ 
+    message: 'Test endpoint working',
+    body: req.body,
+    files: req.files ? req.files.length : 0
+  });
+});
+
+// Test property creation without files
+app.post('/test-property', async (req, res) => {
+  try {
+    console.log('=== Test property creation ===');
+    console.log('Request body:', req.body);
+    
+    // Test with minimal data
+    const testProperty = {
+      title: 'Test Property',
+      description: 'Test Description',
+      propertyType: 'apartment',
+      listingType: 'sale',
+      price: 100000,
+      currency: 'USD',
+      status: 'pending',
+      owner: '507f1f77bcf86cd799439011', // Test ObjectId
+      address: {
+        city: 'Test City',
+        country: 'US'
+      },
+      location: {
+        type: 'Point',
+        coordinates: [0, 0]
+      },
+      details: {
+        bedrooms: 2,
+        bathrooms: 1,
+        squareMeters: 100,
+        yearBuilt: 2025
+      },
+      features: {
+        parkingAvailable: false,
+        furnished: false,
+        petFriendly: false,
+        featured: false
+      },
+      amenities: [],
+      photos: []
+    };
+    
+    console.log('Test property data:', testProperty);
+    
+    // Try to create the Property model
+    const Property = require('./models/Property');
+    const property = new Property(testProperty);
+    console.log('Property model created');
+    
+    // Try to save
+    const saved = await property.save();
+    console.log('Property saved successfully:', saved._id);
+    
+    res.json({ 
+      message: 'Test property created successfully',
+      propertyId: saved._id
+    });
+    
+  } catch (error) {
+    console.error('Test property creation error:', error);
+    res.status(500).json({ 
+      error: 'Test property creation failed',
+      details: error.message,
+      stack: error.stack
+    });
+  }
+});
+
 // Import error handling middleware
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 

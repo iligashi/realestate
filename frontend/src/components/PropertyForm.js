@@ -267,12 +267,82 @@ const PropertyForm = ({ onSubmit, initialData = null, isEditing = false, isSubmi
         return; // Stop submission if there are errors
       }
 
-      const formData = {
-        ...data,
-        amenities,
-        photos: images
-      };
+      // Create FormData for file uploads
+      const formData = new FormData();
+      
+      try {
+        // Add basic property data
+        formData.append('title', String(data.title || ''));
+        formData.append('description', String(data.description || ''));
+        formData.append('propertyType', String(data.propertyType || 'apartment'));
+        formData.append('listingType', 'sale'); // Required by validation
+        formData.append('price', String(data.price || '0'));
+        formData.append('currency', String(data.currency || 'USD'));
+        formData.append('status', String(data.status || 'pending'));
+        
+        // Add address data
+        formData.append('address[street]', String(data.address?.street || ''));
+        formData.append('address[city]', String(data.address?.city || '')); // Required by validation
+        formData.append('address[state]', String(data.address?.state || ''));
+        formData.append('address[zipCode]', String(data.address?.zipCode || ''));
+        formData.append('address[country]', 'US'); // Required by validation
+        
+        // Add location data
+        formData.append('location[type]', 'Point');
+        formData.append('location[coordinates][0]', '0'); // Required by schema
+        formData.append('location[coordinates][1]', '0'); // Required by schema
+        
+        // Add property details
+        formData.append('details[bedrooms]', String(data.details?.bedrooms || '0'));
+        formData.append('details[bathrooms]', String(data.details?.bathrooms || '0'));
+        formData.append('details[squareMeters]', String(data.details?.squareMeters || '0'));
+        formData.append('details[yearBuilt]', String(data.details?.yearBuilt || '2025'));
+        
+        // Add features
+        formData.append('features[parkingAvailable]', String(data.features?.parkingAvailable || false));
+        formData.append('features[furnished]', String(data.features?.furnished || false));
+        formData.append('features[petFriendly]', String(data.features?.petFriendly || false));
+        formData.append('features[featured]', String(data.features?.featured || false));
+        
+        // Add amenities
+        if (amenities && amenities.length > 0) {
+          amenities.forEach((amenity, index) => {
+            if (amenity && typeof amenity === 'string') {
+              formData.append(`amenities[${index}]`, String(amenity));
+            }
+          });
+        }
+        
+        // Add images
+        if (images && images.length > 0) {
+          images.forEach((image, index) => {
+            if (image && image.file && image.file instanceof File) {
+              formData.append('images', image.file);
+              console.log(`Added image ${index + 1}:`, image.file.name, 'Size:', image.file.size);
+            } else {
+              console.warn(`Skipping invalid image at index ${index}:`, image);
+            }
+          });
+        }
+        
+        console.log('FormData created successfully with', formData.getAll('images').length, 'images');
+        
+        // Log FormData contents for debugging
+        for (let [key, value] of formData.entries()) {
+          if (key === 'images') {
+            console.log(`${key}:`, value instanceof File ? `File: ${value.name} (${value.size} bytes)` : value);
+          } else {
+            console.log(`${key}:`, value);
+          }
+        }
+        
+      } catch (error) {
+        console.error('Error creating FormData:', error);
+        toast.error('Failed to prepare form data. Please try again.');
+        return;
+      }
 
+      // Send FormData directly to the backend
       await onSubmit(formData);
       toast.success(isEditing ? 'Property updated successfully!' : 'Property created successfully!');
       if (!isEditing) {

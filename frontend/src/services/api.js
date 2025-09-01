@@ -64,12 +64,30 @@ export const authAPI = {
 export const propertyAPI = {
   getProperties: (filters = {}) => api.get('/properties', { params: filters }),
   getProperty: (id) => api.get(`/properties/${id}`),
-  createProperty: (propertyData, token) => api.post('/properties', propertyData, {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
-  updateProperty: (id, propertyData, token) => api.put(`/properties/${id}`, propertyData, {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
+  createProperty: (propertyData, token) => {
+    const config = {
+      headers: { Authorization: `Bearer ${token}` }
+    };
+    
+    // For FormData (file uploads), let the browser set the Content-Type with boundary
+    if (!(propertyData instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
+    }
+    
+    return api.post('/properties', propertyData, config);
+  },
+  updateProperty: (id, propertyData, token) => {
+    const config = {
+      headers: { Authorization: `Bearer ${token}` }
+    };
+    
+    // For FormData (file uploads), let the browser set the Content-Type with boundary
+    if (!(propertyData instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
+    }
+    
+    return api.put(`/properties/${id}`, propertyData, config);
+  },
   deleteProperty: (id, token) => api.delete(`/properties/${id}`, {
     headers: { Authorization: `Bearer ${token}` }
   }),

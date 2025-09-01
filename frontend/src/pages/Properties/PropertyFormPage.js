@@ -35,68 +35,23 @@ const PropertyFormPage = () => {
     }
 
     try {
-      // Transform the data to match the backend schema and validation requirements
-      const transformedData = {
-        title: propertyData.title || '',
-        description: propertyData.description || '',
-        propertyType: propertyData.propertyType || 'apartment',
-        listingType: 'sale', // Default to sale as required by validation
-        price: parseFloat(propertyData.price) || 0,
-        currency: propertyData.currency || 'USD',
-        status: propertyData.status || 'pending',
-        address: {
-          street: propertyData.address?.street || '',
-          city: propertyData.address?.city || '',
-          state: propertyData.address?.state || '',
-          zipCode: propertyData.address?.zipCode || '',
-          country: 'US' // Required by validation
-        },
-        location: {
-          type: 'Point',
-          coordinates: [0, 0] // Default coordinates - required by schema
-        },
-        details: {
-          bedrooms: parseInt(propertyData.details?.bedrooms) || 0,
-          bathrooms: parseInt(propertyData.details?.bathrooms) || 0,
-          squareMeters: parseInt(propertyData.details?.squareMeters) || 0,
-          yearBuilt: parseInt(propertyData.details?.yearBuilt) || 2025
-        },
-        features: propertyData.amenities || [],
-        amenities: propertyData.amenities || [],
-        photos: propertyData.photos || []
-      };
-
-      console.log('Submitting property data:', transformedData);
-      console.log('Raw form data:', propertyData);
-      console.log('Amenities:', propertyData.amenities);
-      console.log('Photos:', propertyData.photos);
-      console.log('Features:', propertyData.features);
-      console.log('User authenticated:', isAuthenticated);
-      console.log('User:', user);
+      console.log('Submitting property data with FormData');
+      console.log('FormData received:', propertyData);
+      console.log('FormData instanceof FormData:', propertyData instanceof FormData);
       
-      // Validate required fields before sending
-      if (!transformedData.title || transformedData.title.length < 10) {
-        toast.error('Title must be at least 10 characters long');
+      // Validate that we received FormData
+      if (!(propertyData instanceof FormData)) {
+        toast.error('Invalid data format received');
         return;
       }
       
-      if (!transformedData.description || transformedData.description.length < 50) {
-        toast.error('Description must be at least 50 characters long');
-        return;
+      // Log the contents of FormData for debugging
+      for (let [key, value] of propertyData.entries()) {
+        console.log(`${key}:`, value);
       }
       
-      if (!transformedData.address.city) {
-        toast.error('City is required');
-        return;
-      }
-      
-      if (transformedData.price <= 0) {
-        toast.error('Price must be greater than 0');
-        return;
-      }
-      
-      // Use Redux action instead of direct service call
-      const result = await dispatch(createProperty(transformedData)).unwrap();
+      // Use Redux action to create property
+      const result = await dispatch(createProperty(propertyData)).unwrap();
       console.log('Property created successfully:', result);
       
       toast.success('Property created successfully!');

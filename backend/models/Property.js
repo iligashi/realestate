@@ -94,7 +94,12 @@ const propertySchema = new mongoose.Schema({
   },
   
   // Features & Amenities
-  features: [String],
+  features: {
+    parkingAvailable: { type: Boolean, default: false },
+    furnished: { type: Boolean, default: false },
+    petFriendly: { type: Boolean, default: false },
+    featured: { type: Boolean, default: false }
+  },
   amenities: [String],
   appliances: [String],
   heating: String,
