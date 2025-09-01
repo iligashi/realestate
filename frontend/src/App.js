@@ -6,6 +6,7 @@ import LoginPage from './pages/Auth/LoginPage';
 import RegisterPage from './pages/Auth/RegisterPage';
 import ProfilePage from './pages/Profile/ProfilePage';
 import AdminDashboard from './pages/Admin/AdminDashboard';
+import SellerDashboard from './pages/Seller/SellerDashboard';
 import PropertyListPage from './pages/Properties/PropertyListPage';
 import PropertyDetailPage from './pages/Properties/PropertyDetailPage';
 import PropertyFormPage from './pages/Properties/PropertyFormPage';
@@ -33,6 +34,14 @@ function App() {
             <AdminRoute>
               <AdminDashboard />
             </AdminRoute>
+          } 
+        />
+        <Route 
+          path="/seller" 
+          element={
+            <ProtectedRoute>
+              <SellerDashboard />
+            </ProtectedRoute>
           } 
         />
         {/* Properties Routes */}

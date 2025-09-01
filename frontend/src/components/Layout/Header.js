@@ -132,6 +132,17 @@ const Header = () => {
                   >
                     Dashboard
                   </Link>
+                  
+                  {user?.userType === 'seller' && (
+                    <Link
+                      to="/seller"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setProfileDropdownOpen(false)}
+                    >
+                      Seller Dashboard
+                    </Link>
+                  )}
+                  
                   <Link
                     to="/profile"
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
@@ -266,6 +277,17 @@ const Header = () => {
                       >
                         Dashboard
                       </Link>
+                      
+                      {user?.userType === 'seller' && (
+                        <Link
+                          to="/seller"
+                          className="-mx-3 block rounded-lg px-3 py-2 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          Seller Dashboard
+                        </Link>
+                      )}
+                      
                       <Link
                         to="/profile"
                         className="-mx-3 block rounded-lg px-3 py-2 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50"
