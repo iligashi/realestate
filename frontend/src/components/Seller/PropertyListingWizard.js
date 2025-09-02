@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { createPropertyListing, clearError } from '../../store/slices/sellerSlice';
+import { useNavigate } from 'react-router-dom';
+import { createProperty } from '../../store/slices/propertySlice';
 import { 
   PhotoIcon, 
   MapPinIcon, 
@@ -8,13 +9,20 @@ import {
   CurrencyDollarIcon,
   DocumentTextIcon,
   CheckCircleIcon,
-  XMarkIcon
+  XMarkIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 
 const PropertyListingWizard = ({ onClose }) => {
   const dispatch = useDispatch();
-  const { loading, error } = useSelector(state => state.seller);
+  const navigate = useNavigate();
+  const { loading, error } = useSelector(state => state.property);
   const fileInputRef = useRef(null);
+  
+  // Consistent form input styling
+  const inputClasses = "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors";
+  const selectClasses = "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors";
   
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -119,29 +127,58 @@ const PropertyListingWizard = ({ onClose }) => {
   };
 
   const handleSubmit = async () => {
-    const submitData = new FormData();
-    
-    // Add form data
-    Object.keys(formData).forEach(key => {
-      if (key === 'address' || key === 'details' || key === 'features') {
-        submitData.append(key, JSON.stringify(formData[key]));
-      } else if (key === 'amenities') {
-        formData[key].forEach(amenity => {
-          submitData.append('amenities', amenity);
-        });
-      } else {
-        submitData.append(key, formData[key]);
-      }
-    });
-    
-    // Add photos
-    photos.forEach(photo => {
-      submitData.append('photos', photo.file);
-    });
-    
     try {
-      await dispatch(createPropertyListing(submitData)).unwrap();
+      const submitData = new FormData();
+      
+      // Add basic property data
+      submitData.append('title', formData.title);
+      submitData.append('description', formData.description);
+      submitData.append('propertyType', formData.propertyType);
+      submitData.append('listingType', formData.listingType);
+      submitData.append('price', formData.price);
+      submitData.append('currency', formData.currency);
+      submitData.append('status', 'pending');
+      
+      // Add address data
+      submitData.append('address[street]', formData.address.street);
+      submitData.append('address[city]', formData.address.city);
+      submitData.append('address[state]', formData.address.state);
+      submitData.append('address[zipCode]', formData.address.zipCode);
+      submitData.append('address[country]', formData.address.country);
+      
+      // Add location data (required by schema)
+      submitData.append('location[type]', 'Point');
+      submitData.append('location[coordinates][0]', '0');
+      submitData.append('location[coordinates][1]', '0');
+      
+      // Add property details
+      submitData.append('details[bedrooms]', formData.details.bedrooms);
+      submitData.append('details[bathrooms]', formData.details.bathrooms);
+      submitData.append('details[squareMeters]', formData.details.squareMeters);
+      submitData.append('details[yearBuilt]', formData.details.yearBuilt);
+      
+      // Add features
+      submitData.append('features[parkingAvailable]', formData.features.parkingAvailable);
+      submitData.append('features[furnished]', formData.features.furnished);
+      submitData.append('features[petFriendly]', formData.features.petFriendly);
+      submitData.append('features[featured]', formData.features.featured);
+      
+      // Add amenities
+      formData.amenities.forEach(amenity => {
+        submitData.append('amenities', amenity);
+      });
+      
+      // Add photos
+      photos.forEach(photo => {
+        submitData.append('images', photo.file);
+      });
+      
+      // Use the existing createProperty action
+      await dispatch(createProperty(submitData)).unwrap();
+      
+      // Close modal and redirect to properties
       onClose();
+      navigate('/properties');
     } catch (error) {
       console.error('Failed to create property listing:', error);
     }
@@ -179,7 +216,7 @@ const PropertyListingWizard = ({ onClose }) => {
                 type="text"
                 value={formData.title}
                 onChange={(e) => handleInputChange('title', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={inputClasses}
                 placeholder="e.g., Beautiful 3-bedroom apartment in downtown"
               />
             </div>
@@ -192,7 +229,7 @@ const PropertyListingWizard = ({ onClose }) => {
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
                 placeholder="Describe your property in detail..."
               />
             </div>
@@ -205,7 +242,7 @@ const PropertyListingWizard = ({ onClose }) => {
                 <select
                   value={formData.propertyType}
                   onChange={(e) => handleInputChange('propertyType', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={selectClasses}
                 >
                   <option value="apartment">Apartment</option>
                   <option value="house">House</option>
@@ -220,7 +257,7 @@ const PropertyListingWizard = ({ onClose }) => {
                 <select
                   value={formData.listingType}
                   onChange={(e) => handleInputChange('listingType', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={selectClasses}
                 >
                   <option value="sale">For Sale</option>
                   <option value="rent">For Rent</option>
@@ -242,7 +279,7 @@ const PropertyListingWizard = ({ onClose }) => {
                 type="text"
                 value={formData.address.street}
                 onChange={(e) => handleInputChange('address.street', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={inputClasses}
                 placeholder="123 Main Street"
               />
             </div>
@@ -256,7 +293,7 @@ const PropertyListingWizard = ({ onClose }) => {
                   type="text"
                   value={formData.address.city}
                   onChange={(e) => handleInputChange('address.city', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClasses}
                   placeholder="New York"
                 />
               </div>
@@ -269,7 +306,7 @@ const PropertyListingWizard = ({ onClose }) => {
                   type="text"
                   value={formData.address.state}
                   onChange={(e) => handleInputChange('address.state', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClasses}
                   placeholder="NY"
                 />
               </div>
@@ -284,7 +321,7 @@ const PropertyListingWizard = ({ onClose }) => {
                   type="text"
                   value={formData.address.zipCode}
                   onChange={(e) => handleInputChange('address.zipCode', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClasses}
                   placeholder="10001"
                 />
               </div>
@@ -296,7 +333,7 @@ const PropertyListingWizard = ({ onClose }) => {
                 <select
                   value={formData.address.country}
                   onChange={(e) => handleInputChange('address.country', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={selectClasses}
                 >
                   <option value="US">United States</option>
                   <option value="CA">Canada</option>
@@ -321,7 +358,7 @@ const PropertyListingWizard = ({ onClose }) => {
                   min="0"
                   value={formData.details.bedrooms}
                   onChange={(e) => handleInputChange('details.bedrooms', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClasses}
                 />
               </div>
               
@@ -335,7 +372,7 @@ const PropertyListingWizard = ({ onClose }) => {
                   step="0.5"
                   value={formData.details.bathrooms}
                   onChange={(e) => handleInputChange('details.bathrooms', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClasses}
                 />
               </div>
             </div>
@@ -350,7 +387,7 @@ const PropertyListingWizard = ({ onClose }) => {
                   min="0"
                   value={formData.details.squareMeters}
                   onChange={(e) => handleInputChange('details.squareMeters', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClasses}
                 />
               </div>
               
@@ -364,7 +401,7 @@ const PropertyListingWizard = ({ onClose }) => {
                   max="2025"
                   value={formData.details.yearBuilt}
                   onChange={(e) => handleInputChange('details.yearBuilt', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClasses}
                 />
               </div>
             </div>
@@ -378,7 +415,7 @@ const PropertyListingWizard = ({ onClose }) => {
                 min="0"
                 value={formData.details.parkingSpaces}
                 onChange={(e) => handleInputChange('details.parkingSpaces', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={inputClasses}
               />
             </div>
             
@@ -437,7 +474,7 @@ const PropertyListingWizard = ({ onClose }) => {
                   min="0"
                   value={formData.price}
                   onChange={(e) => handleInputChange('price', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClasses}
                   placeholder="500000"
                 />
               </div>
@@ -449,7 +486,7 @@ const PropertyListingWizard = ({ onClose }) => {
                 <select
                   value={formData.currency}
                   onChange={(e) => handleInputChange('currency', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={selectClasses}
                 >
                   <option value="USD">USD</option>
                   <option value="EUR">EUR</option>
@@ -562,30 +599,35 @@ const PropertyListingWizard = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+    <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Create Property Listing</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <XMarkIcon className="h-6 w-6" />
-          </button>
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">Create Property Listing</h2>
+              <p className="text-blue-100 mt-1">Step {currentStep} of {steps.length}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-blue-200 hover:text-white transition-colors p-2 rounded-full hover:bg-blue-600"
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="mx-8 mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="text-sm text-red-700">{error}</div>
           </div>
         )}
 
         {/* Progress Steps */}
-        <div className="mb-8">
+        <div className="px-8 py-6 bg-gray-50 border-b">
           <nav aria-label="Progress">
-            <ol className="flex items-center justify-center space-x-8">
+            <ol className="flex items-center justify-between">
               {steps.map((step, stepIdx) => {
                 const Icon = step.icon;
                 const isCompleted = currentStep > step.id;
@@ -594,21 +636,28 @@ const PropertyListingWizard = ({ onClose }) => {
                 return (
                   <li key={step.name} className="flex items-center">
                     <div className="flex items-center">
-                      <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                        isCompleted ? 'bg-blue-600 text-white' :
-                        isCurrent ? 'bg-blue-100 text-blue-600' :
-                        'bg-gray-200 text-gray-500'
+                      <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-200 ${
+                        isCompleted ? 'bg-blue-600 border-blue-600 text-white' :
+                        isCurrent ? 'bg-blue-50 border-blue-600 text-blue-600' :
+                        'bg-white border-gray-300 text-gray-400'
                       }`}>
-                        <Icon className="h-5 w-5" />
+                        {isCompleted ? (
+                          <CheckCircleIcon className="h-6 w-6" />
+                        ) : (
+                          <Icon className="h-5 w-5" />
+                        )}
                       </div>
-                      <span className={`ml-2 text-sm font-medium ${
-                        isCurrent ? 'text-blue-600' : 'text-gray-500'
+                      <span className={`ml-3 text-sm font-medium transition-colors ${
+                        isCurrent ? 'text-blue-600' : 
+                        isCompleted ? 'text-blue-600' : 'text-gray-500'
                       }`}>
                         {step.name}
                       </span>
                     </div>
                     {stepIdx < steps.length - 1 && (
-                      <div className="ml-8 w-16 h-0.5 bg-gray-200" />
+                      <div className={`ml-8 w-12 h-0.5 transition-colors ${
+                        isCompleted ? 'bg-blue-600' : 'bg-gray-300'
+                      }`} />
                     )}
                   </li>
                 );
@@ -618,24 +667,25 @@ const PropertyListingWizard = ({ onClose }) => {
         </div>
 
         {/* Step Content */}
-        <div className="mb-8">
+        <div className="px-8 py-8 max-h-96 overflow-y-auto">
           {renderStepContent()}
         </div>
 
         {/* Navigation Buttons */}
-        <div className="flex justify-between">
+        <div className="px-8 py-6 bg-gray-50 border-t flex justify-between items-center">
           <button
             onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
             disabled={currentStep === 1}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
+            <ChevronLeftIcon className="h-4 w-4 mr-2" />
             Previous
           </button>
           
           <div className="flex space-x-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
@@ -644,17 +694,28 @@ const PropertyListingWizard = ({ onClose }) => {
               <button
                 onClick={() => setCurrentStep(prev => prev + 1)}
                 disabled={!isStepValid(currentStep)}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center px-6 py-3 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Next
+                <ChevronRightIcon className="h-4 w-4 ml-2" />
               </button>
             ) : (
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center px-6 py-3 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {loading ? 'Creating...' : 'Create Listing'}
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircleIcon className="h-4 w-4 mr-2" />
+                    Create Listing
+                  </>
+                )}
               </button>
             )}
           </div>

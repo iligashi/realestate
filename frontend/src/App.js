@@ -55,6 +55,14 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/properties/:id/edit" 
+          element={
+            <ProtectedRoute>
+              <PropertyFormPage />
+            </ProtectedRoute>
+          } 
+        />
       </Routes>
     </Layout>
   );

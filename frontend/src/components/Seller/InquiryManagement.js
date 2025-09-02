@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   getInquiries, 
@@ -28,6 +28,12 @@ const InquiryManagement = () => {
     error 
   } = useSelector(state => state.seller);
   
+  const [localLoading, setLocalLoading] = useState(false);
+  const [lastRequestTime, setLastRequestTime] = useState(0);
+  const [requestCount, setRequestCount] = useState(0);
+  const [isCircuitOpen, setIsCircuitOpen] = useState(false);
+  const hasInitialized = useRef(false);
+  
   const [selectedInquiry, setSelectedInquiry] = useState(null);
   const [responseText, setResponseText] = useState('');
   const [scheduleViewing, setScheduleViewing] = useState({
@@ -43,15 +49,58 @@ const InquiryManagement = () => {
   });
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!loading) {
-        console.log('InquiryManagement: Dispatching getInquiries with filters:', filters);
-        dispatch(getInquiries(filters));
+    let isMounted = true;
+    const now = Date.now();
+    
+    // Only make initial request, don't re-run on every state change
+    if (hasInitialized.current) {
+      return;
+    }
+    
+    // Circuit breaker - if too many requests, stop making new ones
+    if (isCircuitOpen || requestCount > 10) {
+      console.log('Circuit breaker open - stopping requests');
+      setIsCircuitOpen(true);
+      return;
+    }
+    
+    // Throttle requests - only allow one request per 2 seconds
+    if (now - lastRequestTime < 2000) {
+      return;
+    }
+    
+    const fetchInquiries = async () => {
+      if (isMounted) {
+        hasInitialized.current = true;
+        setLastRequestTime(now);
+        setRequestCount(prev => prev + 1);
+        setLocalLoading(true);
+        try {
+          await dispatch(getInquiries(filters)).unwrap();
+          // Reset circuit breaker on success
+          setRequestCount(0);
+          setIsCircuitOpen(false);
+        } catch (error) {
+          console.error('Failed to fetch inquiries:', error);
+          // Open circuit breaker on repeated failures
+          if (requestCount > 5) {
+            setIsCircuitOpen(true);
+          }
+        } finally {
+          if (isMounted) {
+            setLocalLoading(false);
+          }
+        }
       }
-    }, 300); // 300ms debounce
+    };
 
-    return () => clearTimeout(timer);
-  }, [dispatch, filters.status, filters.priority, filters.type, loading]);
+    const timer = setTimeout(fetchInquiries, 300); // 300ms debounce
+
+    return () => {
+      clearTimeout(timer);
+      isMounted = false;
+    };
+  }, [dispatch, filters.status, filters.priority, filters.type]);
 
   useEffect(() => {
     console.log('InquiryManagement: State updated:', { inquiries, loading, error });
@@ -71,6 +120,14 @@ const InquiryManagement = () => {
     dispatch(getInquiryDetails(inquiry._id));
   };
 
+  const handleRefresh = () => {
+    // Reset circuit breaker and fetch data
+    setIsCircuitOpen(false);
+    setRequestCount(0);
+    hasInitialized.current = false;
+    setLastRequestTime(0);
+  };
+
   const handleRespond = async () => {
     if (!currentInquiry || !responseText.trim()) return;
 
@@ -80,6 +137,7 @@ const InquiryManagement = () => {
     };
 
     try {
+      setLocalLoading(true);
       await dispatch(respondToInquiry({
         id: currentInquiry._id,
         responseData
@@ -92,6 +150,8 @@ const InquiryManagement = () => {
       dispatch(getInquiries(filters));
     } catch (error) {
       console.error('Failed to respond to inquiry:', error);
+    } finally {
+      setLocalLoading(false);
     }
   };
 
@@ -180,9 +240,26 @@ const InquiryManagement = () => {
           </div>
         )}
 
+        {/* Circuit Breaker Message */}
+        {isCircuitOpen && (
+          <div className="mx-4 mt-4 bg-yellow-50 border border-yellow-200 rounded-md p-3">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-yellow-700">
+                Too many requests detected. Circuit breaker is open to prevent system overload.
+              </div>
+              <button
+                onClick={handleRefresh}
+                className="ml-4 px-3 py-1 bg-yellow-600 text-white text-sm rounded-md hover:bg-yellow-700"
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Inquiries List */}
         <div className="flex-1 overflow-y-auto">
-          {loading ? (
+          {localLoading ? (
             <div className="flex items-center justify-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
@@ -360,10 +437,10 @@ const InquiryManagement = () => {
               <div className="mt-4 flex space-x-2">
                 <button
                   onClick={handleRespond}
-                  disabled={!responseText.trim() || loading}
+                  disabled={!responseText.trim() || localLoading}
                   className="flex-1 bg-blue-600 text-white py-2 px-3 rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Sending...' : 'Send Response'}
+                  {localLoading ? 'Sending...' : 'Send Response'}
                 </button>
               </div>
             </div>

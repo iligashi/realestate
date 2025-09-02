@@ -19,7 +19,7 @@ const seedSellerData = async () => {
         firstName: 'John',
         lastName: 'Seller',
         email: 'seller@example.com',
-        password: 'password123', // This should be hashed in real app
+        password: 'password123', // Will be hashed by pre-save hook
         userType: 'seller',
         phone: '+1234567890',
         isActive: true,
@@ -27,6 +27,15 @@ const seedSellerData = async () => {
       });
       await seller.save();
       console.log('Created seller user');
+    } else {
+      // Update password if it's not hashed properly
+      const bcrypt = require('bcryptjs');
+      const isPasswordValid = await bcrypt.compare('password123', seller.password);
+      if (!isPasswordValid) {
+        seller.password = 'password123'; // Will be hashed by pre-save hook
+        await seller.save();
+        console.log('Updated seller password');
+      }
     }
 
     // Create sample properties

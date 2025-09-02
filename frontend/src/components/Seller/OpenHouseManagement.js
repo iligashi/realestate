@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   getOpenHouses, 
@@ -27,6 +27,12 @@ const OpenHouseManagement = () => {
     loading, 
     error 
   } = useSelector(state => state.seller);
+  
+  const [localLoading, setLocalLoading] = useState(false);
+  const [lastRequestTime, setLastRequestTime] = useState(0);
+  const [requestCount, setRequestCount] = useState(0);
+  const [isCircuitOpen, setIsCircuitOpen] = useState(false);
+  const hasInitialized = useRef(false);
   
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingHouse, setEditingHouse] = useState(null);
@@ -60,7 +66,56 @@ const OpenHouseManagement = () => {
   });
 
   useEffect(() => {
-    dispatch(getOpenHouses(viewType));
+    let isMounted = true;
+    const now = Date.now();
+    
+    // Only make initial request, don't re-run on every state change
+    if (hasInitialized.current) {
+      return;
+    }
+    
+    // Circuit breaker - if too many requests, stop making new ones
+    if (isCircuitOpen || requestCount > 10) {
+      console.log('Circuit breaker open - stopping requests');
+      setIsCircuitOpen(true);
+      return;
+    }
+    
+    // Throttle requests - only allow one request per 2 seconds
+    if (now - lastRequestTime < 2000) {
+      return;
+    }
+    
+    const fetchOpenHouses = async () => {
+      if (isMounted) {
+        hasInitialized.current = true;
+        setLastRequestTime(now);
+        setRequestCount(prev => prev + 1);
+        setLocalLoading(true);
+        try {
+          await dispatch(getOpenHouses(viewType)).unwrap();
+          // Reset circuit breaker on success
+          setRequestCount(0);
+          setIsCircuitOpen(false);
+        } catch (error) {
+          console.error('Failed to fetch open houses:', error);
+          // Open circuit breaker on repeated failures
+          if (requestCount > 5) {
+            setIsCircuitOpen(true);
+          }
+        } finally {
+          if (isMounted) {
+            setLocalLoading(false);
+          }
+        }
+      }
+    };
+
+    fetchOpenHouses();
+
+    return () => {
+      isMounted = false;
+    };
   }, [dispatch, viewType]);
 
   useEffect(() => {
@@ -94,6 +149,7 @@ const OpenHouseManagement = () => {
     e.preventDefault();
     
     try {
+      setLocalLoading(true);
       if (editingHouse) {
         await dispatch(updateOpenHouse({
           id: editingHouse._id,
@@ -136,11 +192,14 @@ const OpenHouseManagement = () => {
       dispatch(getOpenHouses(viewType));
     } catch (error) {
       console.error('Failed to save open house:', error);
+    } finally {
+      setLocalLoading(false);
     }
   };
 
   const handleCancel = async (houseId, reason) => {
     try {
+      setLocalLoading(true);
       await dispatch(cancelOpenHouse({
         id: houseId,
         reason
@@ -148,6 +207,8 @@ const OpenHouseManagement = () => {
       dispatch(getOpenHouses(viewType));
     } catch (error) {
       console.error('Failed to cancel open house:', error);
+    } finally {
+      setLocalLoading(false);
     }
   };
 
@@ -197,12 +258,28 @@ const OpenHouseManagement = () => {
         <div className="flex space-x-4">
           <select
             value={viewType}
-            onChange={(e) => setViewType(e.target.value)}
+            onChange={(e) => {
+              setViewType(e.target.value);
+              hasInitialized.current = false; // Reset initialization when view type changes
+            }}
             className="border border-gray-300 rounded-md px-3 py-2 text-sm"
           >
             <option value="upcoming">Upcoming</option>
             <option value="past">Past</option>
           </select>
+          
+          <button
+            onClick={() => {
+              hasInitialized.current = false;
+              setRequestCount(0);
+              setIsCircuitOpen(false);
+              setLastRequestTime(0);
+            }}
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center"
+          >
+            <ClockIcon className="h-5 w-5 mr-2" />
+            Refresh
+          </button>
           
           <button
             onClick={() => setShowCreateForm(true)}
@@ -475,10 +552,10 @@ const OpenHouseManagement = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={localLoading}
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Saving...' : (editingHouse ? 'Update' : 'Create')}
+                  {localLoading ? 'Saving...' : (editingHouse ? 'Update' : 'Create')}
                 </button>
               </div>
             </form>
@@ -493,7 +570,25 @@ const OpenHouseManagement = () => {
             {viewType === 'upcoming' ? 'Upcoming Open Houses' : 'Past Open Houses'}
           </h3>
           
-          {loading ? (
+          {isCircuitOpen ? (
+            <div className="text-center py-12">
+              <div className="text-yellow-500 text-6xl mb-4">⚠️</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Too Many Requests</h3>
+              <p className="text-gray-600 mb-4">
+                We're experiencing high traffic. Please wait a moment and refresh the page.
+              </p>
+              <button
+                onClick={() => {
+                  setIsCircuitOpen(false);
+                  setRequestCount(0);
+                  setLastRequestTime(0);
+                }}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : localLoading ? (
             <div className="flex items-center justify-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>

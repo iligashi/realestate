@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   getListingAnalytics, 
@@ -25,20 +25,69 @@ const AnalyticsDashboard = () => {
     error 
   } = useSelector(state => state.seller);
   
+  const [localLoading, setLocalLoading] = useState(false);
+  const [lastRequestTime, setLastRequestTime] = useState(0);
+  const [requestCount, setRequestCount] = useState(0);
+  const [isCircuitOpen, setIsCircuitOpen] = useState(false);
+  const hasInitialized = useRef(false);
+  
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [timeRange, setTimeRange] = useState('30d');
   const [viewType, setViewType] = useState('overview');
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!loading) {
-        console.log('AnalyticsDashboard: Dispatching getListingAnalytics with period:', timeRange);
-        dispatch(getListingAnalytics({ period: timeRange }));
+    let isMounted = true;
+    const now = Date.now();
+    
+    // Only make initial request, don't re-run on every state change
+    if (hasInitialized.current) {
+      return;
+    }
+    
+    // Circuit breaker - if too many requests, stop making new ones
+    if (isCircuitOpen || requestCount > 10) {
+      console.log('Circuit breaker open - stopping requests');
+      setIsCircuitOpen(true);
+      return;
+    }
+    
+    // Throttle requests - only allow one request per 2 seconds
+    if (now - lastRequestTime < 2000) {
+      return;
+    }
+    
+    const fetchAnalytics = async () => {
+      if (isMounted) {
+        hasInitialized.current = true;
+        setLastRequestTime(now);
+        setRequestCount(prev => prev + 1);
+        setLocalLoading(true);
+        try {
+          await dispatch(getListingAnalytics({ period: timeRange })).unwrap();
+          // Reset circuit breaker on success
+          setRequestCount(0);
+          setIsCircuitOpen(false);
+        } catch (error) {
+          console.error('Failed to fetch analytics:', error);
+          // Open circuit breaker on repeated failures
+          if (requestCount > 5) {
+            setIsCircuitOpen(true);
+          }
+        } finally {
+          if (isMounted) {
+            setLocalLoading(false);
+          }
+        }
       }
-    }, 300); // 300ms debounce
+    };
 
-    return () => clearTimeout(timer);
-  }, [dispatch, timeRange, loading]);
+    const timer = setTimeout(fetchAnalytics, 300); // 300ms debounce
+
+    return () => {
+      clearTimeout(timer);
+      isMounted = false;
+    };
+  }, [dispatch, timeRange]);
 
   useEffect(() => {
     console.log('AnalyticsDashboard: State updated:', { analytics, loading, error });
@@ -52,6 +101,14 @@ const AnalyticsDashboard = () => {
       return () => clearTimeout(timer);
     }
   }, [error, dispatch]);
+
+  const handleRefresh = () => {
+    // Reset circuit breaker and fetch data
+    setIsCircuitOpen(false);
+    setRequestCount(0);
+    hasInitialized.current = false;
+    setLastRequestTime(0);
+  };
 
   const handlePropertySelect = (propertyId) => {
     setSelectedProperty(propertyId);
@@ -122,7 +179,24 @@ const AnalyticsDashboard = () => {
         </div>
       )}
 
-      {loading ? (
+      {/* Circuit Breaker Message */}
+      {isCircuitOpen && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-yellow-700">
+              Too many requests detected. Circuit breaker is open to prevent system overload.
+            </div>
+            <button
+              onClick={handleRefresh}
+              className="ml-4 px-3 py-1 bg-yellow-600 text-white text-sm rounded-md hover:bg-yellow-700"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+      )}
+
+      {localLoading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>

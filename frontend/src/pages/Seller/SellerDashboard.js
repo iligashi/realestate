@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { 
   getSellerDashboard, 
   setActiveTab,
@@ -21,9 +22,11 @@ import PropertyListingWizard from '../../components/Seller/PropertyListingWizard
 import InquiryManagement from '../../components/Seller/InquiryManagement';
 import AnalyticsDashboard from '../../components/Seller/AnalyticsDashboard';
 import OpenHouseManagement from '../../components/Seller/OpenHouseManagement';
+import ErrorBoundary from '../../components/ErrorBoundary';
 
 const SellerDashboard = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { 
     dashboard, 
     loading, 
@@ -375,10 +378,16 @@ const SellerDashboard = () => {
                         </div>
                       </div>
                       <div className="flex space-x-2">
-                        <button className="flex-1 bg-blue-600 text-white py-2 px-3 rounded-md text-sm hover:bg-blue-700 transition-colors">
+                        <button 
+                          onClick={() => navigate(`/properties/${property._id}/edit`)}
+                          className="flex-1 bg-blue-600 text-white py-2 px-3 rounded-md text-sm hover:bg-blue-700 transition-colors"
+                        >
                           Edit
                         </button>
-                        <button className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded-md text-sm hover:bg-gray-200 transition-colors">
+                        <button 
+                          onClick={() => navigate(`/properties/${property._id}`)}
+                          className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded-md text-sm hover:bg-gray-200 transition-colors"
+                        >
                           View
                         </button>
                       </div>
@@ -391,19 +400,25 @@ const SellerDashboard = () => {
 
           {activeTab === 'inquiries' && (
             <div className="p-6">
-              <InquiryManagement />
+              <ErrorBoundary>
+                <InquiryManagement />
+              </ErrorBoundary>
             </div>
           )}
 
           {activeTab === 'analytics' && (
             <div className="p-6">
-              <AnalyticsDashboard />
+              <ErrorBoundary>
+                <AnalyticsDashboard />
+              </ErrorBoundary>
             </div>
           )}
 
           {activeTab === 'open-houses' && (
             <div className="p-6">
-              <OpenHouseManagement />
+              <ErrorBoundary>
+                <OpenHouseManagement />
+              </ErrorBoundary>
             </div>
           )}
 

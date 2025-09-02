@@ -2,7 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { auth, requireRole } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const { sellerRateLimit, strictRateLimit } = require('../middleware/rateLimiter');
 const sellerController = require('../controllers/sellerController');
+
+// Apply rate limiting to all seller routes
+router.use(sellerRateLimit);
 
 // Apply authentication middleware to all routes
 router.use(auth);
@@ -31,7 +35,7 @@ router.get('/properties/:id/price-history', sellerController.getPriceHistory);
 
 // ===== OPEN HOUSE SCHEDULING =====
 router.post('/open-houses', sellerController.createOpenHouse);
-router.get('/open-houses', sellerController.getOpenHouses);
+router.get('/open-houses', strictRateLimit, sellerController.getOpenHouses);
 router.put('/open-houses/:id', sellerController.updateOpenHouse);
 router.delete('/open-houses/:id', sellerController.cancelOpenHouse);
 
