@@ -57,6 +57,7 @@ export const authAPI = {
     return api.put('/auth/profile', profileData, config);
   },
   changePassword: (passwordData) => api.put('/auth/change-password', passwordData),
+  extendSession: () => api.post('/auth/extend-session'),
   logout: () => api.post('/auth/logout'),
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   getInquiries, 
@@ -48,6 +48,17 @@ const InquiryManagement = () => {
     type: ''
   });
 
+  // Memoize filters to prevent unnecessary re-renders
+  const memoizedFilters = useMemo(() => filters, [filters.status, filters.priority, filters.type]);
+
+  // Memoize filter change handler
+  const handleFilterChange = useCallback((filterType, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
     const now = Date.now();
@@ -76,7 +87,7 @@ const InquiryManagement = () => {
         setRequestCount(prev => prev + 1);
         setLocalLoading(true);
         try {
-          await dispatch(getInquiries(filters)).unwrap();
+          await dispatch(getInquiries(memoizedFilters)).unwrap();
           // Reset circuit breaker on success
           setRequestCount(0);
           setIsCircuitOpen(false);
@@ -100,11 +111,9 @@ const InquiryManagement = () => {
       clearTimeout(timer);
       isMounted = false;
     };
-  }, [dispatch, filters.status, filters.priority, filters.type]);
+  }, [dispatch, memoizedFilters]);
 
-  useEffect(() => {
-    console.log('InquiryManagement: State updated:', { inquiries, loading, error });
-  }, [inquiries, loading, error]);
+  // Removed debug logging that was causing infinite loop
 
   useEffect(() => {
     if (error) {
@@ -197,7 +206,7 @@ const InquiryManagement = () => {
           <div className="mt-4 flex space-x-2">
             <select
               value={filters.status}
-              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
               className="text-sm border border-gray-300 rounded-md px-2 py-1"
             >
               <option value="">All Status</option>
@@ -209,7 +218,7 @@ const InquiryManagement = () => {
             
             <select
               value={filters.priority}
-              onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
+              onChange={(e) => handleFilterChange('priority', e.target.value)}
               className="text-sm border border-gray-300 rounded-md px-2 py-1"
             >
               <option value="">All Priority</option>
@@ -221,7 +230,7 @@ const InquiryManagement = () => {
             
             <select
               value={filters.type}
-              onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+              onChange={(e) => handleFilterChange('type', e.target.value)}
               className="text-sm border border-gray-300 rounded-md px-2 py-1"
             >
               <option value="">All Types</option>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   getSellerDashboard, 
   setActiveTab,
@@ -20,6 +20,7 @@ import {
 } from '@heroicons/react/24/outline';
 import PropertyListingWizard from '../../components/Seller/PropertyListingWizard';
 import InquiryManagement from '../../components/Seller/InquiryManagement';
+import MessageInquiries from '../../components/Seller/MessageInquiries';
 import AnalyticsDashboard from '../../components/Seller/AnalyticsDashboard';
 import OpenHouseManagement from '../../components/Seller/OpenHouseManagement';
 import ErrorBoundary from '../../components/ErrorBoundary';
@@ -27,6 +28,7 @@ import ErrorBoundary from '../../components/ErrorBoundary';
 const SellerDashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { 
     dashboard, 
     loading, 
@@ -40,6 +42,14 @@ const SellerDashboard = () => {
   useEffect(() => {
     dispatch(getSellerDashboard());
   }, [dispatch]);
+
+  // Handle tab parameter from URL
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      dispatch(setActiveTab(tabFromUrl));
+    }
+  }, [searchParams, dispatch, activeTab]);
 
   useEffect(() => {
     if (error) {
@@ -401,7 +411,19 @@ const SellerDashboard = () => {
           {activeTab === 'inquiries' && (
             <div className="p-6">
               <ErrorBoundary>
-                <InquiryManagement />
+                <div className="space-y-8">
+                  {/* Message Inquiries */}
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Message Inquiries</h2>
+                    <MessageInquiries />
+                  </div>
+                  
+                  {/* Legacy Inquiry Management */}
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Property Inquiries</h2>
+                    <InquiryManagement />
+                  </div>
+                </div>
               </ErrorBoundary>
             </div>
           )}

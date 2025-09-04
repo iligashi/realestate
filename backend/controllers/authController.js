@@ -267,6 +267,24 @@ const changePassword = async (req, res) => {
   }
 };
 
+// Extend session (refresh token)
+const extendSession = async (req, res) => {
+  try {
+    // Update last login time to extend session
+    const user = await User.findById(req.user._id);
+    user.lastLogin = new Date();
+    await user.save();
+
+    res.json({ 
+      message: 'Session extended successfully',
+      lastLogin: user.lastLogin
+    });
+  } catch (error) {
+    console.error('Extend session error:', error);
+    res.status(500).json({ error: 'Failed to extend session.' });
+  }
+};
+
 // Logout (client-side token removal)
 const logout = async (req, res) => {
   try {
@@ -285,5 +303,6 @@ module.exports = {
   getProfile,
   updateProfile,
   changePassword,
+  extendSession,
   logout
 };

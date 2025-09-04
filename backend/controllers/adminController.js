@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Property = require('../models/Property');
 const Report = require('../models/Report');
@@ -168,6 +169,23 @@ const updateListingStatus = async (req, res) => {
     const { id } = req.params;
     const { status, adminNotes } = req.body;
 
+    console.log('Update listing status request:', { id, status, adminNotes });
+
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ 
+        error: 'Invalid property ID format. ID must be a valid MongoDB ObjectId.'
+      });
+    }
+
+    // Validate status
+    const validStatuses = ['active', 'pending', 'sold', 'rented', 'inactive', 'under-contract'];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        error: 'Invalid status. Must be one of: ' + validStatuses.join(', ')
+      });
+    }
+
     const listing = await Property.findByIdAndUpdate(
       id,
       { 
@@ -189,7 +207,15 @@ const updateListingStatus = async (req, res) => {
     });
   } catch (error) {
     console.error('Update listing status error:', error);
-    res.status(500).json({ error: 'Failed to update listing status.' });
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      error: 'Failed to update listing status.',
+      details: error.message
+    });
   }
 };
 

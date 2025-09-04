@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../../store/slices/authSlice';
+import useSessionManager from '../../hooks/useSessionManager';
+import NotificationBadge from '../NotificationBadge';
 import { 
   Bars3Icon, 
   XMarkIcon, 
@@ -20,6 +22,9 @@ const Header = () => {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  
+  // Initialize session management
+  useSessionManager();
 
   const handleLogout = () => {
     dispatch(logout());
@@ -100,15 +105,19 @@ const Header = () => {
         {/* Desktop Auth - Right End */}
         <div className="hidden lg:flex lg:items-center lg:gap-x-4">
           {isAuthenticated ? (
-            <div className="relative">
-              {/* Profile Dropdown */}
-              <button
-                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-green-600 transition-colors"
-              >
-                <span>Account</span>
-                <ChevronDownIcon className="h-4 w-4" />
-              </button>
+            <>
+              {/* Notification Badge */}
+              <NotificationBadge />
+              
+              <div className="relative">
+                {/* Profile Dropdown */}
+                <button
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-green-600 transition-colors"
+                >
+                  <span>Account</span>
+                  <ChevronDownIcon className="h-4 w-4" />
+                </button>
 
               {/* Profile Dropdown Menu */}
               {profileDropdownOpen && (
@@ -143,6 +152,19 @@ const Header = () => {
                     </Link>
                   )}
                   
+                  {user?.userType === 'seller' && (
+                    <Link
+                      to="/seller?tab=inquiries"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setProfileDropdownOpen(false)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Messages</span>
+                        <NotificationBadge className="scale-75" />
+                      </div>
+                    </Link>
+                  )}
+                  
                   <Link
                     to="/profile"
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
@@ -169,7 +191,8 @@ const Header = () => {
                   </button>
                 </div>
               )}
-            </div>
+              </div>
+            </>
           ) : (
             <>
               <Link

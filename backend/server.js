@@ -61,8 +61,12 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  maxAge: 86400 // Cache preflight for 1 day
 }));
+
+// Trust proxy for rate limiting (fixes X-Forwarded-For header error)
+app.set('trust proxy', 1);
 
 // Rate limiting - More lenient for development
 const limiter = rateLimit({
@@ -105,6 +109,15 @@ app.use('/api', require('./routes/public'));
 // Health check
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Handle favicon and manifest requests to prevent 500 errors
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end(); // No content
+});
+
+app.get('/manifest.json', (req, res) => {
+  res.status(204).end(); // No content
 });
 
 // Test endpoint for debugging

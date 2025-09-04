@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { toast } from 'react-toastify';
 import { 
   ChevronLeftIcon, 
   ChevronRightIcon,
@@ -15,15 +16,17 @@ import {
   EnvelopeIcon
 } from '@heroicons/react/24/outline';
 import { getProperty } from '../../services/propertyService';
-import { toast } from 'react-hot-toast';
+import MessageModal from '../../components/MessageModal';
 
 const PropertyDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useSelector(state => state.auth);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showMessageModal, setShowMessageModal] = useState(false);
 
   // Fetch real property data from backend
   useEffect(() => {
@@ -63,6 +66,23 @@ const PropertyDetailPage = () => {
   // Handle case when no photos are available
   const hasPhotos = property && property.photos && property.photos.length > 0;
   const currentPhoto = hasPhotos ? property.photos[currentImageIndex] : null;
+
+  // Handle contact owner button click
+  const handleContactOwner = () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to contact the property owner');
+      navigate('/login');
+      return;
+    }
+
+    // Check if user is trying to contact themselves
+    if (property && property.owner && user && property.owner._id === user._id) {
+      toast.error('You cannot contact yourself about your own property');
+      return;
+    }
+
+    setShowMessageModal(true);
+  };
 
   const nextImage = () => {
     if (!hasPhotos) return;
@@ -330,7 +350,10 @@ const PropertyDetailPage = () => {
           <div className="bg-white rounded-lg p-6 border border-gray-200 sticky top-6">
             {/* Contact Actions */}
             <div className="space-y-3 mb-6">
-              <button className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors">
+              <button 
+                onClick={handleContactOwner}
+                className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors"
+              >
                 Contact Owner
               </button>
               <button className="w-full border border-green-600 text-green-600 py-3 px-4 rounded-lg font-medium hover:bg-green-50 transition-colors">
@@ -400,6 +423,16 @@ const PropertyDetailPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Message Modal */}
+      {property && property.owner && (
+        <MessageModal
+          isOpen={showMessageModal}
+          onClose={() => setShowMessageModal(false)}
+          property={property}
+          seller={property.owner}
+        />
+      )}
     </div>
   );
 };

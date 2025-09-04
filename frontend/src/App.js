@@ -1,10 +1,13 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout/Layout';
+import SessionProvider from './components/SessionProvider';
+import SessionDebug from './components/SessionDebug';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/Auth/LoginPage';
 import RegisterPage from './pages/Auth/RegisterPage';
 import ProfilePage from './pages/Profile/ProfilePage';
+import DashboardPage from './pages/Dashboard/DashboardPage';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import SellerDashboard from './pages/Seller/SellerDashboard';
 import PropertyListPage from './pages/Properties/PropertyListPage';
@@ -15,11 +18,20 @@ import AdminRoute from './components/Auth/AdminRoute';
 
 function App() {
   return (
-    <Layout>
-      <Routes>
+    <SessionProvider>
+      <Layout>
+        <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          } 
+        />
         <Route 
           path="/profile" 
           element={
@@ -63,8 +75,10 @@ function App() {
             </ProtectedRoute>
           } 
         />
-      </Routes>
-    </Layout>
+        </Routes>
+        <SessionDebug />
+      </Layout>
+    </SessionProvider>
   );
 }
 

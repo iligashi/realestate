@@ -3,13 +3,19 @@ import { useSelector } from 'react-redux';
 import { Navigate, useLocation } from 'react-router-dom';
 
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useSelector((state) => state.auth);
+  const { isAuthenticated, loading, sessionInitialized, token } = useSelector((state) => state.auth);
   const location = useLocation();
 
-  if (loading) {
+  // Show loading while session is being initialized
+  if (!sessionInitialized || (token && loading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <p className="text-gray-600">
+            {token ? 'Restoring session...' : 'Initializing...'}
+          </p>
+        </div>
       </div>
     );
   }

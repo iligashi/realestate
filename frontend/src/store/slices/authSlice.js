@@ -56,9 +56,10 @@ export const updateProfile = createAsyncThunk(
 const initialState = {
   user: null,
   token: localStorage.getItem('token'),
-  isAuthenticated: false,
+  isAuthenticated: false, // Start as false, will be set after profile fetch
   loading: false,
   error: null,
+  sessionInitialized: false,
 };
 
 const authSlice = createSlice({
@@ -69,6 +70,7 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
+      state.sessionInitialized = true;
       localStorage.removeItem('token');
     },
     clearError: (state) => {
@@ -78,6 +80,9 @@ const authSlice = createSlice({
       state.token = action.payload;
       state.isAuthenticated = true;
       localStorage.setItem('token', action.payload);
+    },
+    setSessionInitialized: (state) => {
+      state.sessionInitialized = true;
     },
   },
   extraReducers: (builder) => {
@@ -123,10 +128,15 @@ const authSlice = createSlice({
         state.loading = false;
         state.user = action.payload.user;
         state.isAuthenticated = true;
+        state.sessionInitialized = true;
       })
       .addCase(getProfile.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.isAuthenticated = false;
+        state.token = null;
+        state.sessionInitialized = true;
+        localStorage.removeItem('token');
       })
       // Update Profile
       .addCase(updateProfile.pending, (state) => {
@@ -144,5 +154,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, clearError, setToken } = authSlice.actions;
+export const { logout, clearError, setToken, setSessionInitialized } = authSlice.actions;
 export default authSlice.reducer;

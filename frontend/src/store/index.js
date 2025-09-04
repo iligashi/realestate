@@ -4,6 +4,7 @@ import propertyReducer from './slices/propertySlice';
 import uiReducer from './slices/uiSlice';
 import adminReducer from './slices/adminSlice';
 import sellerReducer from './slices/sellerSlice';
+import messageReducer from './slices/messageSlice';
 
 export const store = configureStore({
   reducer: {
@@ -11,7 +12,8 @@ export const store = configureStore({
     property: propertyReducer,
     ui: uiReducer,
     admin: adminReducer,
-    seller: sellerReducer
+    seller: sellerReducer,
+    messages: messageReducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
