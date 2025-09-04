@@ -5,8 +5,8 @@ import { BellIcon } from '@heroicons/react/24/outline';
 
 const NotificationBadge = ({ className = "" }) => {
   const dispatch = useDispatch();
-  const { unreadCount } = useSelector(state => state.messages);
-  const { isAuthenticated } = useSelector(state => state.auth);
+  const { unreadCount = 0 } = useSelector(state => state.messages || {});
+  const { isAuthenticated, user } = useSelector(state => state.auth);
 
   // Fetch unread count when component mounts and user is authenticated
   useEffect(() => {
@@ -31,7 +31,13 @@ const NotificationBadge = ({ className = "" }) => {
     };
   }, [dispatch, isAuthenticated]);
 
-  if (!isAuthenticated || unreadCount === 0) {
+  // Only show notification if user is authenticated, has unread messages, and is a buyer or seller
+  if (!isAuthenticated || !user || !unreadCount || unreadCount <= 0) {
+    return null;
+  }
+
+  // Only show notifications for buyers and sellers (users who can send/receive messages)
+  if (user.userType !== 'buyer' && user.userType !== 'seller') {
     return null;
   }
 

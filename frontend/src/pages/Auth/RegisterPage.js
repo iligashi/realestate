@@ -23,7 +23,7 @@ const RegisterPage = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate('/properties');
     }
   }, [isAuthenticated, navigate]);
 

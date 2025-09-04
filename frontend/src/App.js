@@ -2,7 +2,6 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout/Layout';
 import SessionProvider from './components/SessionProvider';
-import SessionDebug from './components/SessionDebug';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/Auth/LoginPage';
 import RegisterPage from './pages/Auth/RegisterPage';
@@ -10,11 +9,12 @@ import ProfilePage from './pages/Profile/ProfilePage';
 import DashboardPage from './pages/Dashboard/DashboardPage';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import SellerDashboard from './pages/Seller/SellerDashboard';
+import BuyerDashboard from './pages/Buyer/BuyerDashboard';
 import PropertyListPage from './pages/Properties/PropertyListPage';
 import PropertyDetailPage from './pages/Properties/PropertyDetailPage';
 import PropertyFormPage from './pages/Properties/PropertyFormPage';
-import ProtectedRoute from './components/Auth/ProtectedRoute';
 import AdminRoute from './components/Auth/AdminRoute';
+import ProtectedRoute from './components/Auth/ProtectedRoute';
 
 function App() {
   return (
@@ -56,6 +56,14 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/buyer" 
+          element={
+            <ProtectedRoute>
+              <BuyerDashboard />
+            </ProtectedRoute>
+          } 
+        />
         {/* Properties Routes */}
         <Route path="/properties" element={<PropertyListPage />} />
         <Route path="/properties/:id" element={<PropertyDetailPage />} />
@@ -76,7 +84,6 @@ function App() {
           } 
         />
         </Routes>
-        <SessionDebug />
       </Layout>
     </SessionProvider>
   );

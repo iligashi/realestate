@@ -106,8 +106,10 @@ const Header = () => {
         <div className="hidden lg:flex lg:items-center lg:gap-x-4">
           {isAuthenticated ? (
             <>
-              {/* Notification Badge */}
-              <NotificationBadge />
+              {/* Notification Badge - Only for buyers and sellers */}
+              {(user?.userType === 'buyer' || user?.userType === 'seller') && (
+                <NotificationBadge />
+              )}
               
               <div className="relative">
                 {/* Profile Dropdown */}
@@ -152,9 +154,19 @@ const Header = () => {
                     </Link>
                   )}
                   
+                  {user?.userType === 'buyer' && (
+                    <Link
+                      to="/buyer"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setProfileDropdownOpen(false)}
+                    >
+                      Buyer Dashboard
+                    </Link>
+                  )}
+                  
                   {user?.userType === 'seller' && (
                     <Link
-                      to="/seller?tab=inquiries"
+                      to="/seller?tab=inbox"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       onClick={() => setProfileDropdownOpen(false)}
                     >
@@ -263,7 +275,7 @@ const Header = () => {
                       {getInitials(user.firstName, user.lastName)}
                     </div>
                   )}
-                  <div>
+                  <div className="flex-1">
                     <p className="text-base font-semibold text-gray-900">
                       {user.firstName} {user.lastName}
                     </p>
@@ -271,6 +283,10 @@ const Header = () => {
                       {getRoleDisplayName(user.userType)}
                     </p>
                   </div>
+                  {/* Mobile Notification Badge - Only for buyers and sellers */}
+                  {(user.userType === 'buyer' || user.userType === 'seller') && (
+                    <NotificationBadge />
+                  )}
                 </div>
               </div>
             )}

@@ -15,7 +15,7 @@ const LoginPage = () => {
   const location = useLocation();
   const { loading, error, isAuthenticated } = useSelector((state) => state.auth);
 
-  const from = location.state?.from?.pathname || '/dashboard';
+  const from = location.state?.from?.pathname || '/properties';
 
   useEffect(() => {
     if (isAuthenticated) {
