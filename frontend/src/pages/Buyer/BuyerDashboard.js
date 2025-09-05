@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import useWebSocket from '../../hooks/useWebSocket';
 import { 
   HomeIcon, 
   HeartIcon, 
@@ -32,6 +33,9 @@ const BuyerDashboard = () => {
   const { user = null } = useSelector(state => state.auth || {});
   
   const [activeTab, setActiveTab] = useState('browse');
+
+  // WebSocket integration for real-time features
+  useWebSocket();
 
   // Handle tab parameter from URL
   useEffect(() => {

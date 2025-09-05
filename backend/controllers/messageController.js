@@ -52,6 +52,21 @@ const createMessage = async (req, res) => {
         .populate('seller', 'name email')
         .populate('property', 'title price location');
 
+      // Emit WebSocket event for real-time notification
+      if (global.socketServer) {
+        global.socketServer.emitNewMessage({
+          messageId: updatedMessage._id,
+          buyer: updatedMessage.buyer._id,
+          seller: updatedMessage.seller._id,
+          message: message,
+          sender: {
+            id: updatedMessage.buyer._id,
+            name: updatedMessage.buyer.name,
+            email: updatedMessage.buyer.email
+          }
+        });
+      }
+
       return res.status(200).json({
         message: 'Message added to existing conversation',
         data: updatedMessage
@@ -80,6 +95,21 @@ const createMessage = async (req, res) => {
       .populate('buyer', 'name email')
       .populate('seller', 'name email')
       .populate('property', 'title price location');
+
+    // Emit WebSocket event for real-time notification
+    if (global.socketServer) {
+      global.socketServer.emitNewMessage({
+        messageId: populatedMessage._id,
+        buyer: populatedMessage.buyer._id,
+        seller: populatedMessage.seller._id,
+        message: populatedMessage.message,
+        sender: {
+          id: populatedMessage.buyer._id,
+          name: populatedMessage.buyer.name,
+          email: populatedMessage.buyer.email
+        }
+      });
+    }
 
     res.status(201).json({
       message: 'Message sent successfully',
@@ -228,6 +258,21 @@ const replyToMessage = async (req, res) => {
       .populate('property', 'title price location')
       .populate('thread.sender', 'name email');
 
+    // Emit WebSocket event for real-time notification
+    if (global.socketServer) {
+      global.socketServer.emitNewMessage({
+        messageId: updatedMessage._id,
+        buyer: updatedMessage.buyer._id,
+        seller: updatedMessage.seller._id,
+        message: message.trim(),
+        sender: {
+          id: senderId,
+          name: req.user.name,
+          email: req.user.email
+        }
+      });
+    }
+
     res.json({
       message: 'Reply sent successfully',
       data: updatedMessage
@@ -262,6 +307,14 @@ const markAsRead = async (req, res) => {
     }
 
     await message.markAsRead(userId);
+
+    // Emit WebSocket event for read receipt
+    if (global.socketServer) {
+      global.socketServer.emitMessageRead(messageId, {
+        id: userId,
+        name: req.user.name
+      });
+    }
 
     res.json({ message: 'Message marked as read' });
 

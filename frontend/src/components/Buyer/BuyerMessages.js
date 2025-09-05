@@ -23,6 +23,10 @@ import {
   PlusIcon
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-toastify';
+import useWebSocket from '../../hooks/useWebSocket';
+import OnlineStatus from '../OnlineStatus';
+import RealTimeNotificationCenter from '../RealTimeNotificationCenter';
+import TypingIndicator from '../TypingIndicator';
 
 const BuyerMessages = () => {
   const dispatch = useDispatch();
@@ -43,7 +47,22 @@ const BuyerMessages = () => {
     status: '',
     role: 'buyer' // Default to buyer view
   });
+  const [typingUsers, setTypingUsers] = useState([]);
+  const [isTyping, setIsTyping] = useState(false);
   const hasInitialized = useRef(false);
+
+  // WebSocket integration
+  const {
+    isConnected,
+    joinMessageThread,
+    leaveMessageThread,
+    sendMessage: sendWebSocketMessage,
+    startTyping,
+    stopTyping,
+    markMessageRead,
+    addEventListener,
+    removeEventListener
+  } = useWebSocket();
 
   // Memoize filters to prevent unnecessary re-renders
   const memoizedFilters = useMemo(() => filters, [filters.status, filters.role]);
@@ -106,12 +125,64 @@ const BuyerMessages = () => {
     };
   }, [dispatch]);
 
+  // WebSocket event handlers
+  useEffect(() => {
+    const handleNewMessage = (data) => {
+      console.log('New message received:', data);
+      // Refresh messages list
+      dispatch(getMessages({ role: 'buyer', ...memoizedFilters }));
+      dispatch(getUnreadCount());
+    };
+
+    const handleUserTyping = (data) => {
+      if (data.messageId === selectedMessage?._id) {
+        setTypingUsers(prev => {
+          if (data.isTyping) {
+            return [...prev.filter(u => u.userId !== data.userId), {
+              userId: data.userId,
+              userName: data.userName
+            }];
+          } else {
+            return prev.filter(u => u.userId !== data.userId);
+          }
+        });
+      }
+    };
+
+    const handleMessageRead = (data) => {
+      console.log('Message read receipt:', data);
+      // You can add visual feedback for read receipts here
+    };
+
+    // Add event listeners
+    addEventListener('new_message', handleNewMessage);
+    addEventListener('user_typing', handleUserTyping);
+    addEventListener('message_read', handleMessageRead);
+
+    return () => {
+      removeEventListener('new_message', handleNewMessage);
+      removeEventListener('user_typing', handleUserTyping);
+      removeEventListener('message_read', handleMessageRead);
+    };
+  }, [addEventListener, removeEventListener, dispatch, memoizedFilters, selectedMessage]);
+
   const handleMessageSelect = async (message) => {
+    // Leave previous message thread if any
+    if (selectedMessage) {
+      leaveMessageThread(selectedMessage._id);
+    }
+    
     setSelectedMessage(message);
     setReplyText('');
+    setTypingUsers([]);
     
     // Load the full message thread
     dispatch(getMessageThread(message._id));
+    
+    // Join new message thread for real-time updates
+    if (isConnected) {
+      joinMessageThread(message._id);
+    }
   };
 
   const handleReply = async (e) => {
@@ -128,6 +199,12 @@ const BuyerMessages = () => {
     }
 
     try {
+      // Send via WebSocket for real-time delivery
+      if (isConnected) {
+        sendWebSocketMessage(selectedMessage._id, replyText.trim());
+      }
+
+      // Also send via API to persist the message
       const result = await dispatch(replyToMessage({
         messageId: selectedMessage._id,
         message: replyText.trim()
@@ -166,10 +243,39 @@ const BuyerMessages = () => {
     try {
       await dispatch(markAsRead(messageId));
       dispatch(getUnreadCount());
+      
+      // Also mark as read via WebSocket
+      if (isConnected) {
+        markMessageRead(messageId);
+      }
     } catch (error) {
       console.error('Failed to mark as read:', error);
     }
   };
+
+  // Typing indicator handlers
+  const handleTypingStart = () => {
+    if (selectedMessage && isConnected) {
+      startTyping(selectedMessage._id);
+      setIsTyping(true);
+    }
+  };
+
+  const handleTypingStop = () => {
+    if (selectedMessage && isConnected) {
+      stopTyping(selectedMessage._id);
+      setIsTyping(false);
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (selectedMessage) {
+        leaveMessageThread(selectedMessage._id);
+      }
+    };
+  }, [selectedMessage, leaveMessageThread]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -203,10 +309,19 @@ const BuyerMessages = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Messages</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-gray-900">Messages</h2>
+            <RealTimeNotificationCenter />
+          </div>
           <p className="text-gray-600">
             {unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'No unread messages'}
           </p>
+          {!isConnected && (
+            <p className="text-sm text-orange-600 flex items-center gap-1">
+              <ExclamationTriangleIcon className="h-4 w-4" />
+              Real-time messaging disconnected
+            </p>
+          )}
         </div>
         
         <div className="flex space-x-2">
@@ -266,9 +381,15 @@ const BuyerMessages = () => {
                         )}
                       </div>
                       
-                      <p className="text-sm text-gray-600 mt-1">
-                        To: {message.seller?.name || 'Unknown Seller'}
-                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-sm text-gray-600">
+                          To: {message.seller?.name || 'Unknown Seller'}
+                        </p>
+                        <OnlineStatus 
+                          userId={message.seller?._id} 
+                          size="small" 
+                        />
+                      </div>
                       
                       <p className="text-sm text-gray-500 mt-1">
                         Property: {message.property?.title || 'Unknown Property'}
@@ -313,13 +434,39 @@ const BuyerMessages = () => {
             <div className="border rounded-lg h-96 flex flex-col">
               {/* Message Header */}
               <div className="p-4 border-b bg-gray-50">
-                <h4 className="font-medium text-gray-900">{selectedMessage.subject}</h4>
-                <p className="text-sm text-gray-600">
-                  Property: {selectedMessage.property?.title || 'Unknown Property'}
-                </p>
-                <p className="text-sm text-gray-600">
-                  Seller: {selectedMessage.seller?.name || 'Unknown'} ({selectedMessage.seller?.email || 'No email'})
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-gray-900">{selectedMessage.subject}</h4>
+                    <p className="text-sm text-gray-600">
+                      Property: {selectedMessage.property?.title || 'Unknown Property'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-sm text-gray-600">
+                        Seller: {selectedMessage.seller?.name || 'Unknown'} ({selectedMessage.seller?.email || 'No email'})
+                      </p>
+                      <OnlineStatus 
+                        userId={selectedMessage.seller?._id} 
+                        showName={true}
+                        size="small" 
+                      />
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-gray-500">
+                      {isConnected ? (
+                        <span className="text-green-600 flex items-center gap-1">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          Connected
+                        </span>
+                      ) : (
+                        <span className="text-red-600 flex items-center gap-1">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          Disconnected
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Message Thread */}
@@ -351,6 +498,23 @@ const BuyerMessages = () => {
                     <p>No messages in this conversation yet.</p>
                   </div>
                 )}
+                
+                {/* Typing Indicator */}
+                <TypingIndicator 
+                  messageId={selectedMessage._id}
+                  onTypingChange={(data) => {
+                    setTypingUsers(prev => {
+                      if (data.isTyping) {
+                        return [...prev.filter(u => u.userId !== data.userId), {
+                          userId: data.userId,
+                          userName: data.userName
+                        }];
+                      } else {
+                        return prev.filter(u => u.userId !== data.userId);
+                      }
+                    });
+                  }}
+                />
               </div>
 
               {/* Reply Form */}
@@ -360,19 +524,35 @@ const BuyerMessages = () => {
                     <div className="flex space-x-2">
                       <textarea
                         value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        placeholder="Type your reply..."
-                        className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        onChange={(e) => {
+                          setReplyText(e.target.value);
+                          // Handle typing indicators
+                          if (e.target.value.trim() && !isTyping) {
+                            handleTypingStart();
+                          } else if (!e.target.value.trim() && isTyping) {
+                            handleTypingStop();
+                          }
+                        }}
+                        onFocus={handleTypingStart}
+                        onBlur={handleTypingStop}
+                        placeholder={isConnected ? "Type your reply..." : "Connecting..."}
+                        disabled={!isConnected}
+                        className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                         rows={2}
                       />
                       <button
                         type="submit"
-                        disabled={loading || !replyText.trim()}
+                        disabled={loading || !replyText.trim() || !isConnected}
                         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center"
                       >
                         <PaperAirplaneIcon className="h-4 w-4" />
                       </button>
                     </div>
+                    {!isConnected && (
+                      <p className="text-xs text-orange-600 mt-1">
+                        ⚠️ Messages will be sent when connection is restored
+                      </p>
+                    )}
                   </form>
                 </div>
               )}

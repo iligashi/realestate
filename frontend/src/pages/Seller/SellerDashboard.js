@@ -6,6 +6,7 @@ import {
   setActiveTab,
   clearError 
 } from '../../store/slices/sellerSlice';
+import useWebSocket from '../../hooks/useWebSocket';
 import { 
   HomeIcon, 
   PlusIcon, 
@@ -33,6 +34,9 @@ const SellerDashboard = () => {
   const { user } = useSelector(state => state.auth);
   
   const [showPropertyWizard, setShowPropertyWizard] = useState(false);
+
+  // WebSocket integration for real-time features
+  useWebSocket();
 
   useEffect(() => {
     dispatch(getSellerDashboard());

@@ -6,9 +6,11 @@ const compression = require('compression');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const http = require('http');
 require('dotenv').config();
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
 // Parse FRONTEND_URL environment variable to get allowed origins
@@ -208,10 +210,18 @@ app.use(notFound);
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+// Initialize WebSocket server
+const SocketServer = require('./websocket/socketServer');
+const socketServer = new SocketServer(server);
+
+// Make socket server available globally for use in controllers
+global.socketServer = socketServer;
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`WebSocket server initialized`);
   console.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
-module.exports = app;
+module.exports = { app, server, socketServer };
