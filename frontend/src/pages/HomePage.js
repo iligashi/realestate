@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { 
   HomeIcon, 
   BuildingOfficeIcon, 
   UserGroupIcon,
   MagnifyingGlassIcon,
   MegaphoneIcon,
-  XMarkIcon
+  XMarkIcon,
+  PlusIcon
 } from '@heroicons/react/24/outline';
 
 // Enhanced Announcements Component
@@ -148,6 +150,41 @@ const Announcements = () => {
 };
 
 const HomePage = () => {
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  
+  // Determine what type of property the user can create
+  const getPropertyCreationOptions = () => {
+    if (!isAuthenticated || !user) return null;
+    
+    const options = [];
+    
+    // Sellers and agents can create properties for sale
+    if (['seller', 'agent', 'admin'].includes(user.userType)) {
+      options.push({
+        label: 'List Property for Sale',
+        href: '/properties/create',
+        description: 'Sell your property',
+        icon: HomeIcon,
+        color: 'blue'
+      });
+    }
+    
+    // Renters, sellers, agents, and admins can create rental properties
+    if (['renter', 'seller', 'agent', 'admin'].includes(user.userType)) {
+      options.push({
+        label: 'List Property for Rent',
+        href: '/properties/create-rental',
+        description: 'Rent out your property',
+        icon: BuildingOfficeIcon,
+        color: 'green'
+      });
+    }
+    
+    return options;
+  };
+  
+  const propertyCreationOptions = getPropertyCreationOptions();
+  
   const features = [
     {
       name: 'Find Your Dream Home',
@@ -196,12 +233,42 @@ const HomePage = () => {
             >
               Browse Properties
             </Link>
-            <Link
-              to="/register"
-              className="btn-secondary text-lg px-8 py-3 text-center"
-            >
-              Get Started
-            </Link>
+            {isAuthenticated ? (
+              propertyCreationOptions && propertyCreationOptions.length > 0 ? (
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {propertyCreationOptions.map((option, index) => {
+                    const colorClasses = option.color === 'blue' 
+                      ? 'bg-blue-600 hover:bg-blue-700' 
+                      : 'bg-green-600 hover:bg-green-700';
+                    
+                    return (
+                      <Link
+                        key={index}
+                        to={option.href}
+                        className={`inline-flex items-center justify-center px-6 py-3 border border-transparent text-lg font-medium rounded-md text-white ${colorClasses} transition-colors duration-200`}
+                      >
+                        <option.icon className="h-5 w-5 mr-2" />
+                        {option.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Link
+                  to="/dashboard"
+                  className="btn-secondary text-lg px-8 py-3 text-center"
+                >
+                  Go to Dashboard
+                </Link>
+              )
+            ) : (
+              <Link
+                to="/register"
+                className="btn-secondary text-lg px-8 py-3 text-center"
+              >
+                Get Started
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -227,6 +294,54 @@ const HomePage = () => {
               </div>
             ))}
           </div>
+          
+          {/* Property Creation Section for Authenticated Users */}
+          {isAuthenticated && propertyCreationOptions && propertyCreationOptions.length > 0 && (
+            <div className="mt-20">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl font-bold text-gray-900">Ready to List Your Property?</h2>
+                <p className="mt-4 text-lg text-gray-600">
+                  Join thousands of property owners who trust our platform to showcase their properties.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                {propertyCreationOptions.map((option, index) => {
+                  const colorClasses = option.color === 'blue' 
+                    ? 'bg-blue-50 border-blue-200 hover:bg-blue-100' 
+                    : 'bg-green-50 border-green-200 hover:bg-green-100';
+                  
+                  const iconColorClasses = option.color === 'blue' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-green-600 text-white';
+                  
+                  return (
+                    <Link
+                      key={index}
+                      to={option.href}
+                      className={`group relative rounded-lg border-2 p-6 transition-all duration-200 hover:shadow-lg ${colorClasses}`}
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${iconColorClasses}`}>
+                          <option.icon className="h-6 w-6" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-gray-900 group-hover:text-gray-700">
+                            {option.label}
+                          </h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {option.description}
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <PlusIcon className="h-5 w-5 text-gray-400 group-hover:text-gray-600" />
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -257,6 +372,32 @@ const HomePage = () => {
           </div>
         </div>
       </div>
+      
+      {/* Floating Action Button for Mobile - Only for authenticated users with property creation rights */}
+      {isAuthenticated && propertyCreationOptions && propertyCreationOptions.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-50 lg:hidden">
+          <div className="relative group">
+            <button className="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center">
+              <PlusIcon className="h-6 w-6" />
+            </button>
+            {/* Dropdown menu */}
+            <div className="absolute bottom-16 right-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
+              <div className="bg-white rounded-lg shadow-xl border border-gray-200 py-2 min-w-48">
+                {propertyCreationOptions.map((option, index) => (
+                  <Link
+                    key={index}
+                    to={option.href}
+                    className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <option.icon className="h-4 w-4 mr-3" />
+                    {option.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

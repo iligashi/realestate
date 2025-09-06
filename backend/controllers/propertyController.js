@@ -35,8 +35,8 @@ const getProperties = async (req, res) => {
       if (maxPrice) filter.price.$lte = parseInt(maxPrice);
     }
 
-    // Only show active and sold properties
-    filter.status = { $in: ['active', 'sold'] };
+    // Only show active, sold, and rented properties
+    filter.status = { $in: ['active', 'sold', 'rented'] };
 
     const options = {
       page: parseInt(page),
@@ -106,7 +106,7 @@ const createProperty = async (req, res) => {
       listingType: req.body.listingType || 'sale',
       price: parseFloat(req.body.price) || 0,
       currency: req.body.currency || 'USD',
-      status: req.body.status || 'pending',
+      status: req.body.status || 'active',
       owner: req.user._id,
       address: {
         street: req.body.address?.street || '',
@@ -133,6 +133,20 @@ const createProperty = async (req, res) => {
       },
       amenities: Array.isArray(req.body.amenities) ? req.body.amenities : []
     };
+
+    // Handle rental details if it's a rental property
+    if (req.body.listingType === 'rental' && req.body.rentalDetails) {
+      propertyData.rentalDetails = {
+        monthlyRent: parseFloat(req.body.rentalDetails.monthlyRent) || 0,
+        availableFrom: req.body.rentalDetails.availableFrom ? new Date(req.body.rentalDetails.availableFrom) : null,
+        availableUntil: req.body.rentalDetails.availableUntil ? new Date(req.body.rentalDetails.availableUntil) : null,
+        minimumLeaseMonths: parseInt(req.body.rentalDetails.minimumLeaseMonths) || 1,
+        maximumLeaseMonths: req.body.rentalDetails.maximumLeaseMonths ? parseInt(req.body.rentalDetails.maximumLeaseMonths) : null,
+        depositRequired: parseFloat(req.body.rentalDetails.depositRequired) || 0,
+        utilitiesIncluded: req.body.rentalDetails.utilitiesIncluded === 'true',
+        furnished: req.body.rentalDetails.furnished === 'true'
+      };
+    }
 
     // Handle uploaded images
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
@@ -239,6 +253,20 @@ const updateProperty = async (req, res) => {
     }
 
     const updateData = { ...req.body };
+
+    // Handle rental details if it's a rental property
+    if (req.body.listingType === 'rental' && req.body.rentalDetails) {
+      updateData.rentalDetails = {
+        monthlyRent: parseFloat(req.body.rentalDetails.monthlyRent) || 0,
+        availableFrom: req.body.rentalDetails.availableFrom ? new Date(req.body.rentalDetails.availableFrom) : null,
+        availableUntil: req.body.rentalDetails.availableUntil ? new Date(req.body.rentalDetails.availableUntil) : null,
+        minimumLeaseMonths: parseInt(req.body.rentalDetails.minimumLeaseMonths) || 1,
+        maximumLeaseMonths: req.body.rentalDetails.maximumLeaseMonths ? parseInt(req.body.rentalDetails.maximumLeaseMonths) : null,
+        depositRequired: parseFloat(req.body.rentalDetails.depositRequired) || 0,
+        utilitiesIncluded: req.body.rentalDetails.utilitiesIncluded === 'true',
+        furnished: req.body.rentalDetails.furnished === 'true'
+      };
+    }
 
     // Handle uploaded images
     if (req.files && req.files.length > 0) {

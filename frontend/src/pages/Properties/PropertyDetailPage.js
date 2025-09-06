@@ -13,10 +13,16 @@ import {
   CalendarIcon,
   UserIcon,
   PhoneIcon,
-  EnvelopeIcon
+  EnvelopeIcon,
+  KeyIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  XCircleIcon
 } from '@heroicons/react/24/outline';
 import { getProperty } from '../../services/propertyService';
 import MessageModal from '../../components/MessageModal';
+import RentalApplicationForm from '../../components/RentalApplicationForm';
+import rentalApplicationAPI from '../../services/rentalApplicationAPI';
 
 const PropertyDetailPage = () => {
   const { id } = useParams();
@@ -27,6 +33,7 @@ const PropertyDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showMessageModal, setShowMessageModal] = useState(false);
+  const [showApplicationModal, setShowApplicationModal] = useState(false);
 
   // Fetch real property data from backend
   useEffect(() => {
@@ -84,6 +91,35 @@ const PropertyDetailPage = () => {
     setShowMessageModal(true);
   };
 
+  // Handle rental application submission
+  const handleApplicationSubmit = async (applicationData) => {
+    try {
+      await rentalApplicationAPI.createApplication(property._id, applicationData);
+      toast.success('Rental application submitted successfully!');
+      setShowApplicationModal(false);
+    } catch (error) {
+      console.error('Error submitting application:', error);
+      throw error;
+    }
+  };
+
+  // Handle apply for rental button click
+  const handleApplyForRental = () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to apply for rental');
+      navigate('/login');
+      return;
+    }
+
+    // Check if user is trying to apply for their own property
+    if (property && property.owner && user && property.owner._id === user._id) {
+      toast.error('You cannot apply for your own property');
+      return;
+    }
+
+    setShowApplicationModal(true);
+  };
+
   const nextImage = () => {
     if (!hasPhotos) return;
     setCurrentImageIndex((prev) => 
@@ -118,6 +154,36 @@ const PropertyDetailPage = () => {
 
   const getPropertyTypeName = (type) => {
     return type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
+  // Check if property is for rent
+  const isRentalProperty = property && property.listingType === 'rental';
+
+  // Format rental duration
+  const formatRentalDuration = (minMonths, maxMonths) => {
+    if (minMonths && maxMonths) {
+      if (minMonths === maxMonths) {
+        return `${minMonths} month${minMonths > 1 ? 's' : ''}`;
+      }
+      return `${minMonths}-${maxMonths} months`;
+    }
+    if (minMonths) {
+      return `${minMonths}+ months`;
+    }
+    if (maxMonths) {
+      return `Up to ${maxMonths} months`;
+    }
+    return 'Flexible';
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
   if (loading) {
@@ -263,12 +329,34 @@ const PropertyDetailPage = () => {
               </span>
             </div>
 
-            {/* Price */}
-            <div className="text-3xl font-bold text-green-600 mb-4">
-              {new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: property.currency || 'USD'
-              }).format(property.price)}
+            {/* Price / Rental Information */}
+            <div className="mb-4">
+              {isRentalProperty ? (
+                <div>
+                  <div className="text-3xl font-bold text-green-600 mb-2">
+                    {new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: property.currency || 'USD'
+                    }).format(property.rentalDetails?.monthlyRent || property.price)}
+                    <span className="text-lg font-normal text-gray-600">/month</span>
+                  </div>
+                  {property.rentalDetails?.depositRequired && (
+                    <div className="text-lg text-gray-700">
+                      Deposit: {new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: property.currency || 'USD'
+                      }).format(property.rentalDetails.depositRequired)}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-3xl font-bold text-green-600">
+                  {new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: property.currency || 'USD'
+                  }).format(property.price)}
+                </div>
+              )}
             </div>
 
             {/* Address */}
@@ -302,6 +390,97 @@ const PropertyDetailPage = () => {
                 <div className="text-sm text-gray-600">Year Built</div>
               </div>
             </div>
+
+            {/* Rental Details Section */}
+            {isRentalProperty && property.rentalDetails && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <KeyIcon className="h-5 w-5 text-green-600" />
+                  Rental Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Availability */}
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                      <CalendarIcon className="h-4 w-4 text-green-600" />
+                      Availability
+                    </h4>
+                    <div className="space-y-1 text-sm text-gray-700">
+                      <div>
+                        <span className="font-medium">Available from:</span> {formatDate(property.rentalDetails.availableFrom)}
+                      </div>
+                      {property.rentalDetails.availableUntil && (
+                        <div>
+                          <span className="font-medium">Available until:</span> {formatDate(property.rentalDetails.availableUntil)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Lease Terms */}
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                      <ClockIcon className="h-4 w-4 text-blue-600" />
+                      Lease Terms
+                    </h4>
+                    <div className="space-y-1 text-sm text-gray-700">
+                      <div>
+                        <span className="font-medium">Duration:</span> {formatRentalDuration(property.rentalDetails.minimumLeaseMonths, property.rentalDetails.maximumLeaseMonths)}
+                      </div>
+                      <div>
+                        <span className="font-medium">Minimum:</span> {property.rentalDetails.minimumLeaseMonths || 'N/A'} months
+                      </div>
+                      {property.rentalDetails.maximumLeaseMonths && (
+                        <div>
+                          <span className="font-medium">Maximum:</span> {property.rentalDetails.maximumLeaseMonths} months
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Utilities & Furnishing */}
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">Utilities & Furnishing</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        {property.rentalDetails.utilitiesIncluded ? (
+                          <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <XCircleIcon className="h-4 w-4 text-gray-400" />
+                        )}
+                        <span className="text-sm text-gray-700">Utilities Included</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {property.rentalDetails.furnished ? (
+                          <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <XCircleIcon className="h-4 w-4 text-gray-400" />
+                        )}
+                        <span className="text-sm text-gray-700">Furnished</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Deposit Information */}
+                  {property.rentalDetails.depositRequired && (
+                    <div className="bg-yellow-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-gray-900 mb-2">Security Deposit</h4>
+                      <div className="text-sm text-gray-700">
+                        <div className="font-medium text-lg">
+                          {new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: property.currency || 'USD'
+                          }).format(property.rentalDetails.depositRequired)}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">
+                          Required before move-in
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Description */}
             <div className="mb-6">
@@ -354,17 +533,27 @@ const PropertyDetailPage = () => {
                 onClick={handleContactOwner}
                 className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors"
               >
-                Contact Owner
+                {isRentalProperty ? 'Contact Landlord' : 'Contact Owner'}
               </button>
               <button className="w-full border border-green-600 text-green-600 py-3 px-4 rounded-lg font-medium hover:bg-green-50 transition-colors">
-                Schedule Viewing
+                {isRentalProperty ? 'Schedule Viewing' : 'Schedule Viewing'}
               </button>
+              {isRentalProperty && (
+                <button 
+                  onClick={handleApplyForRental}
+                  className="w-full border border-blue-600 text-blue-600 py-3 px-4 rounded-lg font-medium hover:bg-blue-50 transition-colors"
+                >
+                  Apply for Rental
+                </button>
+              )}
             </div>
 
-            {/* Owner Information */}
+            {/* Owner/Landlord Information */}
             {property.owner && (
               <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Property Owner</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  {isRentalProperty ? 'Landlord' : 'Property Owner'}
+                </h3>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                     <UserIcon className="h-6 w-6 text-green-600" />
@@ -399,7 +588,9 @@ const PropertyDetailPage = () => {
 
             {/* Property Status */}
             <div className="border-t pt-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Property Status</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                {isRentalProperty ? 'Rental Status' : 'Property Status'}
+              </h3>
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>
@@ -418,6 +609,24 @@ const PropertyDetailPage = () => {
                     {property.createdAt ? new Date(property.createdAt).toLocaleDateString() : 'N/A'}
                   </span>
                 </div>
+                {isRentalProperty && property.rentalDetails && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Available from:</span>
+                      <span className="font-medium text-gray-900">
+                        {formatDate(property.rentalDetails.availableFrom)}
+                      </span>
+                    </div>
+                    {property.rentalDetails.availableUntil && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Available until:</span>
+                        <span className="font-medium text-gray-900">
+                          {formatDate(property.rentalDetails.availableUntil)}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -431,6 +640,16 @@ const PropertyDetailPage = () => {
           onClose={() => setShowMessageModal(false)}
           property={property}
           seller={property.owner}
+        />
+      )}
+
+      {/* Rental Application Modal */}
+      {property && isRentalProperty && (
+        <RentalApplicationForm
+          isOpen={showApplicationModal}
+          onClose={() => setShowApplicationModal(false)}
+          property={property}
+          onSubmit={handleApplicationSubmit}
         />
       )}
     </div>

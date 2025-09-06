@@ -10,31 +10,40 @@ const PropertyListPage = () => {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     propertyType: searchParams.get('type') || '',
+    listingType: searchParams.get('listingType') || '',
     minPrice: '',
     maxPrice: '',
     city: '',
     bedrooms: ''
   });
+  
+  // Separate state for search parameters (what gets sent to API)
+  const [searchFilters, setSearchFilters] = useState(filters);
 
   // Update filters when URL params change
   useEffect(() => {
     const typeFromUrl = searchParams.get('type');
-    if (typeFromUrl && typeFromUrl !== filters.propertyType) {
-      setFilters(prev => ({
-        ...prev,
-        propertyType: typeFromUrl
-      }));
+    const listingTypeFromUrl = searchParams.get('listingType');
+    
+    if (typeFromUrl !== filters.propertyType || listingTypeFromUrl !== filters.listingType) {
+      const newFilters = {
+        ...filters,
+        propertyType: typeFromUrl || '',
+        listingType: listingTypeFromUrl || ''
+      };
+      setFilters(newFilters);
+      setSearchFilters(newFilters);
     }
-  }, [searchParams, filters.propertyType]);
+  }, [searchParams, filters.propertyType, filters.listingType]);
 
   useEffect(() => {
     fetchProperties();
-  }, [filters]);
+  }, [searchFilters]);
 
   const fetchProperties = async () => {
     try {
       setLoading(true);
-      const data = await getProperties(filters);
+      const data = await getProperties(searchFilters);
       setProperties(data.properties || []);
     } catch (error) {
       console.error('Error fetching properties:', error);
@@ -51,40 +60,81 @@ const PropertyListPage = () => {
     };
     setFilters(newFilters);
     
-    // Update URL params when property type changes
-    if (key === 'propertyType') {
-      if (value) {
-        setSearchParams({ type: value });
-      } else {
-        setSearchParams({});
+    // For dropdowns (propertyType, bedrooms), search immediately
+    if (key === 'propertyType' || key === 'bedrooms') {
+      setSearchFilters(newFilters);
+      
+      // Update URL params when property type changes
+      if (key === 'propertyType') {
+        if (value) {
+          setSearchParams({ type: value });
+        } else {
+          setSearchParams({});
+        }
       }
+    }
+  };
+
+  const handleSearch = () => {
+    setSearchFilters(filters);
+  };
+
+  // Check if there are unsaved filter changes
+  const hasUnsavedChanges = JSON.stringify(filters) !== JSON.stringify(searchFilters);
+
+  // Handle Enter key press in input fields
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
     }
   };
 
   const clearFilters = () => {
     const clearedFilters = {
       propertyType: '',
+      listingType: '',
       minPrice: '',
       maxPrice: '',
       city: '',
       bedrooms: ''
     };
     setFilters(clearedFilters);
+    setSearchFilters(clearedFilters);
     setSearchParams({}); // Clear URL params
   };
 
-  // Get page title based on property type filter
+  // Get page title based on property type and listing type filters
   const getPageTitle = () => {
-    if (filters.propertyType) {
-      return `${filters.propertyType.charAt(0).toUpperCase() + filters.propertyType.slice(1)}s`;
+    let title = 'All Properties';
+    
+    if (searchFilters.listingType === 'sale') {
+      title = 'Properties for Sale';
+    } else if (searchFilters.listingType === 'rental') {
+      title = 'Properties for Rent';
     }
-    return 'All Properties';
+    
+    if (searchFilters.propertyType) {
+      const propertyType = searchFilters.propertyType.charAt(0).toUpperCase() + searchFilters.propertyType.slice(1);
+      if (searchFilters.listingType === 'sale') {
+        title = `${propertyType}s for Sale`;
+      } else if (searchFilters.listingType === 'rental') {
+        title = `${propertyType}s for Rent`;
+      } else {
+        title = `${propertyType}s`;
+      }
+    }
+    
+    return title;
   };
 
-  // Get page description based on property type filter
+  // Get page description based on property type and listing type filters
   const getPageDescription = () => {
-    if (filters.propertyType) {
-      return `Browse our selection of ${filters.propertyType}s`;
+    if (searchFilters.listingType === 'sale') {
+      return 'Find your perfect property to buy';
+    } else if (searchFilters.listingType === 'rental') {
+      return 'Find your perfect property to rent';
+    } else if (searchFilters.propertyType) {
+      return `Browse our selection of ${searchFilters.propertyType}s`;
     }
     return 'Find your perfect property';
   };
@@ -109,17 +159,18 @@ const PropertyListPage = () => {
             <h1 className="text-3xl font-bold text-gray-900">{getPageTitle()}</h1>
             <p className="text-gray-600 mt-2">{getPageDescription()}</p>
           </div>
-          <Link
-            to="/properties/create"
-            className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 font-medium"
-          >
-            Add Property
-          </Link>
         </div>
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+            {hasUnsavedChanges && (
+              <span className="text-sm text-blue-600 font-medium">
+                • You have unsaved filter changes
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -146,6 +197,7 @@ const PropertyListPage = () => {
                 placeholder="Min"
                 value={filters.minPrice}
                 onChange={(e) => handleFilterChange('minPrice', e.target.value)}
+                onKeyPress={handleKeyPress}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
@@ -159,6 +211,7 @@ const PropertyListPage = () => {
                 placeholder="Max"
                 value={filters.maxPrice}
                 onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
+                onKeyPress={handleKeyPress}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
@@ -172,6 +225,7 @@ const PropertyListPage = () => {
                 placeholder="Enter city"
                 value={filters.city}
                 onChange={(e) => handleFilterChange('city', e.target.value)}
+                onKeyPress={handleKeyPress}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
@@ -195,7 +249,17 @@ const PropertyListPage = () => {
             </div>
           </div>
 
-          <div className="mt-4 flex justify-end">
+          <div className="mt-4 flex justify-between">
+            <button
+              onClick={handleSearch}
+              className={`px-6 py-2 rounded-md transition-colors duration-200 font-medium ${
+                hasUnsavedChanges 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+            >
+              {hasUnsavedChanges ? 'Apply Filters' : 'Search Properties'}
+            </button>
             <button
               onClick={clearFilters}
               className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
@@ -215,17 +279,11 @@ const PropertyListPage = () => {
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No properties found</h3>
             <p className="text-gray-600 mb-6">
-              {filters.propertyType 
-                ? `No ${filters.propertyType}s found with the current filters.` 
-                : 'Try adjusting your filters or add a new property.'
+              {searchFilters.propertyType 
+                ? `No ${searchFilters.propertyType}s found with the current filters.` 
+                : 'Try adjusting your filters to find properties.'
               }
             </p>
-            <Link
-              to="/properties/create"
-              className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 font-medium"
-            >
-              Add Your First Property
-            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -239,7 +297,7 @@ const PropertyListPage = () => {
         {properties.length > 0 && (
           <div className="mt-6 text-center text-gray-600">
             Showing {properties.length} {properties.length === 1 ? 'property' : 'properties'}
-            {filters.propertyType && ` of type ${filters.propertyType}`}
+            {searchFilters.propertyType && ` of type ${searchFilters.propertyType}`}
           </div>
         )}
       </div>

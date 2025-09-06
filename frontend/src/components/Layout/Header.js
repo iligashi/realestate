@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../../store/slices/authSlice';
@@ -13,18 +13,41 @@ import {
   UserGroupIcon,
   ChevronDownIcon,
   BuildingOffice2Icon,
-  HomeModernIcon
+  HomeModernIcon,
+  CurrencyDollarIcon,
+  KeyIcon
 } from '@heroicons/react/24/outline';
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [propertyTypeDropdownOpen, setPropertyTypeDropdownOpen] = useState(false);
+  
+  const profileDropdownRef = useRef(null);
+  const propertyTypeDropdownRef = useRef(null);
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
   // Initialize session management
   useSessionManager();
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setProfileDropdownOpen(false);
+      }
+      if (propertyTypeDropdownRef.current && !propertyTypeDropdownRef.current.contains(event.target)) {
+        setPropertyTypeDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -38,6 +61,28 @@ const Header = () => {
     { name: 'Houses', href: '/properties?type=house', icon: HomeModernIcon },
     { name: 'Offices', href: '/properties?type=office', icon: BuildingOffice2Icon },
   ];
+
+  const propertyTypeOptions = [
+    { 
+      name: 'Buy Properties', 
+      href: '/properties?listingType=sale', 
+      icon: CurrencyDollarIcon, 
+      description: 'Properties for sale',
+      color: 'blue'
+    },
+    { 
+      name: 'Rent Properties', 
+      href: '/properties?listingType=rental', 
+      icon: KeyIcon, 
+      description: 'Properties for rent',
+      color: 'green'
+    }
+  ];
+
+  const handlePropertyTypeClick = (href) => {
+    navigate(href);
+    setPropertyTypeDropdownOpen(false);
+  };
 
   // Helper function to get profile picture URL
   const getProfilePictureUrl = (profilePicture) => {
@@ -100,6 +145,47 @@ const Header = () => {
               <span>{item.name}</span>
             </Link>
           ))}
+          
+          {/* Property Type Dropdown */}
+          <div className="relative" ref={propertyTypeDropdownRef}>
+            <button
+              onClick={() => setPropertyTypeDropdownOpen(!propertyTypeDropdownOpen)}
+              className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-green-600 transition-colors"
+            >
+              <span>Browse</span>
+              <ChevronDownIcon className="h-4 w-4" />
+            </button>
+
+            {/* Property Type Dropdown Menu */}
+            {propertyTypeDropdownOpen && (
+              <div className="absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                {propertyTypeOptions.map((option) => {
+                  const Icon = option.icon;
+                  const colorClasses = option.color === 'blue' 
+                    ? 'text-blue-600' 
+                    : 'text-green-600';
+                  
+                  return (
+                    <button
+                      key={option.name}
+                      onClick={() => handlePropertyTypeClick(option.href)}
+                      className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
+                        option.color === 'blue' ? 'bg-blue-100' : 'bg-green-100'
+                      }`}>
+                        <Icon className={`h-4 w-4 ${colorClasses}`} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{option.name}</p>
+                        <p className="text-xs text-gray-500">{option.description}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Desktop Auth - Right End */}
@@ -111,7 +197,7 @@ const Header = () => {
                 <NotificationBadge />
               )}
               
-              <div className="relative">
+              <div className="relative" ref={profileDropdownRef}>
                 {/* Profile Dropdown */}
                 <button
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
@@ -161,6 +247,16 @@ const Header = () => {
                       onClick={() => setProfileDropdownOpen(false)}
                     >
                       Buyer Dashboard
+                    </Link>
+                  )}
+                  
+                  {user?.userType === 'renter' && (
+                    <Link
+                      to="/renter"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setProfileDropdownOpen(false)}
+                    >
+                      Renter Dashboard
                     </Link>
                   )}
                   
@@ -298,13 +394,47 @@ const Header = () => {
                     <Link
                       key={item.name}
                       to={item.href}
-                      className="-mx-3 block rounded-lg px-3 py-2 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                      className="-mx-3 flex items-center space-x-2 rounded-lg px-3 py-2 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <item.icon className="h-5 w-5" />
                       <span>{item.name}</span>
                     </Link>
                   ))}
+                  
+                  {/* Mobile Property Type Options */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      Browse by Type
+                    </h3>
+                    {propertyTypeOptions.map((option) => {
+                      const Icon = option.icon;
+                      const colorClasses = option.color === 'blue' 
+                        ? 'text-blue-600' 
+                        : 'text-green-600';
+                      
+                      return (
+                        <button
+                          key={option.name}
+                          onClick={() => {
+                            handlePropertyTypeClick(option.href);
+                            setMobileMenuOpen(false);
+                          }}
+                          className="-mx-3 flex items-center space-x-3 rounded-lg px-3 py-3 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50 w-full text-left"
+                        >
+                          <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
+                            option.color === 'blue' ? 'bg-blue-100' : 'bg-green-100'
+                          }`}>
+                            <Icon className={`h-4 w-4 ${colorClasses}`} />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{option.name}</p>
+                            <p className="text-xs text-gray-500">{option.description}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="py-6">
                   {isAuthenticated ? (
@@ -324,6 +454,26 @@ const Header = () => {
                           onClick={() => setMobileMenuOpen(false)}
                         >
                           Seller Dashboard
+                        </Link>
+                      )}
+                      
+                      {user?.userType === 'buyer' && (
+                        <Link
+                          to="/buyer"
+                          className="-mx-3 block rounded-lg px-3 py-2 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          Buyer Dashboard
+                        </Link>
+                      )}
+                      
+                      {user?.userType === 'renter' && (
+                        <Link
+                          to="/renter"
+                          className="-mx-3 block rounded-lg px-3 py-2 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          Renter Dashboard
                         </Link>
                       )}
                       

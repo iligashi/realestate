@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import PropertyForm from '../../components/PropertyForm';
 import { createProperty, updateProperty } from '../../store/slices/propertySlice';
@@ -9,6 +9,7 @@ import { toast } from 'react-hot-toast';
 const PropertyFormPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const location = useLocation();
   const { id } = useParams();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const { loading, error } = useSelector((state) => state.property);
@@ -16,15 +17,33 @@ const PropertyFormPage = () => {
   const [propertyData, setPropertyData] = useState(null);
   const [loadingProperty, setLoadingProperty] = useState(false);
   const isEditing = Boolean(id);
+  const isRentalProperty = location.pathname.includes('create-rental');
 
-  // Check if user is authenticated
+  // Check if user is authenticated and has permission
   useEffect(() => {
     if (!isAuthenticated) {
       toast.error('Please log in to create a property');
       navigate('/login');
       return;
     }
-  }, [isAuthenticated, navigate]);
+    
+    // Check if user has permission to create properties
+    if (isRentalProperty) {
+      // For rental properties, allow renters, sellers, agents, and admins
+      if (user && !['renter', 'seller', 'agent', 'admin'].includes(user.userType)) {
+        toast.error('Only renters, sellers, agents, and admins can create rental properties');
+        navigate('/dashboard');
+        return;
+      }
+    } else {
+      // For sale properties, only allow sellers, agents, and admins
+      if (user && !['seller', 'agent', 'admin'].includes(user.userType)) {
+        toast.error('Only sellers, agents, and admins can create properties for sale');
+        navigate('/dashboard');
+        return;
+      }
+    }
+  }, [isAuthenticated, user, navigate]);
 
   // Fetch property data for editing
   useEffect(() => {
@@ -118,13 +137,19 @@ const PropertyFormPage = () => {
     }
   };
 
-  // Show loading or redirect if not authenticated
-  if (!isAuthenticated) {
+  // Show loading or redirect if not authenticated or not authorized
+  const isAuthorized = isRentalProperty 
+    ? ['renter', 'seller', 'agent', 'admin'].includes(user?.userType)
+    : ['seller', 'agent', 'admin'].includes(user?.userType);
+    
+  if (!isAuthenticated || (user && !isAuthorized)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Redirecting to login...</p>
+          <p className="mt-4 text-gray-600">
+            {!isAuthenticated ? 'Redirecting to login...' : 'Redirecting to dashboard...'}
+          </p>
         </div>
       </div>
     );
@@ -149,6 +174,7 @@ const PropertyFormPage = () => {
         isSubmitting={loading} 
         isEditing={isEditing}
         initialData={propertyData}
+        isRentalProperty={isRentalProperty}
       />
     </div>
   );

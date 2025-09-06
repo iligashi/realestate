@@ -72,7 +72,7 @@ const validateProperty = [
         errors.push('Invalid property type');
       }
       
-      if (!req.body.listingType || !['sale', 'rent', 'auction', 'pre-construction'].includes(req.body.listingType)) {
+      if (!req.body.listingType || !['sale', 'rent', 'rental', 'auction', 'pre-construction'].includes(req.body.listingType)) {
         errors.push('Invalid listing type');
       }
       
@@ -90,6 +90,29 @@ const validateProperty = [
       
       if (!req.body.location || !req.body.location.coordinates || !Array.isArray(req.body.location.coordinates)) {
         errors.push('Location coordinates are required');
+      }
+      
+      // Validate rental details if listing type is rental
+      if (req.body.listingType === 'rental') {
+        if (!req.body.rentalDetails) {
+          errors.push('Rental details are required for rental properties');
+        } else {
+          if (!req.body.rentalDetails.monthlyRent || req.body.rentalDetails.monthlyRent <= 0) {
+            errors.push('Monthly rent is required and must be greater than 0');
+          }
+          
+          if (!req.body.rentalDetails.availableFrom) {
+            errors.push('Available from date is required for rental properties');
+          }
+          
+          if (!req.body.rentalDetails.availableUntil) {
+            errors.push('Available until date is required for rental properties');
+          }
+          
+          if (!req.body.rentalDetails.minimumLeaseMonths || req.body.rentalDetails.minimumLeaseMonths < 1) {
+            errors.push('Minimum lease duration must be at least 1 month');
+          }
+        }
       }
       
       if (errors.length > 0) {
@@ -114,9 +137,93 @@ const validateProperty = [
   }
 ];
 
+// Validation rules for rental application
+const validateRentalApplication = (req, res, next) => {
+  console.log('=== validateRentalApplication middleware ===');
+  console.log('Validating rental application:', req.body);
+  
+  try {
+    const errors = [];
+    
+    // Personal Information validation
+    if (!req.body.personalInfo) {
+      errors.push('Personal information is required');
+    } else {
+      const { personalInfo } = req.body;
+      if (!personalInfo.firstName || personalInfo.firstName.trim() === '') {
+        errors.push('First name is required');
+      }
+      if (!personalInfo.lastName || personalInfo.lastName.trim() === '') {
+        errors.push('Last name is required');
+      }
+      if (!personalInfo.email || !personalInfo.email.includes('@')) {
+        errors.push('Valid email is required');
+      }
+      if (!personalInfo.phone || personalInfo.phone.trim() === '') {
+        errors.push('Phone number is required');
+      }
+      if (!personalInfo.dateOfBirth) {
+        errors.push('Date of birth is required');
+      }
+    }
+
+    // Rental Information validation
+    if (!req.body.rentalInfo) {
+      errors.push('Rental information is required');
+    } else {
+      const { rentalInfo } = req.body;
+      if (!rentalInfo.desiredMoveInDate) {
+        errors.push('Desired move-in date is required');
+      }
+      if (!rentalInfo.leaseDuration || rentalInfo.leaseDuration < 1) {
+        errors.push('Valid lease duration is required');
+      }
+    }
+
+    // Employment validation (optional but if provided, validate)
+    if (req.body.employment) {
+      const { employment } = req.body;
+      if (employment.monthlyIncome && employment.monthlyIncome < 0) {
+        errors.push('Monthly income must be positive');
+      }
+    }
+
+    // Financial validation (optional but if provided, validate)
+    if (req.body.financialInfo) {
+      const { financialInfo } = req.body;
+      if (financialInfo.annualIncome && financialInfo.annualIncome < 0) {
+        errors.push('Annual income must be positive');
+      }
+      if (financialInfo.creditScore && (financialInfo.creditScore < 300 || financialInfo.creditScore > 850)) {
+        errors.push('Credit score must be between 300 and 850');
+      }
+    }
+    
+    if (errors.length > 0) {
+      console.log('Rental application validation errors:', errors);
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: errors
+      });
+    }
+    
+    console.log('Rental application validation passed successfully');
+    console.log('=== End validateRentalApplication middleware ===');
+    next();
+    
+  } catch (error) {
+    console.error('Error in rental application validation middleware:', error);
+    res.status(500).json({
+      error: 'Validation error',
+      details: error.message
+    });
+  }
+};
+
 module.exports = {
   validate,
   validateRegistration,
   validateLogin,
-  validateProperty
+  validateProperty,
+  validateRentalApplication
 };

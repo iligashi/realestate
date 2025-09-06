@@ -12,7 +12,8 @@ import {
   ChatBubbleLeftRightIcon,
   MagnifyingGlassIcon,
   UserIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import ErrorBoundary from '../../components/ErrorBoundary';
 
@@ -25,6 +26,7 @@ import MortgageCalculator from '../../components/Buyer/MortgageCalculator';
 import PropertyAlerts from '../../components/Buyer/PropertyAlerts';
 import BuyerMessages from '../../components/Buyer/BuyerMessages';
 import NotificationCenter from '../../components/Buyer/NotificationCenter';
+import ApplicantApplicationStatus from '../../components/ApplicantApplicationStatus';
 
 const BuyerDashboard = () => {
   const dispatch = useDispatch();
@@ -52,6 +54,7 @@ const BuyerDashboard = () => {
     { id: 'viewings', name: 'Viewings', icon: CalendarIcon, description: 'Schedule property viewings' },
     { id: 'calculator', name: 'Mortgage Calculator', icon: CalculatorIcon, description: 'Calculate mortgage payments' },
     { id: 'alerts', name: 'Property Alerts', icon: BellIcon, description: 'New listing notifications' },
+    { id: 'applications', name: 'My Applications', icon: DocumentTextIcon, description: 'Track rental applications' },
     { id: 'messages', name: 'Messages', icon: ChatBubbleLeftRightIcon, description: 'Chat with sellers' },
     { id: 'notifications', name: 'Notifications', icon: BellIcon, description: 'All notifications' }
   ];
@@ -70,6 +73,8 @@ const BuyerDashboard = () => {
         return <MortgageCalculator />;
       case 'alerts':
         return <PropertyAlerts />;
+      case 'applications':
+        return <ApplicantApplicationStatus />;
       case 'messages':
         return <BuyerMessages />;
       case 'notifications':

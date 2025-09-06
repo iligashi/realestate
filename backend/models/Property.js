@@ -20,7 +20,7 @@ const propertySchema = new mongoose.Schema({
   },
   listingType: {
     type: String,
-    enum: ['sale', 'rent', 'auction', 'pre-construction'],
+    enum: ['sale', 'rent', 'rental', 'auction', 'pre-construction'],
     required: true
   },
   
@@ -44,6 +44,18 @@ const propertySchema = new mongoose.Schema({
     type: String,
     enum: ['monthly', 'weekly', 'daily', 'yearly'],
     default: 'monthly'
+  },
+  
+  // Rental-specific details
+  rentalDetails: {
+    monthlyRent: { type: Number, min: 0 },
+    availableFrom: Date,
+    availableUntil: Date,
+    minimumLeaseMonths: { type: Number, min: 1 },
+    maximumLeaseMonths: { type: Number, min: 1 },
+    depositRequired: { type: Number, min: 0 },
+    utilitiesIncluded: { type: Boolean, default: false },
+    furnished: { type: Boolean, default: false }
   },
   
   // Location & Address

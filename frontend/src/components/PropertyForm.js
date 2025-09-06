@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 
-const PropertyForm = ({ onSubmit, initialData = null, isEditing = false, isSubmitting = false }) => {
+const PropertyForm = ({ onSubmit, initialData = null, isEditing = false, isSubmitting = false, isRentalProperty = false }) => {
   const [amenities, setAmenities] = useState(initialData?.amenities || []);
   const [newAmenity, setNewAmenity] = useState('');
   const [images, setImages] = useState(initialData?.photos || []);
@@ -41,6 +41,17 @@ const PropertyForm = ({ onSubmit, initialData = null, isEditing = false, isSubmi
         furnished: false,
         petFriendly: false,
         featured: false
+      },
+      // Rental-specific fields
+      rentalDetails: {
+        monthlyRent: '',
+        availableFrom: '',
+        availableUntil: '',
+        minimumLeaseMonths: '',
+        maximumLeaseMonths: '',
+        depositRequired: '',
+        utilitiesIncluded: false,
+        furnished: false
       }
     }
   });
@@ -275,7 +286,7 @@ const PropertyForm = ({ onSubmit, initialData = null, isEditing = false, isSubmi
         formData.append('title', String(data.title || ''));
         formData.append('description', String(data.description || ''));
         formData.append('propertyType', String(data.propertyType || 'apartment'));
-        formData.append('listingType', 'sale'); // Required by validation
+        formData.append('listingType', isRentalProperty ? 'rental' : 'sale'); // Required by validation
         formData.append('price', String(data.price || '0'));
         formData.append('currency', String(data.currency || 'USD'));
         formData.append('status', String(data.status || 'pending'));
@@ -303,6 +314,18 @@ const PropertyForm = ({ onSubmit, initialData = null, isEditing = false, isSubmi
         formData.append('features[furnished]', String(data.features?.furnished || false));
         formData.append('features[petFriendly]', String(data.features?.petFriendly || false));
         formData.append('features[featured]', String(data.features?.featured || false));
+        
+        // Add rental details if it's a rental property
+        if (isRentalProperty && data.rentalDetails) {
+          formData.append('rentalDetails[monthlyRent]', String(data.rentalDetails.monthlyRent || '0'));
+          formData.append('rentalDetails[availableFrom]', String(data.rentalDetails.availableFrom || ''));
+          formData.append('rentalDetails[availableUntil]', String(data.rentalDetails.availableUntil || ''));
+          formData.append('rentalDetails[minimumLeaseMonths]', String(data.rentalDetails.minimumLeaseMonths || '1'));
+          formData.append('rentalDetails[maximumLeaseMonths]', String(data.rentalDetails.maximumLeaseMonths || ''));
+          formData.append('rentalDetails[depositRequired]', String(data.rentalDetails.depositRequired || '0'));
+          formData.append('rentalDetails[utilitiesIncluded]', String(data.rentalDetails.utilitiesIncluded || false));
+          formData.append('rentalDetails[furnished]', String(data.rentalDetails.furnished || false));
+        }
         
         // Add amenities
         if (amenities && amenities.length > 0) {
@@ -361,7 +384,9 @@ const PropertyForm = ({ onSubmit, initialData = null, isEditing = false, isSubmi
     <div className="max-w-4xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">
-          {isEditing ? 'Edit Property' : 'Create New Property'}
+          {isEditing 
+            ? `Edit ${isRentalProperty ? 'Rental' : 'Property'}` 
+            : `Create New ${isRentalProperty ? 'Rental Property' : 'Property'}`}
         </h1>
         <button
           type="button"
@@ -499,6 +524,148 @@ const PropertyForm = ({ onSubmit, initialData = null, isEditing = false, isSubmi
                 ))}
               </select>
             </div>
+
+            {/* Rental-specific fields */}
+            {isRentalProperty && (
+              <>
+                {/* Monthly Rent */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Monthly Rent <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Enter monthly rent amount"
+                    className="w-full px-3 py-2 border border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    {...register('rentalDetails.monthlyRent', { 
+                      required: 'Monthly rent is required',
+                      min: { value: 0.01, message: 'Monthly rent must be greater than 0' }
+                    })}
+                  />
+                  {errors.rentalDetails?.monthlyRent && (
+                    <p className="text-red-500 text-sm mt-1">{errors.rentalDetails.monthlyRent.message}</p>
+                  )}
+                </div>
+
+                {/* Available From */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Available From <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full px-3 py-2 border border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    {...register('rentalDetails.availableFrom', { 
+                      required: 'Available from date is required'
+                    })}
+                  />
+                  {errors.rentalDetails?.availableFrom && (
+                    <p className="text-red-500 text-sm mt-1">{errors.rentalDetails.availableFrom.message}</p>
+                  )}
+                </div>
+
+                {/* Available Until */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Available Until <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full px-3 py-2 border border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    {...register('rentalDetails.availableUntil', { 
+                      required: 'Available until date is required'
+                    })}
+                  />
+                  {errors.rentalDetails?.availableUntil && (
+                    <p className="text-red-500 text-sm mt-1">{errors.rentalDetails.availableUntil.message}</p>
+                  )}
+                </div>
+
+                {/* Minimum Lease Duration */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Minimum Lease (Months) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="e.g., 6"
+                    className="w-full px-3 py-2 border border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    {...register('rentalDetails.minimumLeaseMonths', { 
+                      required: 'Minimum lease duration is required',
+                      min: { value: 1, message: 'Minimum lease must be at least 1 month' }
+                    })}
+                  />
+                  {errors.rentalDetails?.minimumLeaseMonths && (
+                    <p className="text-red-500 text-sm mt-1">{errors.rentalDetails.minimumLeaseMonths.message}</p>
+                  )}
+                </div>
+
+                {/* Maximum Lease Duration */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Maximum Lease (Months)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="e.g., 24 (leave empty for no limit)"
+                    className="w-full px-3 py-2 border border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    {...register('rentalDetails.maximumLeaseMonths', { 
+                      min: { value: 1, message: 'Maximum lease must be at least 1 month' }
+                    })}
+                  />
+                  {errors.rentalDetails?.maximumLeaseMonths && (
+                    <p className="text-red-500 text-sm mt-1">{errors.rentalDetails.maximumLeaseMonths.message}</p>
+                  )}
+                </div>
+
+                {/* Security Deposit */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Security Deposit
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Enter security deposit amount"
+                    className="w-full px-3 py-2 border border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    {...register('rentalDetails.depositRequired', { 
+                      min: { value: 0, message: 'Deposit must be 0 or greater' }
+                    })}
+                  />
+                  {errors.rentalDetails?.depositRequired && (
+                    <p className="text-red-500 text-sm mt-1">{errors.rentalDetails.depositRequired.message}</p>
+                  )}
+                </div>
+
+                {/* Rental Features */}
+                <div className="col-span-2">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Rental Features</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        {...register('rentalDetails.utilitiesIncluded')}
+                      />
+                      <span className="text-sm text-gray-700">Utilities Included</span>
+                    </label>
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        {...register('rentalDetails.furnished')}
+                      />
+                      <span className="text-sm text-gray-700">Furnished</span>
+                    </label>
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Status */}
             <div>

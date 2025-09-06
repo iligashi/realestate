@@ -10,11 +10,14 @@ import DashboardPage from './pages/Dashboard/DashboardPage';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import SellerDashboard from './pages/Seller/SellerDashboard';
 import BuyerDashboard from './pages/Buyer/BuyerDashboard';
+import RenterDashboard from './pages/Renter/RenterDashboard';
 import PropertyListPage from './pages/Properties/PropertyListPage';
 import PropertyDetailPage from './pages/Properties/PropertyDetailPage';
 import PropertyFormPage from './pages/Properties/PropertyFormPage';
 import AdminRoute from './components/Auth/AdminRoute';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
+import SellerRoute from './components/Auth/SellerRoute';
+import RenterRoute from './components/Auth/RenterRoute';
 
 function App() {
   return (
@@ -64,23 +67,39 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/renter" 
+          element={
+            <ProtectedRoute>
+              <RenterDashboard />
+            </ProtectedRoute>
+          } 
+        />
         {/* Properties Routes */}
         <Route path="/properties" element={<PropertyListPage />} />
         <Route path="/properties/:id" element={<PropertyDetailPage />} />
         <Route 
           path="/properties/create" 
           element={
-            <ProtectedRoute>
+            <SellerRoute>
               <PropertyFormPage />
-            </ProtectedRoute>
+            </SellerRoute>
           } 
         />
         <Route 
           path="/properties/:id/edit" 
           element={
-            <ProtectedRoute>
+            <SellerRoute>
               <PropertyFormPage />
-            </ProtectedRoute>
+            </SellerRoute>
+          } 
+        />
+        <Route 
+          path="/properties/create-rental" 
+          element={
+            <RenterRoute>
+              <PropertyFormPage />
+            </RenterRoute>
           } 
         />
         </Routes>
