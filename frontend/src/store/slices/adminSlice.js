@@ -22,6 +22,10 @@ export const fetchAllUsers = createAsyncThunk(
   'admin/fetchAllUsers',
   async (filters = {}, { rejectWithValue, getState }) => {
     try {
+      
+      // Wait 400ms before making the API call (debounce effect)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('Fetching users with filters:', filters);
       const { token } = getState().auth;
       const params = adminAPI.formatParams(filters);
       const response = await adminAPI.getAllUsers(params, token);
