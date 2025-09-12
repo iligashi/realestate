@@ -72,7 +72,7 @@ const Header = () => {
     },
     { 
       name: 'Rent Properties', 
-      href: '/properties?listingType=rental', 
+      href: '/rentals', 
       icon: KeyIcon, 
       description: 'Properties for rent',
       color: 'green'

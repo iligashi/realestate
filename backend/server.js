@@ -107,6 +107,7 @@ app.use('/api/payments', require('./routes/payments'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/rental-applications', require('./routes/rentalApplications'));
+app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api', require('./routes/public'));
 
 // Health check

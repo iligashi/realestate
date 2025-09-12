@@ -8,18 +8,41 @@ const messageSchema = new mongoose.Schema({
     required: true
   },
   
-  // Buyer (person sending the message)
+  // Buyer (person sending the message) - for sales inquiries
   buyer: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: 'User'
   },
   
-  // Seller (property owner)
+  // Seller (property owner) - for sales inquiries
   seller: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: 'User'
+  },
+
+  // Renter (person applying for rental) - for rental inquiries
+  renter: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+
+  // Landlord (property owner) - for rental inquiries
+  landlord: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+
+  // Message type to distinguish between sales and rental inquiries
+  messageType: {
+    type: String,
+    enum: ['sale', 'rental'],
+    default: 'sale'
+  },
+
+  // Rental application reference (if this is a rental message)
+  rentalApplication: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'RentalApplication'
   },
   
   // Message content
@@ -76,6 +99,14 @@ const messageSchema = new mongoose.Schema({
     seller: {
       type: Boolean,
       default: false
+    },
+    renter: {
+      type: Boolean,
+      default: false
+    },
+    landlord: {
+      type: Boolean,
+      default: false
     }
   },
   
@@ -90,8 +121,12 @@ const messageSchema = new mongoose.Schema({
 
 // Index for efficient queries
 messageSchema.index({ property: 1, buyer: 1, seller: 1 });
+messageSchema.index({ property: 1, renter: 1, landlord: 1 });
 messageSchema.index({ seller: 1, status: 1, lastMessageAt: -1 });
 messageSchema.index({ buyer: 1, lastMessageAt: -1 });
+messageSchema.index({ landlord: 1, status: 1, lastMessageAt: -1 });
+messageSchema.index({ renter: 1, lastMessageAt: -1 });
+messageSchema.index({ messageType: 1 });
 
 // Virtual for unread count
 messageSchema.virtual('unreadCount').get(function() {
@@ -100,10 +135,14 @@ messageSchema.virtual('unreadCount').get(function() {
 
 // Method to mark as read
 messageSchema.methods.markAsRead = function(userId) {
-  if (this.buyer.toString() === userId.toString()) {
+  if (this.buyer && this.buyer.toString() === userId.toString()) {
     this.readBy.buyer = true;
-  } else if (this.seller.toString() === userId.toString()) {
+  } else if (this.seller && this.seller.toString() === userId.toString()) {
     this.readBy.seller = true;
+  } else if (this.renter && this.renter.toString() === userId.toString()) {
+    this.readBy.renter = true;
+  } else if (this.landlord && this.landlord.toString() === userId.toString()) {
+    this.readBy.landlord = true;
     // Mark all thread messages as read
     this.thread.forEach(msg => {
       msg.isRead = true;
@@ -126,10 +165,14 @@ messageSchema.methods.addReply = function(senderId, message) {
   this.lastMessageAt = new Date();
   
   // Mark as unread for the recipient
-  if (this.buyer.toString() === senderId.toString()) {
+  if (this.buyer && this.buyer.toString() === senderId.toString()) {
     this.readBy.seller = false;
-  } else {
+  } else if (this.seller && this.seller.toString() === senderId.toString()) {
     this.readBy.buyer = false;
+  } else if (this.renter && this.renter.toString() === senderId.toString()) {
+    this.readBy.landlord = false;
+  } else if (this.landlord && this.landlord.toString() === senderId.toString()) {
+    this.readBy.renter = false;
   }
   
   return this.save();

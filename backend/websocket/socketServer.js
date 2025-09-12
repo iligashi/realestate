@@ -309,22 +309,41 @@ class SocketServer {
 
   // Method to emit new message from API (called from message controller)
   emitNewMessage(messageData) {
-    const { messageId, buyer, seller, message, sender } = messageData;
+    const { messageId, buyer, seller, renter, landlord, message, sender } = messageData;
     
-    // Emit to both buyer and seller
-    this.io.to(`user_${buyer}`).emit('new_message_notification', {
-      messageId,
-      message,
-      sender,
-      timestamp: new Date()
-    });
+    // Handle sales messages (buyer-seller)
+    if (buyer && seller) {
+      this.io.to(`user_${buyer}`).emit('new_message_notification', {
+        messageId,
+        message,
+        sender,
+        timestamp: new Date()
+      });
+      
+      this.io.to(`user_${seller}`).emit('new_message_notification', {
+        messageId,
+        message,
+        sender,
+        timestamp: new Date()
+      });
+    }
     
-    this.io.to(`user_${seller}`).emit('new_message_notification', {
-      messageId,
-      message,
-      sender,
-      timestamp: new Date()
-    });
+    // Handle rental messages (renter-landlord)
+    if (renter && landlord) {
+      this.io.to(`user_${renter}`).emit('new_message_notification', {
+        messageId,
+        message,
+        sender,
+        timestamp: new Date()
+      });
+      
+      this.io.to(`user_${landlord}`).emit('new_message_notification', {
+        messageId,
+        message,
+        sender,
+        timestamp: new Date()
+      });
+    }
 
     // Also emit to message thread room if participants are connected
     this.io.to(`message_${messageId}`).emit('new_message', {

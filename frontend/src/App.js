@@ -14,6 +14,7 @@ import RenterDashboard from './pages/Renter/RenterDashboard';
 import PropertyListPage from './pages/Properties/PropertyListPage';
 import PropertyDetailPage from './pages/Properties/PropertyDetailPage';
 import PropertyFormPage from './pages/Properties/PropertyFormPage';
+import RentalPropertiesPage from './pages/Properties/RentalPropertiesPage';
 import AdminRoute from './components/Auth/AdminRoute';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import SellerRoute from './components/Auth/SellerRoute';
@@ -77,6 +78,7 @@ function App() {
         />
         {/* Properties Routes */}
         <Route path="/properties" element={<PropertyListPage />} />
+        <Route path="/rentals" element={<RentalPropertiesPage />} />
         <Route path="/properties/:id" element={<PropertyDetailPage />} />
         <Route 
           path="/properties/create" 

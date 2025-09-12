@@ -26,6 +26,8 @@ import ViewingScheduler from '../../components/Buyer/ViewingScheduler';
 import MortgageCalculator from '../../components/Buyer/MortgageCalculator';
 import PropertyAlerts from '../../components/Buyer/PropertyAlerts';
 import RentalApplicationManagement from '../../components/Renter/RentalApplicationManagement';
+import RenterApplicationManagement from '../../components/Renter/RenterApplicationManagement';
+import RenterMessages from '../../components/Renter/RenterMessages';
 
 const RenterDashboard = () => {
   const dispatch = useDispatch();
@@ -74,9 +76,9 @@ const RenterDashboard = () => {
       case 'alerts':
         return <PropertyAlerts />;
       case 'applications':
-        return <RentalApplicationManagement />;
+        return <RenterApplicationManagement />;
       case 'messages':
-        return <div className="p-6 text-center text-gray-500">Messages feature coming soon...</div>;
+        return <RenterMessages />;
       case 'notifications':
         return <div className="p-6 text-center text-gray-500">Notifications feature coming soon...</div>;
       case 'my-rentals':

@@ -336,9 +336,29 @@ const addApplicationMessage = async (req, res) => {
 
     await application.save();
 
+    // Emit WebSocket event for real-time notification
+    if (global.socketServer) {
+      const recipientId = isFromLandlord ? application.applicant : application.landlord;
+      global.socketServer.emitNewMessage({
+        messageId: application._id,
+        renter: application.applicant,
+        landlord: application.landlord,
+        message: message,
+        sender: {
+          id: userId,
+          name: req.user.name,
+          email: req.user.email
+        }
+      });
+    }
+
     res.json({
       success: true,
-      message: 'Message added successfully'
+      message: 'Message added successfully',
+      application: await RentalApplication.findById(applicationId)
+        .populate('applicant', 'name email')
+        .populate('landlord', 'name email')
+        .populate('property', 'title address')
     });
 
   } catch (error) {

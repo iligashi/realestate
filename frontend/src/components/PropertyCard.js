@@ -1,7 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { 
+  DocumentTextIcon,
+  ChatBubbleLeftRightIcon,
+  CalendarIcon
+} from '@heroicons/react/24/outline';
+import ModernRentalApplicationForm from './Renter/ModernRentalApplicationForm';
+import MessageModal from './MessageModal';
+import ViewingModal from './ViewingModal';
+import rentalApplicationAPI from '../services/rentalApplicationAPI';
 
 const PropertyCard = ({ property }) => {
+  const navigate = useNavigate();
+  const { isAuthenticated, user } = useSelector(state => state.auth || {});
+  const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [showViewingModal, setShowViewingModal] = useState(false);
+
   const formatPrice = (price, currency) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -11,6 +29,72 @@ const PropertyCard = ({ property }) => {
 
   const getPropertyTypeLabel = (type) => {
     return type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
+  // Check if property is for rent
+  const isRentalProperty = property && property.listingType === 'rental';
+
+  // Handle rental application submission
+  const handleApplicationSubmit = async (applicationData) => {
+    try {
+      await rentalApplicationAPI.createApplication(property._id, applicationData);
+      toast.success('Rental application submitted successfully!');
+      setShowApplicationModal(false);
+    } catch (error) {
+      console.error('Error submitting application:', error);
+      throw error;
+    }
+  };
+
+  // Handle apply for rental button click
+  const handleApplyForRental = () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to apply for rental');
+      navigate('/login');
+      return;
+    }
+
+    // Check if user is trying to apply for their own property
+    if (property && property.owner && user && property.owner._id === user._id) {
+      toast.error('You cannot apply for your own property');
+      return;
+    }
+
+    setShowApplicationModal(true);
+  };
+
+  // Handle message button click
+  const handleMessage = () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to message the property owner');
+      navigate('/login');
+      return;
+    }
+
+    // Check if user is trying to message themselves
+    if (property && property.owner && user && property.owner._id === user._id) {
+      toast.error('You cannot message yourself about your own property');
+      return;
+    }
+
+    setShowMessageModal(true);
+  };
+
+  // Handle viewing button click
+  const handleViewing = () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to schedule a viewing');
+      navigate('/login');
+      return;
+    }
+
+    // Check if user is trying to schedule viewing for their own property
+    if (property && property.owner && user && property.owner._id === user._id) {
+      toast.error('You cannot schedule a viewing for your own property');
+      return;
+    }
+
+    setShowViewingModal(true);
   };
 
   return (
@@ -94,9 +178,12 @@ const PropertyCard = ({ property }) => {
         </div>
 
         {/* Price */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-3">
           <span className="text-xl font-bold text-green-600">
             {formatPrice(property.price, property.currency)}
+            {isRentalProperty && (
+              <span className="text-sm text-gray-500 font-normal">/month</span>
+            )}
           </span>
           
           <Link
@@ -106,7 +193,65 @@ const PropertyCard = ({ property }) => {
             View Details
           </Link>
         </div>
+
+        {/* Rental Application Actions */}
+        {isRentalProperty && (
+          <div className="space-y-2">
+            <button
+              onClick={handleApplyForRental}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
+            >
+              <DocumentTextIcon className="h-4 w-4" />
+              Apply for Rent
+            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={handleMessage}
+                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+              >
+                <ChatBubbleLeftRightIcon className="h-3 w-3" />
+                Message
+              </button>
+              <button 
+                onClick={handleViewing}
+                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+              >
+                <CalendarIcon className="h-3 w-3" />
+                Viewing
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Rental Application Modal */}
+      {isRentalProperty && (
+        <ModernRentalApplicationForm
+          isOpen={showApplicationModal}
+          onClose={() => setShowApplicationModal(false)}
+          property={property}
+          onSubmit={handleApplicationSubmit}
+        />
+      )}
+
+      {/* Message Modal */}
+      {property && property.owner && (
+        <MessageModal
+          isOpen={showMessageModal}
+          onClose={() => setShowMessageModal(false)}
+          property={property}
+          seller={property.owner}
+        />
+      )}
+
+      {/* Viewing Modal */}
+      {showViewingModal && (
+        <ViewingModal
+          isOpen={showViewingModal}
+          onClose={() => setShowViewingModal(false)}
+          property={property}
+        />
+      )}
     </div>
   );
 };

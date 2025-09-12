@@ -21,7 +21,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { getProperty } from '../../services/propertyService';
 import MessageModal from '../../components/MessageModal';
-import RentalApplicationForm from '../../components/RentalApplicationForm';
+import ModernRentalApplicationForm from '../../components/Renter/ModernRentalApplicationForm';
 import rentalApplicationAPI from '../../services/rentalApplicationAPI';
 
 const PropertyDetailPage = () => {
@@ -645,7 +645,7 @@ const PropertyDetailPage = () => {
 
       {/* Rental Application Modal */}
       {property && isRentalProperty && (
-        <RentalApplicationForm
+        <ModernRentalApplicationForm
           isOpen={showApplicationModal}
           onClose={() => setShowApplicationModal(false)}
           property={property}

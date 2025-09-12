@@ -3,6 +3,7 @@ const router = express.Router();
 const { auth } = require('../middleware/auth');
 const {
   createMessage,
+  createRentalMessage,
   getMessages,
   getMessageThread,
   replyToMessage,
@@ -16,6 +17,9 @@ router.use(auth);
 
 // Create a new message (buyer contacting seller)
 router.post('/', createMessage);
+
+// Create a new rental message (renter contacting landlord)
+router.post('/rental', createRentalMessage);
 
 // Get messages for the authenticated user
 router.get('/', getMessages);
