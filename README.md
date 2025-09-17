@@ -1,3 +1,3 @@
 Admin profile:
-admin@admin.com
-Admin123
+admin@realestate.com
+password
