@@ -1,0 +1,79 @@
+{
+  "name": "real-estate-frontend",
+  "version": "1.0.0",
+  "description": "Modern Real Estate Marketplace Frontend",
+  "private": true,
+  "dependencies": {
+    "@headlessui/react": "^1.7.15",
+    "@heroicons/react": "^2.0.18",
+    "@reduxjs/toolkit": "^1.9.5",
+    "@tailwindcss/aspect-ratio": "^0.4.2",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.16",
+    "axios": "^1.5.0",
+    "clsx": "^2.0.0",
+    "date-fns": "^2.30.0",
+    "eslint": "^8.48.0",
+    "eslint-config-prettier": "^9.0.0",
+    "framer-motion": "^10.16.4",
+    "js-cookie": "^3.0.5",
+    "lodash": "^4.17.21",
+    "prettier": "^3.0.3",
+    "react": "^18.2.0",
+    "react-datepicker": "^4.21.0",
+    "react-dom": "^18.2.0",
+    "react-helmet-async": "^1.3.0",
+    "react-hook-form": "^7.45.4",
+    "react-hot-toast": "^2.4.1",
+    "react-query": "^3.39.3",
+    "react-redux": "^8.1.2",
+    "react-router-dom": "^6.15.0",
+    "react-scripts": "5.0.1",
+    "react-select": "^5.8.0",
+    "react-toastify": "^9.1.3",
+    "socket.io-client": "^4.8.1",
+    "tailwindcss": "^3.3.3",
+    "uuid": "^9.0.0",
+    "zod": "^3.22.2"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "start:3000": "PORT=3000 react-scripts start",
+    "start:3001": "PORT=3001 react-scripts start",
+    "start:3002": "PORT=3002 react-scripts start",
+    "start:3003": "PORT=3003 react-scripts start",
+    "start:dev": "PORT=3000 react-scripts start",
+    "start:test": "PORT=3001 react-scripts start",
+    "start:staging": "PORT=3002 react-scripts start",
+    "start:demo": "PORT=3003 react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "lint": "eslint src --ext .js,.jsx",
+    "lint:fix": "eslint src --ext .js,.jsx --fix",
+    "format": "prettier --write src/**/*.{js,jsx,css,md}"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.15",
+    "postcss": "^8.4.29"
+  },
+  "proxy": "http://localhost:5000"
+}
