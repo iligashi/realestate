@@ -1,11 +1,4 @@
 A comprehensive, full-stack real estate platform built with modern web technologies, featuring real-time communication, multi-role user management, and advanced property management capabilities.
-
-![Real Estate Platform](https://img.shields.io/badge/Real%20Estate-Platform-blue)
-![React](https://img.shields.io/badge/React-18.2.0-blue)
-![Node.js](https://img.shields.io/badge/Node.js-Express-green)
-![MongoDB](https://img.shields.io/badge/MongoDB-Database-green)
-![WebSocket](https://img.shields.io/badge/WebSocket-Real--time-orange)
-
 ## 📋 Table of Contents
 
 - [Features](#-features)
@@ -216,3 +209,7 @@ Real-time features are powered by Socket.IO with:
 - Property inquiry alerts
 - Appointment reminders
 - System announcements
+=======
+Admin profile:
+admin@realestate.com
+password
