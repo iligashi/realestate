@@ -1,42 +1,41 @@
-const mongoose = require('mongoose');
+const { sequelize } = require('./models');
+const { User } = require('./models');
 require('dotenv').config();
 
 const testConnection = async () => {
   try {
     console.log('🔌 Testing database connection...');
-    console.log('MONGODB_URI:', process.env.MONGODB_URI || 'mongodb://localhost:27017/real-estate-marketplace');
+    console.log('DATABASE_URL:', process.env.DATABASE_URL || 'mysql://localhost:3306/real_estate_db');
     
     // Connect to database
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/real-estate-marketplace', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await sequelize.authenticate();
+    console.log('✅ Database Connected');
     
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    console.log(`📊 Database: ${conn.connection.name}`);
-    
-    // Check if collections exist
-    const collections = await mongoose.connection.db.listCollections().toArray();
-    console.log('📁 Collections found:', collections.map(c => c.name));
+    // Check if tables exist
+    const tables = await sequelize.getQueryInterface().showAllTables();
+    console.log('📁 Tables found:', tables);
     
     // Check user count
-    const User = require('./models/User');
-    const userCount = await User.countDocuments();
+    const userCount = await User.count();
     console.log(`👥 Users in database: ${userCount}`);
     
     // Check if we can read a user
     if (userCount > 0) {
-      const firstUser = await User.findOne().select('email firstName lastName userType');
+      const firstUser = await User.findOne({
+        attributes: ['email', 'first_name', 'last_name', 'user_type']
+      });
       console.log('👤 First user:', firstUser);
     }
     
     // Close connection
-    await mongoose.connection.close();
+    await sequelize.close();
     console.log('🔌 Connection closed');
     
   } catch (error) {
-    console.error('❌ Database connection error:', error);
+    console.error('❌ Database connection failed:', error.message);
+    process.exit(1);
   }
 };
 
+// Run the test
 testConnection();

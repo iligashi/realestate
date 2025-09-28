@@ -16,6 +16,10 @@ import rentalApplicationAPI from '../services/rentalApplicationAPI';
 const PropertyCard = ({ property }) => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useSelector(state => state.auth || {});
+  
+  console.log('PropertyCard - property data:', property);
+  console.log('PropertyCard - property.id:', property?.id);
+  console.log('PropertyCard - property._id:', property?._id);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [showViewingModal, setShowViewingModal] = useState(false);
@@ -37,7 +41,7 @@ const PropertyCard = ({ property }) => {
   // Handle rental application submission
   const handleApplicationSubmit = async (applicationData) => {
     try {
-      await rentalApplicationAPI.createApplication(property._id, applicationData);
+      await rentalApplicationAPI.createApplication(property.id, applicationData);
       toast.success('Rental application submitted successfully!');
       setShowApplicationModal(false);
     } catch (error) {
@@ -55,7 +59,7 @@ const PropertyCard = ({ property }) => {
     }
 
     // Check if user is trying to apply for their own property
-    if (property && property.owner && user && property.owner._id === user._id) {
+    if (property && property.owner && user && property.owner.id === user.id) {
       toast.error('You cannot apply for your own property');
       return;
     }
@@ -72,7 +76,7 @@ const PropertyCard = ({ property }) => {
     }
 
     // Check if user is trying to message themselves
-    if (property && property.owner && user && property.owner._id === user._id) {
+    if (property && property.owner && user && property.owner.id === user.id) {
       toast.error('You cannot message yourself about your own property');
       return;
     }
@@ -89,7 +93,7 @@ const PropertyCard = ({ property }) => {
     }
 
     // Check if user is trying to schedule viewing for their own property
-    if (property && property.owner && user && property.owner._id === user._id) {
+    if (property && property.owner && user && property.owner.id === user.id) {
       toast.error('You cannot schedule a viewing for your own property');
       return;
     }
@@ -187,7 +191,7 @@ const PropertyCard = ({ property }) => {
           </span>
           
           <Link
-            to={`/properties/${property._id}`}
+            to={`/properties/${property.id}`}
             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 text-sm font-medium"
           >
             View Details

@@ -1,4 +1,28 @@
-const Property = require('../models/Property');
+const { Property, User } = require('../models');
+const { Op } = require('sequelize');
+
+// Helper function to parse JSON fields
+const parseJsonFields = (property) => {
+  if (!property) return property;
+  
+  const parsedProperty = property.toJSON ? property.toJSON() : property;
+  
+  // Parse JSON string fields
+  const jsonFields = ['photos', 'address', 'details', 'features', 'amenities', 'rentalDetails', 'priceHistory', 'mapData', 'appliances', 'utilities', 'documents', 'neighborhood', 'schools', 'transportation', 'sustainability', 'analytics', 'seo', 'customFields', 'videos', 'virtualTours'];
+  
+  jsonFields.forEach(field => {
+    if (parsedProperty[field] && typeof parsedProperty[field] === 'string') {
+      try {
+        parsedProperty[field] = JSON.parse(parsedProperty[field]);
+      } catch (error) {
+        console.warn(`Failed to parse ${field} field:`, error.message);
+        parsedProperty[field] = null;
+      }
+    }
+  });
+  
+  return parsedProperty;
+};
 
 // Get all properties (with optional filtering)
 const getProperties = async (req, res) => {
@@ -22,21 +46,21 @@ const getProperties = async (req, res) => {
     
     if (propertyType) filter.propertyType = propertyType;
     if (listingType) filter.listingType = listingType;
-    if (city) filter['address.city'] = { $regex: city, $options: 'i' };
-    if (state) filter['address.state'] = { $regex: state, $options: 'i' };
-    if (country) filter['address.country'] = { $regex: country, $options: 'i' };
-    if (bedrooms) filter['details.bedrooms'] = { $gte: parseInt(bedrooms) };
-    if (bathrooms) filter['details.bathrooms'] = { $gte: parseInt(bathrooms) };
+    if (city) filter['$address.city$'] = { [Op.like]: `%${city}%` };
+    if (state) filter['$address.state$'] = { [Op.like]: `%${state}%` };
+    if (country) filter['$address.country$'] = { [Op.like]: `%${country}%` };
+    if (bedrooms) filter['$details.bedrooms$'] = { [Op.gte]: parseInt(bedrooms) };
+    if (bathrooms) filter['$details.bathrooms$'] = { [Op.gte]: parseInt(bathrooms) };
     
     // Price range filter
     if (minPrice || maxPrice) {
       filter.price = {};
-      if (minPrice) filter.price.$gte = parseInt(minPrice);
-      if (maxPrice) filter.price.$lte = parseInt(maxPrice);
+      if (minPrice) filter.price[Op.gte] = parseInt(minPrice);
+      if (maxPrice) filter.price[Op.lte] = parseInt(maxPrice);
     }
 
     // Only show active, sold, and rented properties
-    filter.status = { $in: ['active', 'sold', 'rented'] };
+    filter.status = { [Op.in]: ['active', 'sold', 'rented'] };
 
     const options = {
       page: parseInt(page),
@@ -44,16 +68,25 @@ const getProperties = async (req, res) => {
       sort: { createdAt: -1 }
     };
 
-    const properties = await Property.find(filter)
-      .populate('owner', 'firstName lastName email phone avatar')
-      .limit(options.limit)
-      .skip((options.page - 1) * options.limit)
-      .sort(options.sort);
+    const properties = await Property.findAll({
+      where: filter,
+      include: [{
+        model: User,
+        as: 'owner',
+        attributes: ['firstName', 'lastName', 'email', 'phone', 'avatar']
+      }],
+      limit: options.limit,
+      offset: (options.page - 1) * options.limit,
+      order: [['createdAt', 'DESC']]
+    });
 
-    const total = await Property.countDocuments(filter);
+    const total = await Property.count({ where: filter });
+
+    // Parse JSON fields for each property
+    const parsedProperties = properties.map(parseJsonFields);
 
     res.json({
-      properties,
+      properties: parsedProperties,
       pagination: {
         currentPage: options.page,
         totalPages: Math.ceil(total / options.limit),
@@ -70,15 +103,29 @@ const getProperties = async (req, res) => {
 // Get single property by ID
 const getProperty = async (req, res) => {
   try {
-    const property = await Property.findById(req.params.id)
-      .populate('owner', 'firstName lastName email phone avatar')
-      .populate('agent', 'firstName lastName email phone avatar agent');
+    const property = await Property.findByPk(req.params.id, {
+      include: [
+        {
+          model: User,
+          as: 'owner',
+          attributes: ['firstName', 'lastName', 'email', 'phone', 'avatar']
+        },
+        {
+          model: User,
+          as: 'agent',
+          attributes: ['firstName', 'lastName', 'email', 'phone', 'avatar']
+        }
+      ]
+    });
 
     if (!property) {
       return res.status(404).json({ error: 'Property not found.' });
     }
 
-    res.json({ property });
+    // Parse JSON fields
+    const parsedProperty = parseJsonFields(property);
+
+    res.json({ property: parsedProperty });
   } catch (error) {
     console.error('Get property error:', error);
     res.status(500).json({ error: 'Failed to fetch property.' });
@@ -107,7 +154,7 @@ const createProperty = async (req, res) => {
       price: parseFloat(req.body.price) || 0,
       currency: req.body.currency || 'USD',
       status: req.body.status || 'active',
-      owner: req.user._id,
+      ownerId: req.user.id,
       address: {
         street: req.body.address?.street || '',
         city: req.body.address?.city || 'Unknown City',
@@ -190,7 +237,7 @@ const createProperty = async (req, res) => {
     if (propertyData.details.squareMeters) propertyData.details.squareMeters = parseInt(propertyData.details.squareMeters) || 0;
     if (propertyData.details.yearBuilt) propertyData.details.yearBuilt = parseInt(propertyData.details.yearBuilt) || 2025;
 
-    // Log the exact data structure being sent to mongoose
+    // Log the exact data structure being sent to database
     console.log('=== DATABASE SAVE ATTEMPT ===');
     console.log('Property data type:', typeof propertyData);
     console.log('Property data keys:', Object.keys(propertyData));
@@ -199,12 +246,8 @@ const createProperty = async (req, res) => {
     console.log('Features object:', propertyData.features);
     console.log('Amenities array:', propertyData.amenities);
     
-    const property = new Property(propertyData);
-    console.log('Mongoose model created successfully');
-    
-    console.log('Attempting to save to database...');
-    const savedProperty = await property.save();
-    console.log('Property saved successfully with ID:', savedProperty._id);
+    const savedProperty = await Property.create(propertyData);
+    console.log('Property saved successfully with ID:', savedProperty.id);
     console.log('Saved property data:', savedProperty);
     console.log('=== DATABASE SAVE SUCCESS ===');
     console.log('=== End createProperty controller ===');
@@ -241,14 +284,14 @@ const createProperty = async (req, res) => {
 // Update property (requires authentication + ownership)
 const updateProperty = async (req, res) => {
   try {
-    const property = await Property.findById(req.params.id);
+    const property = await Property.findByPk(req.params.id);
     
     if (!property) {
       return res.status(404).json({ error: 'Property not found.' });
     }
 
     // Check ownership
-    if (property.owner.toString() !== req.user._id.toString()) {
+    if (property.ownerId !== req.user.id) {
       return res.status(403).json({ error: 'Not authorized to update this property.' });
     }
 
@@ -256,7 +299,7 @@ const updateProperty = async (req, res) => {
 
     // Handle rental details if it's a rental property
     if (req.body.listingType === 'rental' && req.body.rentalDetails) {
-      updateData.rentalDetails = {
+      updateData.rental_details = {
         monthlyRent: parseFloat(req.body.rentalDetails.monthlyRent) || 0,
         availableFrom: req.body.rentalDetails.availableFrom ? new Date(req.body.rentalDetails.availableFrom) : null,
         availableUntil: req.body.rentalDetails.availableUntil ? new Date(req.body.rentalDetails.availableUntil) : null,
@@ -281,15 +324,29 @@ const updateProperty = async (req, res) => {
       console.log('Property images updated:', photos.length, 'files');
     }
 
-    const updatedProperty = await Property.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    await property.update(updateData);
+    
+    const updatedProperty = await Property.findByPk(req.params.id, {
+      include: [
+        {
+          model: User,
+          as: 'owner',
+          attributes: ['firstName', 'lastName', 'email', 'phone', 'avatar']
+        },
+        {
+          model: User,
+          as: 'agent',
+          attributes: ['firstName', 'lastName', 'email', 'phone', 'avatar']
+        }
+      ]
+    });
+
+    // Parse JSON fields
+    const parsedProperty = parseJsonFields(updatedProperty);
 
     res.json({
       message: 'Property updated successfully',
-      property: updatedProperty
+      property: parsedProperty
     });
   } catch (error) {
     console.error('Update property error:', error);
@@ -300,18 +357,18 @@ const updateProperty = async (req, res) => {
 // Delete property (requires authentication + ownership)
 const deleteProperty = async (req, res) => {
   try {
-    const property = await Property.findById(req.params.id);
+    const property = await Property.findByPk(req.params.id);
     
     if (!property) {
       return res.status(404).json({ error: 'Property not found.' });
     }
 
     // Check ownership
-    if (property.owner.toString() !== req.user._id.toString()) {
+    if (property.ownerId !== req.user.id) {
       return res.status(403).json({ error: 'Not authorized to delete this property.' });
     }
 
-    await Property.findByIdAndDelete(req.params.id);
+    await property.destroy();
 
     res.json({ message: 'Property deleted successfully' });
   } catch (error) {
@@ -323,10 +380,22 @@ const deleteProperty = async (req, res) => {
 // Get user's properties
 const getUserProperties = async (req, res) => {
   try {
-    const properties = await Property.find({ owner: req.user._id })
-      .sort({ createdAt: -1 });
+    const properties = await Property.findAll({
+      where: { ownerId: req.user.id },
+      include: [
+        {
+          model: User,
+          as: 'owner',
+          attributes: ['firstName', 'lastName', 'email', 'phone', 'avatar']
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
 
-    res.json({ properties });
+    // Parse JSON fields for each property
+    const parsedProperties = properties.map(parseJsonFields);
+
+    res.json({ properties: parsedProperties });
   } catch (error) {
     console.error('Get user properties error:', error);
     res.status(500).json({ error: 'Failed to fetch user properties.' });

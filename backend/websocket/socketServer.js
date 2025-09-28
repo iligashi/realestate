@@ -1,6 +1,6 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const { User } = require('../models');
 
 class SocketServer {
   constructor(server) {
@@ -48,15 +48,17 @@ class SocketServer {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         console.log('JWT decoded:', { userId: decoded.userId, exp: decoded.exp });
         
-        const user = await User.findById(decoded.userId).select('-password');
+        const user = await User.findByPk(decoded.userId, {
+          attributes: { exclude: ['password'] }
+        });
         
         if (!user) {
           console.log('User not found for userId:', decoded.userId);
           return next(new Error('User not found'));
         }
 
-        console.log('WebSocket authentication successful for user:', user.name, user.email);
-        socket.userId = user._id.toString();
+        console.log('WebSocket authentication successful for user:', user.firstName, user.email);
+        socket.userId = user.id.toString();
         socket.user = user;
         next();
       } catch (error) {

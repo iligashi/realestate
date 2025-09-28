@@ -42,6 +42,9 @@ const PropertyDetailPage = () => {
         setLoading(true);
         setError(null);
         
+        console.log('PropertyDetailPage - ID from URL params:', id);
+        console.log('PropertyDetailPage - ID type:', typeof id);
+        
         const response = await getProperty(id);
         if (response && response.property) {
           setProperty(response.property);
@@ -94,7 +97,7 @@ const PropertyDetailPage = () => {
   // Handle rental application submission
   const handleApplicationSubmit = async (applicationData) => {
     try {
-      await rentalApplicationAPI.createApplication(property._id, applicationData);
+      await rentalApplicationAPI.createApplication(property.id, applicationData);
       toast.success('Rental application submitted successfully!');
       setShowApplicationModal(false);
     } catch (error) {

@@ -459,13 +459,13 @@ const SellerDashboard = () => {
                       </div>
                       <div className="flex space-x-3">
                         <button 
-                          onClick={() => navigate(`/properties/${property._id}/edit`)}
+                          onClick={() => navigate(`/properties/${property.id}/edit`)}
                           className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-4 rounded-xl text-sm font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                         >
                           Edit Property
                         </button>
                         <button 
-                          onClick={() => navigate(`/properties/${property._id}`)}
+                          onClick={() => navigate(`/properties/${property.id}`)}
                           className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-xl text-sm font-medium hover:bg-gray-200 transition-all duration-200"
                         >
                           View Details

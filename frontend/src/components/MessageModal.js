@@ -30,7 +30,7 @@ const MessageModal = ({ isOpen, onClose, property, seller }) => {
 
     try {
       const result = await dispatch(createMessage({
-        propertyId: property._id,
+        propertyId: property.id,
         subject: formData.subject,
         message: formData.message
       }));

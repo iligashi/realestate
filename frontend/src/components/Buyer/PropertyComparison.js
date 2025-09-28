@@ -226,7 +226,7 @@ const PropertyComparison = () => {
               <td key={property._id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
                 <div className="flex space-x-2 justify-center">
                   <button
-                    onClick={() => window.open(`/properties/${property._id}`, '_blank')}
+                    onClick={() => window.open(`/properties/${property.id}`, '_blank')}
                     className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors flex items-center"
                   >
                     <EyeIcon className="h-3 w-3 mr-1" />

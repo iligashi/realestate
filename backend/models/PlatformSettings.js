@@ -1,180 +1,230 @@
-const mongoose = require('mongoose');
-
-const platformSettingsSchema = new mongoose.Schema({
-  general: {
-    siteName: {
-      type: String,
-      default: 'Real Estate Platform',
-      trim: true,
-      maxlength: 100
+module.exports = (sequelize, DataTypes) => {
+  const PlatformSettings = sequelize.define('PlatformSettings', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
     },
-    siteDescription: {
-      type: String,
-      default: 'Your trusted platform for real estate transactions',
-      trim: true,
-      maxlength: 500
+    // General settings (stored as JSON)
+    general: {
+      type: DataTypes.JSON,
+      allowNull: true
     },
-    contactEmail: {
-      type: String,
-      default: 'contact@realestate.com',
-      trim: true
+    // Appearance settings (stored as JSON)
+    appearance: {
+      type: DataTypes.JSON,
+      allowNull: true
     },
-    contactPhone: {
-      type: String,
-      default: '+1 (555) 123-4567',
-      trim: true
+    // Business settings (stored as JSON)
+    business: {
+      type: DataTypes.JSON,
+      allowNull: true
     },
-    address: {
-      street: { type: String, trim: true },
-      city: { type: String, trim: true },
-      state: { type: String, trim: true },
-      zipCode: { type: String, trim: true },
-      country: { type: String, default: 'United States', trim: true }
+    // Feature settings (stored as JSON)
+    features: {
+      type: DataTypes.JSON,
+      allowNull: true
     },
-    logo: {
-      type: String,
-      default: ''
+    // Security settings (stored as JSON)
+    security: {
+      type: DataTypes.JSON,
+      allowNull: true
     },
-    favicon: {
-      type: String,
-      default: ''
+    // Notification settings (stored as JSON)
+    notifications: {
+      type: DataTypes.JSON,
+      allowNull: true
     },
-    socialMedia: {
-      facebook: { type: String, trim: true },
-      twitter: { type: String, trim: true },
-      linkedin: { type: String, trim: true },
-      instagram: { type: String, trim: true }
+    // Maintenance settings (stored as JSON)
+    maintenance: {
+      type: DataTypes.JSON,
+      allowNull: true
     }
-  },
-  appearance: {
-    primaryColor: {
-      type: String,
-      default: '#3B82F6',
-      validate: {
-        validator: function(v) {
-          return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(v);
-        },
-        message: 'Primary color must be a valid hex color'
+  }, {
+    tableName: 'platform_settings',
+    timestamps: true,
+    underscored: true,
+    indexes: [
+      {
+        fields: ['id'],
+        unique: true
       }
-    },
-    secondaryColor: {
-      type: String,
-      default: '#1F2937',
-      validate: {
-        validator: function(v) {
-          return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(v);
+    ]
+  });
+
+  // Static method to get or create platform settings
+  PlatformSettings.getSettings = async function() {
+    let settings = await PlatformSettings.findOne();
+    if (!settings) {
+      // Create with default values
+      settings = await PlatformSettings.create({
+        general: {
+          siteName: 'Real Estate Platform',
+          siteDescription: 'Your trusted platform for real estate transactions',
+          contactEmail: 'contact@realestate.com',
+          contactPhone: '+1 (555) 123-4567',
+          address: {
+            street: '',
+            city: '',
+            state: '',
+            zipCode: '',
+            country: 'United States'
+          },
+          logo: '',
+          favicon: '',
+          socialMedia: {
+            facebook: '',
+            twitter: '',
+            linkedin: '',
+            instagram: ''
+          }
         },
-        message: 'Secondary color must be a valid hex color'
+        appearance: {
+          primaryColor: '#3B82F6',
+          secondaryColor: '#1F2937',
+          theme: 'light',
+          customCSS: ''
+        },
+        business: {
+          commissionRate: 5.0,
+          featuredListingPrice: 29.99,
+          premiumFeatures: [],
+          currency: 'USD',
+          taxRate: 0
+        },
+        features: {
+          enableReviews: true,
+          enableMessaging: true,
+          enableNotifications: true,
+          enableAdvancedSearch: true,
+          enableVirtualTours: false,
+          enableAIChatbot: false,
+          maxImagesPerListing: 20,
+          maxListingsPerUser: 10
+        },
+        security: {
+          requireEmailVerification: true,
+          requirePhoneVerification: false,
+          requireIDVerification: false,
+          maxLoginAttempts: 5,
+          sessionTimeout: 24,
+          enableTwoFactorAuth: false
+        },
+        notifications: {
+          emailTemplates: {
+            welcome: '',
+            listingApproved: '',
+            listingRejected: '',
+            newMessage: '',
+            passwordReset: ''
+          },
+          smsEnabled: false,
+          pushNotifications: true
+        },
+        maintenance: {
+          isMaintenanceMode: false,
+          maintenanceMessage: '',
+          maintenanceStartTime: null,
+          maintenanceEndTime: null,
+          allowedIPs: []
+        }
+      });
+    }
+    return settings;
+  };
+
+  // Instance method to update specific section
+  PlatformSettings.prototype.updateSection = async function(section, data) {
+    const currentData = this[section] || {};
+    this[section] = { ...currentData, ...data };
+    return this.save();
+  };
+
+  // Instance method to reset to defaults
+  PlatformSettings.prototype.resetToDefaults = async function() {
+    const defaults = {
+      general: {
+        siteName: 'Real Estate Platform',
+        siteDescription: 'Your trusted platform for real estate transactions',
+        contactEmail: 'contact@realestate.com',
+        contactPhone: '+1 (555) 123-4567',
+        address: {
+          street: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          country: 'United States'
+        },
+        logo: '',
+        favicon: '',
+        socialMedia: {
+          facebook: '',
+          twitter: '',
+          linkedin: '',
+          instagram: ''
+        }
+      },
+      appearance: {
+        primaryColor: '#3B82F6',
+        secondaryColor: '#1F2937',
+        theme: 'light',
+        customCSS: ''
+      },
+      business: {
+        commissionRate: 5.0,
+        featuredListingPrice: 29.99,
+        premiumFeatures: [],
+        currency: 'USD',
+        taxRate: 0
+      },
+      features: {
+        enableReviews: true,
+        enableMessaging: true,
+        enableNotifications: true,
+        enableAdvancedSearch: true,
+        enableVirtualTours: false,
+        enableAIChatbot: false,
+        maxImagesPerListing: 20,
+        maxListingsPerUser: 10
+      },
+      security: {
+        requireEmailVerification: true,
+        requirePhoneVerification: false,
+        requireIDVerification: false,
+        maxLoginAttempts: 5,
+        sessionTimeout: 24,
+        enableTwoFactorAuth: false
+      },
+      notifications: {
+        emailTemplates: {
+          welcome: '',
+          listingApproved: '',
+          listingRejected: '',
+          newMessage: '',
+          passwordReset: ''
+        },
+        smsEnabled: false,
+        pushNotifications: true
+      },
+      maintenance: {
+        isMaintenanceMode: false,
+        maintenanceMessage: '',
+        maintenanceStartTime: null,
+        maintenanceEndTime: null,
+        allowedIPs: []
       }
-    },
-    theme: {
-      type: String,
-      enum: ['light', 'dark', 'auto'],
-      default: 'light'
-    },
-    customCSS: {
-      type: String,
-      maxlength: 10000
-    }
-  },
-  business: {
-    commissionRate: {
-      type: Number,
-      default: 5.0,
-      min: 0,
-      max: 100
-    },
-    featuredListingPrice: {
-      type: Number,
-      default: 29.99,
-      min: 0
-    },
-    premiumFeatures: [{
-      name: { type: String, required: true },
-      price: { type: Number, required: true, min: 0 },
-      description: { type: String },
-      isActive: { type: Boolean, default: true }
-    }],
-    currency: {
-      type: String,
-      default: 'USD',
-      enum: ['USD', 'EUR', 'GBP', 'CAD', 'AUD']
-    },
-    taxRate: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100
-    }
-  },
-  features: {
-    enableReviews: { type: Boolean, default: true },
-    enableMessaging: { type: Boolean, default: true },
-    enableNotifications: { type: Boolean, default: true },
-    enableAdvancedSearch: { type: Boolean, default: true },
-    enableVirtualTours: { type: Boolean, default: false },
-    enableAIChatbot: { type: Boolean, default: false },
-    maxImagesPerListing: { type: Number, default: 20, min: 1, max: 100 },
-    maxListingsPerUser: { type: Number, default: 10, min: 1, max: 100 }
-  },
-  security: {
-    requireEmailVerification: { type: Boolean, default: true },
-    requirePhoneVerification: { type: Boolean, default: false },
-    requireIDVerification: { type: Boolean, default: false },
-    maxLoginAttempts: { type: Number, default: 5, min: 1, max: 10 },
-    sessionTimeout: { type: Number, default: 24, min: 1, max: 168 }, // hours
-    enableTwoFactorAuth: { type: Boolean, default: false }
-  },
-  notifications: {
-    emailTemplates: {
-      welcome: { type: String, maxlength: 2000 },
-      listingApproved: { type: String, maxlength: 2000 },
-      listingRejected: { type: String, maxlength: 2000 },
-      newMessage: { type: String, maxlength: 2000 },
-      passwordReset: { type: String, maxlength: 2000 }
-    },
-    smsEnabled: { type: Boolean, default: false },
-    pushNotifications: { type: Boolean, default: true }
-  },
-  maintenance: {
-    isMaintenanceMode: { type: Boolean, default: false },
-    maintenanceMessage: { type: String, maxlength: 1000 },
-    maintenanceStartTime: Date,
-    maintenanceEndTime: Date,
-    allowedIPs: [String]
-  }
-}, {
-  timestamps: true
-});
+    };
 
-// Ensure only one platform settings document exists
-platformSettingsSchema.index({}, { unique: true });
+    this.general = defaults.general;
+    this.appearance = defaults.appearance;
+    this.business = defaults.business;
+    this.features = defaults.features;
+    this.security = defaults.security;
+    this.notifications = defaults.notifications;
+    this.maintenance = defaults.maintenance;
+    
+    return this.save();
+  };
 
-// Static method to get or create platform settings
-platformSettingsSchema.statics.getSettings = async function() {
-  let settings = await this.findOne();
-  if (!settings) {
-    settings = await this.create({});
-  }
-  return settings;
+  return PlatformSettings;
 };
-
-// Method to update specific section
-platformSettingsSchema.methods.updateSection = function(section, data) {
-  this[section] = { ...this[section], ...data };
-  return this.save();
-};
-
-// Method to reset to defaults
-platformSettingsSchema.methods.resetToDefaults = function() {
-  this.general = platformSettingsSchema.path('general').defaultValue;
-  this.appearance = platformSettingsSchema.path('appearance').defaultValue;
-  this.business = platformSettingsSchema.path('business').defaultValue;
-  this.features = platformSettingsSchema.path('features').defaultValue;
-  this.security = platformSettingsSchema.path('security').defaultValue;
-  this.notifications = platformSettingsSchema.path('notifications').defaultValue;
-  this.maintenance = platformSettingsSchema.path('maintenance').defaultValue;
-  return this.save();
-};
-
-module.exports = mongoose.model('PlatformSettings', platformSettingsSchema);

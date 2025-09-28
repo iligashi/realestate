@@ -1,5 +1,4 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -90,7 +89,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Import database connection
-const connectDB = require('./config/database');
+const { connectDB } = require('./config/database');
 
 // Connect to database
 connectDB();
@@ -180,17 +179,16 @@ app.post('/test-property', async (req, res) => {
     console.log('Test property data:', testProperty);
     
     // Try to create the Property model
-    const Property = require('./models/Property');
-    const property = new Property(testProperty);
+    const { Property } = require('./models');
+    const property = await Property.create(testProperty);
     console.log('Property model created');
     
     // Try to save
-    const saved = await property.save();
-    console.log('Property saved successfully:', saved._id);
+    console.log('Property saved successfully:', property.id);
     
     res.json({ 
       message: 'Test property created successfully',
-      propertyId: saved._id
+      propertyId: property.id
     });
     
   } catch (error) {

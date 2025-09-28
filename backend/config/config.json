@@ -1,0 +1,41 @@
+{
+  "development": {
+    "username": "root",
+    "password": "",
+    "database": "real_estate_dev",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "logging": false,
+    "define": {
+      "timestamps": true,
+      "underscored": true,
+      "underscoredAll": true
+    }
+  },
+  "test": {
+    "username": "root",
+    "password": "",
+    "database": "real_estate_test",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "logging": false,
+    "define": {
+      "timestamps": true,
+      "underscored": true,
+      "underscoredAll": true
+    }
+  },
+  "production": {
+    "username": "root",
+    "password": "",
+    "database": "real_estate_prod",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "logging": false,
+    "define": {
+      "timestamps": true,
+      "underscored": true,
+      "underscoredAll": true
+    }
+  }
+}

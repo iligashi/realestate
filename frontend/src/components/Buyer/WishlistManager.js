@@ -145,7 +145,7 @@ const WishlistManager = () => {
         
         <div className="flex space-x-2">
           <button
-            onClick={() => window.open(`/properties/${favorite._id}`, '_blank')}
+            onClick={() => window.open(`/properties/${favorite.id}`, '_blank')}
             className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center"
           >
             <EyeIcon className="h-4 w-4 mr-2" />
@@ -215,7 +215,7 @@ const WishlistManager = () => {
           
           <div className="flex space-x-2">
             <button
-              onClick={() => window.open(`/properties/${favorite._id}`, '_blank')}
+              onClick={() => window.open(`/properties/${favorite.id}`, '_blank')}
               className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center"
             >
               <EyeIcon className="h-4 w-4 mr-2" />

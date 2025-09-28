@@ -337,7 +337,7 @@ const AdminDashboard = () => {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {users.list.map((userItem) => (
-              <tr key={userItem._id}>
+              <tr key={userItem.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="flex-shrink-0 h-10 w-10">
@@ -384,7 +384,7 @@ const AdminDashboard = () => {
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => handleUserDelete(userItem._id)}
+                      onClick={() => handleUserDelete(userItem.id)}
                       className="text-red-600 hover:text-red-900"
                       title="Delete user"
                     >
@@ -419,7 +419,7 @@ const AdminDashboard = () => {
                 userType: formData.get('userType'),
                 isBlocked: formData.get('isBlocked') === 'true'
               };
-              handleUserUpdate(editingUser._id, userData);
+              handleUserUpdate(editingUser.id, userData);
             }}>
               <div className="space-y-4">
                 <div>
@@ -567,7 +567,7 @@ const AdminDashboard = () => {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {listings.list.map((listing) => (
-              <tr key={listing._id}>
+              <tr key={listing.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="flex-shrink-0 h-10 w-10">
@@ -616,7 +616,7 @@ const AdminDashboard = () => {
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => handleListingDelete(listing._id)}
+                      onClick={() => handleListingDelete(listing.id)}
                       className="text-red-600 hover:text-red-900"
                       title="Delete listing"
                     >
@@ -648,7 +648,7 @@ const AdminDashboard = () => {
               const statusData = {
                 status: formData.get('status')
               };
-              handleListingStatusUpdate(editingListing._id, statusData);
+              handleListingStatusUpdate(editingListing.id, statusData);
             }}>
               <div className="space-y-4">
                 <div>
@@ -771,7 +771,7 @@ const AdminDashboard = () => {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {reports.list.map((report) => (
-              <tr key={report._id}>
+              <tr key={report.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="flex-shrink-0 h-10 w-10">
@@ -862,7 +862,7 @@ const AdminDashboard = () => {
                 adminNotes: formData.get('adminNotes'),
                 action: formData.get('action')
               };
-              handleReportResolution(editingReport._id, resolutionData);
+              handleReportResolution(editingReport.id, resolutionData);
             }}>
               <div className="space-y-4">
                 <div>
@@ -1123,7 +1123,7 @@ const AdminDashboard = () => {
             </div>
           ) : (
             (featuredListings?.list || []).map((listing) => (
-              <div key={listing._id} className="bg-white rounded-lg shadow overflow-hidden">
+              <div key={listing.id} className="bg-white rounded-lg shadow overflow-hidden">
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-medium text-gray-900">{listing.title}</h3>
@@ -1214,7 +1214,7 @@ const AdminDashboard = () => {
             </div>
           ) : (
             announcements.list.map((announcement) => (
-              <div key={announcement._id} className="bg-white rounded-lg shadow p-6">
+              <div key={announcement.id} className="bg-white rounded-lg shadow p-6">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <h3 className="text-lg font-medium text-gray-900">{announcement.title}</h3>
@@ -1236,7 +1236,7 @@ const AdminDashboard = () => {
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDelete(announcement._id)}
+                      onClick={() => handleDelete(announcement.id)}
                       className="text-red-600 hover:text-red-900"
                     >
                       Delete
@@ -1267,7 +1267,7 @@ const AdminDashboard = () => {
                 if (isCreating) {
                   handleCreate(announcementData);
                 } else {
-                  handleUpdate(editingAnnouncement._id, announcementData);
+                  handleUpdate(editingAnnouncement.id, announcementData);
                 }
               }}>
                 <div className="space-y-4">
