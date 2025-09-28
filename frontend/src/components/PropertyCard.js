@@ -6,11 +6,13 @@ import { toast } from 'react-toastify';
 import { 
   DocumentTextIcon,
   ChatBubbleLeftRightIcon,
-  CalendarIcon
+  CalendarIcon,
+  FlagIcon
 } from '@heroicons/react/24/outline';
 import ModernRentalApplicationForm from './Renter/ModernRentalApplicationForm';
 import MessageModal from './MessageModal';
 import ViewingModal from './ViewingModal';
+import ReportForm from './ReportForm';
 import rentalApplicationAPI from '../services/rentalApplicationAPI';
 
 const PropertyCard = ({ property }) => {
@@ -19,6 +21,8 @@ const PropertyCard = ({ property }) => {
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [showViewingModal, setShowViewingModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
 
   const formatPrice = (price, currency) => {
     return new Intl.NumberFormat('en-US', {
@@ -36,13 +40,30 @@ const PropertyCard = ({ property }) => {
 
   // Handle rental application submission
   const handleApplicationSubmit = async (applicationData) => {
+    if (isSubmittingApplication) return; // Prevent multiple submissions
+    
     try {
-      await rentalApplicationAPI.createApplication(property._id, applicationData);
+      setIsSubmittingApplication(true);
+      const propertyId = property.id || property._id;
+      console.log('Submitting application for property ID:', propertyId);
+      console.log('Application data:', applicationData);
+      await rentalApplicationAPI.createApplication(propertyId, applicationData);
       toast.success('Rental application submitted successfully!');
       setShowApplicationModal(false);
     } catch (error) {
       console.error('Error submitting application:', error);
+      
+      // Handle specific error cases
+      if (error.response?.data?.message === 'You have already applied for this property') {
+        toast.error('You have already applied for this property. Please check your applications.');
+        setShowApplicationModal(false);
+        return;
+      }
+      
+      // Re-throw other errors to be handled by the form
       throw error;
+    } finally {
+      setIsSubmittingApplication(false);
     }
   };
 
@@ -95,6 +116,23 @@ const PropertyCard = ({ property }) => {
     }
 
     setShowViewingModal(true);
+  };
+
+  // Handle report button click
+  const handleReport = () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to report this property');
+      navigate('/login');
+      return;
+    }
+
+    // Check if user is trying to report their own property
+    if (property && property.owner && user && property.owner.id === user.id) {
+      toast.error('You cannot report your own property');
+      return;
+    }
+
+    setShowReportModal(true);
   };
 
   return (
@@ -199,10 +237,24 @@ const PropertyCard = ({ property }) => {
           <div className="space-y-2">
             <button
               onClick={handleApplyForRental}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
+              disabled={isSubmittingApplication}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md transition-colors duration-200 text-sm font-medium ${
+                isSubmittingApplication
+                  ? 'bg-gray-400 text-white cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
             >
-              <DocumentTextIcon className="h-4 w-4" />
-              Apply for Rent
+              {isSubmittingApplication ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <DocumentTextIcon className="h-4 w-4" />
+                  Apply for Rent
+                </>
+              )}
             </button>
             <div className="flex gap-2">
               <button 
@@ -218,6 +270,13 @@ const PropertyCard = ({ property }) => {
               >
                 <CalendarIcon className="h-3 w-3" />
                 Viewing
+              </button>
+              <button 
+                onClick={handleReport}
+                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+              >
+                <FlagIcon className="h-3 w-3" />
+                Report
               </button>
             </div>
           </div>
@@ -250,6 +309,16 @@ const PropertyCard = ({ property }) => {
           isOpen={showViewingModal}
           onClose={() => setShowViewingModal(false)}
           property={property}
+        />
+      )}
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <ReportForm
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          reportedItem={property}
+          reportedItemType="Property"
         />
       )}
     </div>

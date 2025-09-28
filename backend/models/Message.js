@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
@@ -66,6 +67,63 @@ const messageSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true
+=======
+module.exports = (sequelize, DataTypes) => {
+  const Message = sequelize.define('Message', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
+    propertyId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'property_id',
+      references: {
+        model: 'properties',
+        key: 'id'
+      }
+    },
+    buyerId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'buyer_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    sellerId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'seller_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    renterId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'renter_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    landlordId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'landlord_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    subject: {
+      type: DataTypes.STRING(200),
+      allowNull: false
+>>>>>>> Stashed changes
     },
     message: {
       type: String,
@@ -77,9 +135,21 @@ const messageSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     },
+<<<<<<< Updated upstream
     isRead: {
       type: Boolean,
       default: false
+=======
+    status: {
+      type: DataTypes.ENUM('new', 'replied', 'closed'),
+      defaultValue: 'new'
+    },
+    // Read status for each participant (stored as JSON)
+    readBy: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: 'read_by'
+>>>>>>> Stashed changes
     }
   }],
   

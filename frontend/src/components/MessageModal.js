@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { createMessage } from '../store/slices/messageSlice';
 
 const MessageModal = ({ isOpen, onClose, property, seller }) => {
+  
   const dispatch = useDispatch();
   const { loading } = useSelector(state => state.messages);
   const { user } = useSelector(state => state.auth);
@@ -12,6 +13,7 @@ const MessageModal = ({ isOpen, onClose, property, seller }) => {
     subject: '',
     message: ''
   });
+
 
   const handleChange = (e) => {
     setFormData({
@@ -30,7 +32,7 @@ const MessageModal = ({ isOpen, onClose, property, seller }) => {
 
     try {
       const result = await dispatch(createMessage({
-        propertyId: property._id,
+        propertyId: property?.id || property?._id,
         subject: formData.subject,
         message: formData.message
       }));
@@ -52,11 +54,22 @@ const MessageModal = ({ isOpen, onClose, property, seller }) => {
     onClose();
   };
 
-  if (!isOpen) return null;
-
+  if (!isOpen) {
+    return null;
+  }
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+    <div 
+      className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
+    >
+      <div 
+        className="bg-white rounded-lg p-6 w-full max-w-md mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium text-gray-900">
             Contact Property Owner
@@ -73,20 +86,22 @@ const MessageModal = ({ isOpen, onClose, property, seller }) => {
 
         {/* Property Info */}
         <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-          <h4 className="font-medium text-gray-900">{property.title}</h4>
+          <h4 className="font-medium text-gray-900">{property?.title}</h4>
           <p className="text-sm text-gray-600">
-            {property.address?.city}, {property.address?.country}
+            {property?.address?.city}, {property?.address?.state}
           </p>
           <p className="text-sm text-gray-600">
-            ${property.price?.toLocaleString()} {property.currency}
+            ${property?.price?.toLocaleString()} {property?.currency || 'USD'}
           </p>
         </div>
 
         {/* Seller Info */}
         <div className="mb-4 p-3 bg-blue-50 rounded-lg">
           <h4 className="font-medium text-gray-900">Property Owner</h4>
-          <p className="text-sm text-gray-600">{seller.name}</p>
-          <p className="text-sm text-gray-600">{seller.email}</p>
+          <p className="text-sm text-gray-600">
+            {seller?.firstName} {seller?.lastName}
+          </p>
+          <p className="text-sm text-gray-600">{seller?.email}</p>
         </div>
 
         <form onSubmit={handleSubmit}>

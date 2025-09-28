@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 const mongoose = require('mongoose');
 
 const reportSchema = new mongoose.Schema({
@@ -34,6 +35,73 @@ const reportSchema = new mongoose.Schema({
       'copyright',
       'fraud',
       'other'
+=======
+module.exports = (sequelize, DataTypes) => {
+  const Report = sequelize.define('Report', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
+    reportedById: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'reporter_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    reportedItemId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'reported_item_id'
+    },
+    reportedItemModel: {
+      type: DataTypes.ENUM('property', 'user', 'message', 'review'),
+      allowNull: false,
+      field: 'reported_item_type'
+    },
+    type: {
+      type: DataTypes.ENUM('spam', 'inappropriate', 'fraud', 'harassment', 'other'),
+      allowNull: false
+    },
+    reason: {
+      type: DataTypes.TEXT,
+      allowNull: false
+    },
+    status: {
+      type: DataTypes.ENUM('pending', 'under_review', 'resolved', 'dismissed'),
+      defaultValue: 'pending'
+    },
+    // Evidence/attachments (stored as JSON)
+    evidence: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Additional metadata (stored as JSON)
+    metadata: {
+      type: DataTypes.JSON,
+      allowNull: true
+    }
+  }, {
+    tableName: 'reports',
+    timestamps: true,
+    underscored: true,
+    indexes: [
+      {
+        fields: ['status', 'created_at']
+      },
+      {
+        fields: ['type', 'status']
+      },
+      {
+        fields: ['reporter_id']
+      },
+      {
+        fields: ['reported_item_id']
+      }
+>>>>>>> Stashed changes
     ]
   },
   
@@ -132,4 +200,10 @@ reportSchema.statics.getByType = function(type) {
   return this.find({ type }).populate('reportedBy', 'firstName lastName email');
 };
 
+<<<<<<< Updated upstream
 module.exports = mongoose.model('Report', reportSchema);
+=======
+
+  return Report;
+};
+>>>>>>> Stashed changes

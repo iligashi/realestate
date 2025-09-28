@@ -163,11 +163,40 @@ const getApplicantApplications = async (req, res) => {
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
+<<<<<<< Updated upstream
     const total = await RentalApplication.countDocuments(query);
+=======
+    // Convert to JSON to trigger the model's JSON parsing
+    const parsedApplications = applications.map(app => {
+      const appData = app.toJSON();
+      
+      // Parse JSON fields for property
+      if (appData.property) {
+        if (typeof appData.property.address === 'string') {
+          try {
+            appData.property.address = JSON.parse(appData.property.address);
+          } catch (e) {
+            appData.property.address = {};
+          }
+        }
+        if (typeof appData.property.photos === 'string') {
+          try {
+            appData.property.photos = JSON.parse(appData.property.photos);
+          } catch (e) {
+            appData.property.photos = [];
+          }
+        }
+      }
+      
+      return appData;
+    });
+
+    const total = await RentalApplication.count({ where: whereClause });
+>>>>>>> Stashed changes
 
     res.json({
       success: true,
-      applications,
+      applications: parsedApplications,
       pagination: {
         current: parseInt(page),
         pages: Math.ceil(total / limit),

@@ -1,3 +1,5 @@
+import api from './api';
+
 const API_BASE_URL = '/api/properties';
 
 // Helper function to get auth headers
@@ -36,13 +38,8 @@ export const getProperties = async (filters = {}) => {
 // Get a single property by ID
 export const getProperty = async (id) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/${id}`);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch property');
-    }
-
-    return await response.json();
+    const response = await api.get(`/properties/${id}`);
+    return response.data;
   } catch (error) {
     console.error('Error fetching property:', error);
     throw error;
