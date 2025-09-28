@@ -332,15 +332,6 @@ propertySchema.statics.findNearby = function(coordinates, maxDistance = 10000) {
   });
 };
 
-<<<<<<< Updated upstream
-propertySchema.statics.findByPriceRange = function(minPrice, maxPrice) {
-  return this.find({
-    price: { $gte: minPrice, $lte: maxPrice }
-  });
-};
-
-module.exports = mongoose.model('Property', propertySchema);
-=======
   // Instance methods
   Property.prototype.getFullAddress = function() {
     const addr = this.address;
@@ -443,4 +434,3 @@ module.exports = mongoose.model('Property', propertySchema);
 
   return Property;
 };
->>>>>>> Stashed changes
