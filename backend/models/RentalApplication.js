@@ -110,6 +110,9 @@ const rentalApplicationSchema = new mongoose.Schema({
       allowNull: true,
       defaultValue: 'normal'
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes

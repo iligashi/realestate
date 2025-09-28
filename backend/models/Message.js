@@ -149,6 +149,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.JSON,
       allowNull: true,
       field: 'read_by'
+<<<<<<< Updated upstream
 >>>>>>> Stashed changes
     }
   }],
@@ -177,6 +178,8 @@ module.exports = (sequelize, DataTypes) => {
     landlord: {
       type: Boolean,
       default: false
+=======
+>>>>>>> Stashed changes
     }
   },
   

@@ -27,10 +27,31 @@ const createMessage = async (req, res) => {
 
     if (existingMessage) {
       // Add to existing thread instead of creating new message
+<<<<<<< Updated upstream
       existingMessage.replies.push({
         sender: buyerId,
         message: message,
         timestamp: new Date()
+=======
+      const currentThread = existingMessage.thread || [];
+      const newMessage = {
+        id: Date.now() + Math.random(),
+        message: message,
+        sentAt: new Date().toISOString(),
+        senderId: buyerId,
+        sender: {
+          id: buyerId,
+          name: req.user.firstName + ' ' + req.user.lastName,
+          email: req.user.email
+        },
+        isRead: false
+      };
+
+      const updatedMessage = await existingMessage.update({
+        thread: [...currentThread, newMessage],
+        status: 'replied',
+        lastMessageAt: new Date()
+>>>>>>> Stashed changes
       });
       existingMessage.lastMessageAt = new Date();
       await existingMessage.save();
@@ -47,6 +68,7 @@ const createMessage = async (req, res) => {
       });
     }
 
+<<<<<<< Updated upstream
     // Create new message thread
     const newMessage = new Message({
       property: propertyId,
@@ -56,6 +78,34 @@ const createMessage = async (req, res) => {
       replies: [],
       status: 'open',
       readBy: [buyerId],
+=======
+    // Create new message thread with proper structure
+    const initialMessage = {
+      id: Date.now() + Math.random(),
+      message: message,
+      sentAt: new Date().toISOString(),
+      senderId: buyerId,
+      sender: {
+        id: buyerId,
+        name: req.user.firstName + ' ' + req.user.lastName,
+        email: req.user.email
+      },
+      isRead: false
+    };
+
+    const newMessage = await Message.create({
+      property_id: propertyId,
+      buyer_id: buyerId,
+      seller_id: property.owner.id,
+      subject: subject,
+      message: message,
+      status: 'new',
+      thread: [initialMessage],
+      readBy: {
+        buyer: true,
+        seller: false
+      },
+>>>>>>> Stashed changes
       lastMessageAt: new Date()
     });
 
@@ -154,6 +204,7 @@ const createRentalMessage = async (req, res) => {
 const getMessages = async (req, res) => {
   try {
     const userId = req.user.id;
+<<<<<<< Updated upstream
     const { role } = req.query;
 
     let query = {};
@@ -183,6 +234,58 @@ const getMessages = async (req, res) => {
       .populate('landlord', 'firstName lastName email')
       .populate('property', 'title price address photos')
       .sort({ lastMessageAt: -1 });
+=======
+    const { page = 1, limit = 10, status, role } = req.query;
+
+    let whereClause = {};
+
+    // Handle role-based filtering
+    if (role === 'seller') {
+      whereClause = {
+        seller_id: userId
+      };
+    } else if (role === 'buyer') {
+      whereClause = {
+        buyer_id: userId
+      };
+    } else if (role === 'renter') {
+      whereClause = {
+        renter_id: userId
+      };
+    } else if (role === 'landlord') {
+      whereClause = {
+        landlord_id: userId
+      };
+    } else {
+      // Default: get all messages for the user
+      whereClause = {
+        [Op.or]: [
+          { buyer_id: userId },
+          { seller_id: userId },
+          { renter_id: userId },
+          { landlord_id: userId }
+        ]
+      };
+    }
+
+    if (status) {
+      whereClause.status = status;
+    }
+
+    const messages = await Message.findAndCountAll({
+      where: whereClause,
+      include: [
+        { model: Property, as: 'property', attributes: ['id', 'title', 'price'] },
+        { model: User, as: 'buyer', attributes: ['id', 'firstName', 'lastName'] },
+        { model: User, as: 'seller', attributes: ['id', 'firstName', 'lastName'] },
+        { model: User, as: 'renter', attributes: ['id', 'firstName', 'lastName'] },
+        { model: User, as: 'landlord', attributes: ['id', 'firstName', 'lastName'] }
+      ],
+      order: [['updatedAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: (parseInt(page) - 1) * parseInt(limit)
+    });
+>>>>>>> Stashed changes
 
     res.json({
       success: true,
@@ -317,15 +420,44 @@ const replyToMessage = async (req, res) => {
       });
     }
 
+<<<<<<< Updated upstream
     // Add reply
     messageThread.replies.push({
       sender: userId,
       message: message,
       timestamp: new Date()
+=======
+    // Get sender info for the thread
+    const senderInfo = {
+      id: senderId,
+      name: req.user.firstName + ' ' + req.user.lastName,
+      email: req.user.email
+    };
+
+    // Add reply to thread with proper structure
+    const currentThread = messageThread.thread || [];
+    const newMessage = {
+      id: Date.now() + Math.random(), // Generate unique ID for the message
+      message: message,
+      sentAt: new Date().toISOString(),
+      senderId: senderId,
+      sender: senderInfo,
+      isRead: false
+    };
+
+    const updatedThread = [...currentThread, newMessage];
+
+    // Update the message with new thread and mark as replied
+    const updatedMessage = await messageThread.update({
+      thread: updatedThread,
+      status: 'replied',
+      lastMessageAt: new Date()
+>>>>>>> Stashed changes
     });
     messageThread.lastMessageAt = new Date();
     messageThread.readBy = [userId]; // Reset read status
 
+<<<<<<< Updated upstream
     await messageThread.save();
 
     const updatedMessage = await Message.findById(messageId)
@@ -334,11 +466,51 @@ const replyToMessage = async (req, res) => {
       .populate('renter', 'firstName lastName email')
       .populate('landlord', 'firstName lastName email')
       .populate('property', 'title price address');
+=======
+    // Update read status - mark as unread for the recipient
+    const readBy = messageThread.readBy || {};
+    if (messageThread.buyerId === senderId) {
+      readBy.seller = false;
+    } else if (messageThread.sellerId === senderId) {
+      readBy.buyer = false;
+    } else if (messageThread.renterId === senderId) {
+      readBy.landlord = false;
+    } else if (messageThread.landlordId === senderId) {
+      readBy.renter = false;
+    }
+
+    await updatedMessage.update({ readBy });
+
+    // Determine recipient for notification
+    let recipientId = null;
+    if (messageThread.buyerId === senderId) {
+      recipientId = messageThread.sellerId;
+    } else if (messageThread.sellerId === senderId) {
+      recipientId = messageThread.buyerId;
+    } else if (messageThread.renterId === senderId) {
+      recipientId = messageThread.landlordId;
+    } else if (messageThread.landlordId === senderId) {
+      recipientId = messageThread.renterId;
+    }
+>>>>>>> Stashed changes
 
     res.json({
       success: true,
       message: 'Reply sent successfully',
+<<<<<<< Updated upstream
       data: updatedMessage
+=======
+      data: {
+        messageId: updatedMessage.id,
+        buyer: updatedMessage.buyerId,
+        seller: updatedMessage.sellerId,
+        renter: updatedMessage.renterId,
+        landlord: updatedMessage.landlordId,
+        thread: updatedMessage.thread,
+        recipientId: recipientId,
+        lastMessage: newMessage
+      }
+>>>>>>> Stashed changes
     });
   } catch (error) {
     console.error('Error replying to message:', error);
@@ -501,6 +673,136 @@ const deleteMessageThread = async (req, res) => {
   }
 };
 
+// Get a specific message thread/conversation
+const getMessageThread = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user.id;
+
+    const messageThread = await Message.findByPk(messageId, {
+      include: [
+        { model: Property, attributes: ['id', 'title', 'price', 'photos'] },
+        { model: User, as: 'buyer', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] },
+        { model: User, as: 'seller', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] },
+        { model: User, as: 'renter', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] },
+        { model: User, as: 'landlord', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] }
+      ]
+    });
+
+    if (!messageThread) {
+      return res.status(404).json({ error: 'Message thread not found' });
+    }
+
+    // Check if user is part of this conversation
+    const isParticipant = 
+      (messageThread.buyerId === userId) ||
+      (messageThread.sellerId === userId) ||
+      (messageThread.renterId === userId) ||
+      (messageThread.landlordId === userId);
+
+    if (!isParticipant) {
+      return res.status(403).json({ error: 'Not authorized to view this conversation' });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        messageId: messageThread.id,
+        property: messageThread.property,
+        buyer: messageThread.buyer,
+        seller: messageThread.seller,
+        renter: messageThread.renter,
+        landlord: messageThread.landlord,
+        subject: messageThread.subject,
+        status: messageThread.status,
+        thread: messageThread.thread || [],
+        readBy: messageThread.readBy || {},
+        lastMessageAt: messageThread.lastMessageAt,
+        createdAt: messageThread.createdAt,
+        updatedAt: messageThread.updatedAt
+      }
+    });
+
+  } catch (error) {
+    console.error('Get message thread error:', error);
+    res.status(500).json({ error: 'Failed to fetch message thread' });
+  }
+};
+
+// Delete a message thread/conversation
+const deleteMessageThread = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user.id;
+
+    const messageThread = await Message.findByPk(messageId);
+
+    if (!messageThread) {
+      return res.status(404).json({ error: 'Message thread not found' });
+    }
+
+    // Check if user is part of this conversation
+    const isParticipant = 
+      (messageThread.buyerId === userId) ||
+      (messageThread.sellerId === userId) ||
+      (messageThread.renterId === userId) ||
+      (messageThread.landlordId === userId);
+
+    if (!isParticipant) {
+      return res.status(403).json({ error: 'Not authorized to delete this conversation' });
+    }
+
+    // Soft delete by marking as closed, or hard delete
+    await messageThread.destroy();
+
+    res.json({
+      success: true,
+      message: 'Conversation deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Delete message thread error:', error);
+    res.status(500).json({ error: 'Failed to delete conversation' });
+  }
+};
+
+// Get conversation history for a specific property
+const getPropertyConversations = async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+    const userId = req.user.id;
+
+    const conversations = await Message.findAll({
+      where: {
+        property_id: propertyId,
+        [Op.or]: [
+          { buyer_id: userId },
+          { seller_id: userId },
+          { renter_id: userId },
+          { landlord_id: userId }
+        ]
+      },
+      include: [
+        { model: Property, attributes: ['id', 'title', 'price'] },
+        { model: User, as: 'buyer', attributes: ['id', 'firstName', 'lastName'] },
+        { model: User, as: 'seller', attributes: ['id', 'firstName', 'lastName'] },
+        { model: User, as: 'renter', attributes: ['id', 'firstName', 'lastName'] },
+        { model: User, as: 'landlord', attributes: ['id', 'firstName', 'lastName'] }
+      ],
+      order: [['lastMessageAt', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      conversations: conversations
+    });
+
+  } catch (error) {
+    console.error('Get property conversations error:', error);
+    res.status(500).json({ error: 'Failed to fetch property conversations' });
+  }
+};
+
 module.exports = {
   createMessage,
   createRentalMessage,
@@ -510,6 +812,11 @@ module.exports = {
   markAsRead,
   getUnreadCount,
   closeMessage,
+<<<<<<< Updated upstream
+=======
+  createRentalInquiry,
+  getMessageThread,
+>>>>>>> Stashed changes
   deleteMessageThread,
   getPropertyConversations
 };
