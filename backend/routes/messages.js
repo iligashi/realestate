@@ -10,7 +10,6 @@ const {
   markAsRead,
   getUnreadCount,
   closeMessage,
-  getMessageThread,
   deleteMessageThread,
   getPropertyConversations
 } = require('../controllers/messageController');
@@ -30,22 +29,11 @@ router.get('/', getMessages);
 // Get unread message count for notifications
 router.get('/unread-count', getUnreadCount);
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-// Get a specific message thread
-router.get('/:messageId', getMessageThread);
-=======
-=======
->>>>>>> Stashed changes
 // Get a specific message thread/conversation
 router.get('/:messageId', getMessageThread);
 
 // Get conversations for a specific property
 router.get('/property/:propertyId', getPropertyConversations);
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
 // Reply to a message
 router.post('/:messageId/reply', replyToMessage);
