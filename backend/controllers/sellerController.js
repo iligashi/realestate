@@ -1,21 +1,14 @@
-<<<<<<< Updated upstream
 const Property = require('../models/Property');
 const Inquiry = require('../models/Inquiry');
 const OpenHouse = require('../models/OpenHouse');
 const ListingAnalytics = require('../models/ListingAnalytics');
 const User = require('../models/User');
-=======
-const { Property, Inquiry, OpenHouse, ListingAnalytics, User, sequelize } = require('../models');
-const { Op } = require('sequelize');
->>>>>>> Stashed changes
 
 // ===== DASHBOARD OVERVIEW =====
 const getSellerDashboard = async (req, res) => {
   try {
     const sellerId = req.user.id;
-    console.log('Seller dashboard request for user ID:', sellerId);
     
-<<<<<<< Updated upstream
     // Get basic stats
     const totalProperties = await Property.countDocuments({ owner: sellerId });
     const activeProperties = await Property.countDocuments({ 
@@ -47,115 +40,6 @@ const getSellerDashboard = async (req, res) => {
       .limit(5)
       .lean();
 
-=======
-    // Get seller's properties with basic stats
-    console.log('Fetching properties for seller...');
-    const properties = await Property.findAll({
-      where: { ownerId: sellerId },
-      attributes: ['id', 'title', 'address', 'price', 'status', 'photos', 'createdAt'],
-      order: [['createdAt', 'DESC']]
-    });
-    console.log('Found properties:', properties.length);
-    
-    // Get inquiry stats
-    const inquiryStats = await Inquiry.findAll({
-      where: { sellerId: sellerId },
-      attributes: [
-        'status',
-        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
-      ],
-      group: ['status'],
-      raw: true
-    });
-    
-    // Get open house stats
-    const upcomingOpenHouses = await OpenHouse.count({
-      where: {
-        sellerId: sellerId,
-        startDate: { [Op.gte]: new Date() },
-        status: { [Op.in]: ['scheduled', 'active'] }
-      }
-    });
-    
-    // Get analytics summary - since these are JSON fields, we need to get all records and calculate manually
-    const analyticsRecords = await ListingAnalytics.findAll({
-      where: { sellerId: sellerId },
-      raw: true
-    });
-    
-    // Calculate totals from JSON fields
-    let totalViews = 0;
-    let totalInquiries = 0;
-    let totalSaves = 0;
-    let totalResponseTime = 0;
-    let responseTimeCount = 0;
-    
-    analyticsRecords.forEach(record => {
-      // Parse JSON fields if they are strings
-      let views = record.views;
-      let inquiries = record.inquiries;
-      let saves = record.saves;
-      let responseTime = record.response_time;
-      
-      if (typeof views === 'string') {
-        try { views = JSON.parse(views); } catch (e) { views = null; }
-      }
-      if (typeof inquiries === 'string') {
-        try { inquiries = JSON.parse(inquiries); } catch (e) { inquiries = null; }
-      }
-      if (typeof saves === 'string') {
-        try { saves = JSON.parse(saves); } catch (e) { saves = null; }
-      }
-      if (typeof responseTime === 'string') {
-        try { responseTime = JSON.parse(responseTime); } catch (e) { responseTime = null; }
-      }
-      
-      if (views && typeof views === 'object') {
-        totalViews += views.total || 0;
-      }
-      if (inquiries && typeof inquiries === 'object') {
-        totalInquiries += inquiries.total || 0;
-      }
-      if (saves && typeof saves === 'object') {
-        totalSaves += saves.total || 0;
-      }
-      if (responseTime && typeof responseTime === 'object' && responseTime.average) {
-        totalResponseTime += responseTime.average;
-        responseTimeCount++;
-      }
-    });
-    
-    const avgResponseTime = responseTimeCount > 0 ? totalResponseTime / responseTimeCount : 0;
-    
-    const analyticsSummary = [{
-      totalViews,
-      totalInquiries,
-      totalSaves,
-      avgResponseTime
-    }];
-    
-    // Get recent activity - simplified for now
-    const recentInquiries = [];
-    
-    // Calculate workflow status for each property
-    const propertiesWithWorkflow = properties.map(property => {
-      let workflowStage = 'List';
-      if (property.status === 'active') {
-        workflowStage = 'Market';
-      } else if (property.status === 'under-contract') {
-        workflowStage = 'Negotiate';
-      } else if (property.status === 'sold') {
-        workflowStage = 'Close';
-      }
-      
-      return {
-        ...property.toJSON(),
-        workflowStage,
-        daysOnMarket: Math.floor((new Date() - property.createdAt) / (1000 * 60 * 60 * 24))
-      };
-    });
-    
->>>>>>> Stashed changes
     res.json({
       success: true,
       data: {
@@ -165,7 +49,6 @@ const getSellerDashboard = async (req, res) => {
           totalInquiries: totalInquiries || 0,
           totalViews: totalViews[0]?.totalViews || 0
         },
-<<<<<<< Updated upstream
         recentProperties,
         recentInquiries
       }
@@ -177,20 +60,6 @@ const getSellerDashboard = async (req, res) => {
       message: 'Error fetching dashboard data',
       error: error.message
     });
-=======
-        inquiryStats: inquiryStats.length > 0 ? inquiryStats.reduce((acc, stat) => {
-          acc[stat.status] = parseInt(stat.count);
-          return acc;
-        }, {}) : {},
-        recentActivity: recentInquiries
-      }
-    });
-  } catch (error) {
-    console.error('Get seller dashboard error:', error);
-    console.error('Error details:', error.message);
-    console.error('Stack trace:', error.stack);
-    res.status(500).json({ error: 'Failed to fetch seller dashboard.' });
->>>>>>> Stashed changes
   }
 };
 
@@ -456,20 +325,10 @@ const createPropertyListing = createProperty;
 const updatePropertyListing = updateProperty;
 const updatePropertyPhotos = async (req, res) => {
   try {
-<<<<<<< Updated upstream
     const { id } = req.params;
     const sellerId = req.user.id;
 
     const property = await Property.findOne({ _id: id, owner: sellerId });
-=======
-    const property = await Property.findOne({
-      where: {
-        id: req.params.id,
-        ownerId: req.user.id
-      }
-    });
-    
->>>>>>> Stashed changes
     if (!property) {
       return res.status(404).json({
         success: false,
@@ -494,7 +353,6 @@ const updatePropertyPhotos = async (req, res) => {
 const getInquiries = getSellerInquiries;
 const getInquiryDetails = async (req, res) => {
   try {
-<<<<<<< Updated upstream
     const { id } = req.params;
     const sellerId = req.user.id;
 
@@ -506,84 +364,6 @@ const getInquiryDetails = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Inquiry not found'
-=======
-    const inquiry = await Inquiry.findOne({
-      where: {
-        id: req.params.id,
-        sellerId: req.user.id
-      },
-      include: [
-        { model: Property, as: 'property', attributes: ['title', 'address', 'price', 'photos', 'description'] },
-        { model: User, as: 'buyer', attributes: ['firstName', 'lastName', 'email', 'phone', 'avatar'] }
-      ]
-    });
-    
-    if (!inquiry) {
-      return res.status(404).json({ error: 'Inquiry not found or not authorized.' });
-    }
-    
-    res.json({ inquiry });
-  } catch (error) {
-    console.error('Get inquiry details error:', error);
-    res.status(500).json({ error: 'Failed to fetch inquiry details.' });
-  }
-};
-
-const respondToInquiry = async (req, res) => {
-  try {
-    const { message, scheduleViewing, offerResponse } = req.body;
-    
-    const inquiry = await Inquiry.findOne({
-      where: {
-        id: req.params.id,
-        sellerId: req.user.id
-      }
-    });
-    
-    if (!inquiry) {
-      return res.status(404).json({ error: 'Inquiry not found or not authorized.' });
-    }
-    
-    // Update inquiry status
-    inquiry.status = 'responded';
-    inquiry.responseCount += 1;
-    inquiry.lastResponse = new Date();
-    
-    // Handle scheduling viewing
-    if (scheduleViewing) {
-      inquiry.scheduledViewing = {
-        date: scheduleViewing.date,
-        time: scheduleViewing.time,
-        duration: scheduleViewing.duration || 60,
-        notes: scheduleViewing.notes,
-        confirmed: false
-      };
-      inquiry.status = 'scheduled';
-    }
-    
-    // Handle offer response
-    if (offerResponse && inquiry.offer) {
-      inquiry.offer.status = offerResponse.status;
-      if (offerResponse.counterOffer) {
-        inquiry.offer.amount = offerResponse.counterOffer.amount;
-        inquiry.offer.conditions = offerResponse.counterOffer.conditions;
-      }
-    }
-    
-    await inquiry.save();
-    
-    // Update analytics
-    const analytics = await ListingAnalytics.findOne({
-      where: {
-        propertyId: inquiry.propertyId,
-        sellerId: req.user.id
-      }
-    });
-    
-    if (analytics) {
-      await analytics.update({
-        inquiries: analytics.inquiries + 1
->>>>>>> Stashed changes
       });
     }
 
@@ -603,87 +383,11 @@ const respondToInquiry = async (req, res) => {
 const respondToInquiry = updateInquiryStatus;
 const getListingAnalytics = async (req, res) => {
   try {
-<<<<<<< Updated upstream
     const sellerId = req.user.id;
     const analytics = await ListingAnalytics.find({
       property: { $in: await Property.find({ owner: sellerId }).select('_id') }
     }).populate('property', 'title');
 
-=======
-    const { propertyId, period = '30d' } = req.query;
-    
-    let filter = { sellerId: req.user.id };
-    if (propertyId) filter.propertyId = propertyId;
-    
-    const analytics = await ListingAnalytics.findAll({
-      where: filter,
-      include: [
-        { model: Property, as: 'property', attributes: ['title', 'address', 'price', 'status'] }
-      ],
-      order: [['views_last_updated', 'DESC']]
-    });
-    
-    // Calculate period-based data
-    const periodData = analytics.map(analytic => {
-      const data = analytic.toJSON();
-      
-      // Filter data based on period
-      if (period === '7d') {
-        data.views.period = data.views.thisWeek;
-        data.inquiries.period = data.inquiries.thisWeek;
-        data.saves.period = data.saves.thisWeek;
-      } else if (period === '30d') {
-        data.views.period = data.views.thisMonth;
-        data.inquiries.period = data.inquiries.thisMonth;
-        data.saves.period = data.saves.thisMonth;
-      } else {
-        data.views.period = data.views.total;
-        data.inquiries.period = data.inquiries.total;
-        data.saves.period = data.saves.total;
-      }
-      
-      return data;
-    });
-    
-    res.json({ analytics: periodData });
-  } catch (error) {
-    console.error('Get listing analytics error:', error);
-    // Return empty data instead of error to prevent infinite loading
-    res.json({ analytics: [] });
-  }
-};
-
-const getAnalyticsDetails = async (req, res) => {
-  try {
-    const analytics = await ListingAnalytics.findOne({
-      where: {
-        id: req.params.id,
-        sellerId: req.user.id
-      },
-      include: [
-        { model: Property, as: 'property', attributes: ['title', 'address', 'price', 'photos'] }
-      ]
-    });
-    
-    if (!analytics) {
-      return res.status(404).json({ error: 'Analytics not found or not authorized.' });
-    }
-    
-    // Calculate performance insights
-    const insights = {
-      topTrafficSource: Object.keys(analytics.trafficSources).reduce((a, b) => 
-        analytics.trafficSources[a] > analytics.trafficSources[b] ? a : b
-      ),
-      bestPerformingHour: analytics.hourlyViews.reduce((a, b) => 
-        a.views > b.views ? a : b
-      ),
-      conversionRate: analytics.views.total > 0 ? 
-        (analytics.inquiries.total / analytics.views.total * 100).toFixed(2) : 0,
-      responseQuality: analytics.responseTime.average < 24 ? 'Excellent' : 
-        analytics.responseTime.average < 48 ? 'Good' : 'Needs Improvement'
-    };
-    
->>>>>>> Stashed changes
     res.json({
       success: true,
       data: analytics
@@ -700,7 +404,6 @@ const getAnalyticsDetails = async (req, res) => {
 const getAnalyticsDetails = getPropertyAnalytics;
 const updatePropertyPrice = async (req, res) => {
   try {
-<<<<<<< Updated upstream
     const { id } = req.params;
     const { price } = req.body;
     const sellerId = req.user.id;
@@ -710,46 +413,6 @@ const updatePropertyPrice = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Property not found'
-=======
-    const { newPrice, reason } = req.body;
-    
-    const property = await Property.findOne({
-      where: {
-        id: req.params.id,
-        ownerId: req.user.id
-      }
-    });
-    
-    if (!property) {
-      return res.status(404).json({ error: 'Property not found or not authorized.' });
-    }
-    
-    const oldPrice = property.price;
-    
-    // Add to price history
-    property.priceHistory.push({
-      price: oldPrice,
-      date: new Date(),
-      reason: reason || 'Price update'
-    });
-    
-    // Update current price
-    property.price = newPrice;
-    await property.save();
-    
-    // Update analytics
-    const analytics = await ListingAnalytics.findOne({
-      where: {
-        propertyId: property.id,
-        sellerId: req.user.id
-      }
-    });
-    
-    if (analytics) {
-      await analytics.update({
-        price_changes: analytics.price_changes + 1,
-        last_price_change: new Date()
->>>>>>> Stashed changes
       });
     }
 
@@ -840,20 +503,10 @@ const getOpenHouses = async (req, res) => {
 
 const updateOpenHouse = async (req, res) => {
   try {
-<<<<<<< Updated upstream
     const { id } = req.params;
     const sellerId = req.user.id;
 
     const openHouse = await OpenHouse.findOne({ _id: id, seller: sellerId });
-=======
-    const openHouse = await OpenHouse.findOne({
-      where: {
-        id: req.params.id,
-        sellerId: req.user.id
-      }
-    });
-    
->>>>>>> Stashed changes
     if (!openHouse) {
       return res.status(404).json({
         success: false,
@@ -883,22 +536,10 @@ const updateOpenHouse = async (req, res) => {
 
 const cancelOpenHouse = async (req, res) => {
   try {
-<<<<<<< Updated upstream
     const { id } = req.params;
     const sellerId = req.user.id;
 
     const openHouse = await OpenHouse.findOne({ _id: id, seller: sellerId });
-=======
-    const { reason } = req.body;
-    
-    const openHouse = await OpenHouse.findOne({
-      where: {
-        id: req.params.id,
-        sellerId: req.user.id
-      }
-    });
-    
->>>>>>> Stashed changes
     if (!openHouse) {
       return res.status(404).json({
         success: false,
@@ -923,23 +564,11 @@ const cancelOpenHouse = async (req, res) => {
 
 const updatePropertyWorkflow = async (req, res) => {
   try {
-<<<<<<< Updated upstream
     const { id } = req.params;
     const { workflow } = req.body;
     const sellerId = req.user.id;
 
     const property = await Property.findOne({ _id: id, owner: sellerId });
-=======
-    const { stage, notes } = req.body;
-    
-    const property = await Property.findOne({
-      where: {
-        id: req.params.id,
-        ownerId: req.user.id
-      }
-    });
-    
->>>>>>> Stashed changes
     if (!property) {
       return res.status(404).json({
         success: false,

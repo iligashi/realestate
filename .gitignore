@@ -118,3 +118,5 @@ public/uploads/
 # Backup files
 *.bak
 *.backup
+
+node_modules/

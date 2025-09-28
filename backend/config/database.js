@@ -1,37 +1,57 @@
-const mongoose = require('mongoose');
+const { Sequelize } = require('sequelize');
 
+// Create Sequelize instance
+const sequelize = new Sequelize(
+  process.env.DB_NAME || 'real_estate_marketplace',
+  process.env.DB_USER || 'root',
+  process.env.DB_PASSWORD || '',
+  {
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 3306,
+    dialect: 'mysql',
+    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    pool: {
+      max: 10,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    },
+    define: {
+      timestamps: true,
+      underscored: true,
+      freezeTableName: true
+    }
+  }
+);
+
+// Test the connection
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/real-estate-marketplace', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      maxPoolSize: 10, // Maintain up to 10 socket connections
-      serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
-      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-    });
-
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    await sequelize.authenticate();
+    console.log('✅ MySQL Connected successfully');
+    
+    // Sync models (create tables if they don't exist)
+    if (process.env.NODE_ENV === 'development') {
+      await sequelize.sync({ alter: true });
+      console.log('✅ Database synchronized');
+    }
     
     // Handle connection events
-    mongoose.connection.on('error', (err) => {
-      console.error('❌ MongoDB connection error:', err);
-    });
-
-    mongoose.connection.on('disconnected', () => {
-      console.log('⚠️  MongoDB disconnected');
+    sequelize.connectionManager.on('disconnect', () => {
+      console.log('⚠️  MySQL disconnected');
     });
 
     // Graceful shutdown
     process.on('SIGINT', async () => {
-      await mongoose.connection.close();
-      console.log('🔄 MongoDB connection closed through app termination');
+      await sequelize.close();
+      console.log('🔄 MySQL connection closed through app termination');
       process.exit(0);
     });
 
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error.message);
+    console.error('❌ MySQL connection error:', error.message);
     console.log('⚠️  Server will start without database connection');
-    console.log('💡 To fix: Install MongoDB or update MONGODB_URI in .env file');
+    console.log('💡 To fix: Install MySQL or update database credentials in .env file');
     
     // In production, you might want to exit here
     if (process.env.NODE_ENV === 'production') {
@@ -40,4 +60,4 @@ const connectDB = async () => {
   }
 };
 
-module.exports = connectDB;
+module.exports = { sequelize, connectDB };

@@ -10,10 +10,6 @@ const {
   markAsRead,
   getUnreadCount,
   closeMessage,
-<<<<<<< Updated upstream
-=======
-  getMessageThread,
->>>>>>> Stashed changes
   deleteMessageThread,
   getPropertyConversations
 } = require('../controllers/messageController');

@@ -1,254 +1,213 @@
-<<<<<<< Updated upstream
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const messageSchema = new mongoose.Schema({
-  // Property being inquired about
-  property: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Property',
-    required: true
+const Message = sequelize.define('Message', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
   },
-  
-  // Buyer (person sending the message) - for sales inquiries
-  buyer: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+  propertyId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'Properties',
+      key: 'id'
+    }
   },
-  
-  // Seller (property owner) - for sales inquiries
-  seller: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+  buyerId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'Users',
+      key: 'id'
+    }
   },
-
-  // Renter (person applying for rental) - for rental inquiries
-  renter: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+  sellerId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'Users',
+      key: 'id'
+    }
   },
-
-  // Landlord (property owner) - for rental inquiries
-  landlord: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+  renterId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'Users',
+      key: 'id'
+    }
   },
-
-  // Message type to distinguish between sales and rental inquiries
-  messageType: {
-    type: String,
-    enum: ['sale', 'rental'],
-    default: 'sale'
+  landlordId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'Users',
+      key: 'id'
+    }
   },
-
-  // Rental application reference (if this is a rental message)
-  rentalApplication: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'RentalApplication'
-  },
-  
-  // Message content
-  subject: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 200
-  },
-  
   message: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 1000
+    type: DataTypes.TEXT,
+    allowNull: false
   },
-  
-  // Message thread (for replies)
-  thread: [{
-    sender: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
-=======
-module.exports = (sequelize, DataTypes) => {
-  const Message = sequelize.define('Message', {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
-    },
-    propertyId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      field: 'property_id',
-      references: {
-        model: 'properties',
-        key: 'id'
-      }
-    },
-    buyerId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      field: 'buyer_id',
-      references: {
-        model: 'users',
-        key: 'id'
-      }
-    },
-    sellerId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      field: 'seller_id',
-      references: {
-        model: 'users',
-        key: 'id'
-      }
-    },
-    renterId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      field: 'renter_id',
-      references: {
-        model: 'users',
-        key: 'id'
-      }
-    },
-    landlordId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      field: 'landlord_id',
-      references: {
-        model: 'users',
-        key: 'id'
-      }
-    },
-    subject: {
-      type: DataTypes.STRING(200),
-      allowNull: false
->>>>>>> Stashed changes
-    },
-    message: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 1000
-    },
-    sentAt: {
-      type: Date,
-      default: Date.now
-    },
-<<<<<<< Updated upstream
-    isRead: {
-      type: Boolean,
-      default: false
-=======
-    status: {
-      type: DataTypes.ENUM('new', 'replied', 'closed'),
-      defaultValue: 'new'
-    },
-    // Read status for each participant (stored as JSON)
-    readBy: {
-      type: DataTypes.JSON,
-      allowNull: true,
-      field: 'read_by'
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-    }
-  }],
-  
-  // Status tracking
+  replies: {
+    type: DataTypes.JSON,
+    defaultValue: []
+  },
   status: {
-    type: String,
-    enum: ['new', 'replied', 'closed'],
-    default: 'new'
+    type: DataTypes.ENUM('open', 'closed', 'resolved'),
+    defaultValue: 'open'
   },
-  
-  // Read status for each participant
   readBy: {
-    buyer: {
-      type: Boolean,
-      default: false
-    },
-    seller: {
-      type: Boolean,
-      default: false
-    },
-    renter: {
-      type: Boolean,
-      default: false
-    },
-    landlord: {
-      type: Boolean,
-      default: false
-=======
->>>>>>> Stashed changes
-    }
+    type: DataTypes.JSON,
+    defaultValue: []
   },
-  
-  // Timestamps
   lastMessageAt: {
-    type: Date,
-    default: Date.now
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
   }
 }, {
-  timestamps: true
+  tableName: 'messages',
+  timestamps: true,
+  indexes: [
+    {
+      fields: ['propertyId']
+    },
+    {
+      fields: ['buyerId']
+    },
+    {
+      fields: ['sellerId']
+    },
+    {
+      fields: ['renterId']
+    },
+    {
+      fields: ['landlordId']
+    },
+    {
+      fields: ['status']
+    },
+    {
+      fields: ['lastMessageAt']
+    }
+  ]
 });
 
-// Index for efficient queries
-messageSchema.index({ property: 1, buyer: 1, seller: 1 });
-messageSchema.index({ property: 1, renter: 1, landlord: 1 });
-messageSchema.index({ seller: 1, status: 1, lastMessageAt: -1 });
-messageSchema.index({ buyer: 1, lastMessageAt: -1 });
-messageSchema.index({ landlord: 1, status: 1, lastMessageAt: -1 });
-messageSchema.index({ renter: 1, lastMessageAt: -1 });
-messageSchema.index({ messageType: 1 });
-
-// Virtual for unread count
-messageSchema.virtual('unreadCount').get(function() {
-  return this.thread.filter(msg => !msg.isRead).length;
-});
-
-// Method to mark as read
-messageSchema.methods.markAsRead = function(userId) {
-  if (this.buyer && this.buyer.toString() === userId.toString()) {
-    this.readBy.buyer = true;
-  } else if (this.seller && this.seller.toString() === userId.toString()) {
-    this.readBy.seller = true;
-  } else if (this.renter && this.renter.toString() === userId.toString()) {
-    this.readBy.renter = true;
-  } else if (this.landlord && this.landlord.toString() === userId.toString()) {
-    this.readBy.landlord = true;
-    // Mark all thread messages as read
-    this.thread.forEach(msg => {
-      msg.isRead = true;
-    });
-  }
-  return this.save();
-};
-
-// Method to add reply
-messageSchema.methods.addReply = function(senderId, message) {
-  this.thread.push({
+// Instance methods
+Message.prototype.addReply = async function(senderId, message) {
+  const replies = this.replies || [];
+  replies.push({
     sender: senderId,
     message: message,
-    sentAt: new Date(),
-    isRead: false
+    timestamp: new Date()
   });
-  
-  // Update status and last message time
-  this.status = 'replied';
+  this.replies = replies;
   this.lastMessageAt = new Date();
-  
-  // Mark as unread for the recipient
-  if (this.buyer && this.buyer.toString() === senderId.toString()) {
-    this.readBy.seller = false;
-  } else if (this.seller && this.seller.toString() === senderId.toString()) {
-    this.readBy.buyer = false;
-  } else if (this.renter && this.renter.toString() === senderId.toString()) {
-    this.readBy.landlord = false;
-  } else if (this.landlord && this.landlord.toString() === senderId.toString()) {
-    this.readBy.renter = false;
-  }
-  
+  this.readBy = [senderId]; // Reset read status
   return this.save();
 };
 
-module.exports = mongoose.model('Message', messageSchema);
+Message.prototype.markAsRead = async function(userId) {
+  const readBy = this.readBy || [];
+  if (!readBy.includes(userId)) {
+    readBy.push(userId);
+    this.readBy = readBy;
+    return this.save();
+  }
+  return this;
+};
+
+Message.prototype.close = async function() {
+  this.status = 'closed';
+  return this.save();
+};
+
+// Static methods
+Message.findByUser = function(userId, role) {
+  let whereClause = {};
+  
+  if (role === 'buyer') {
+    whereClause.buyerId = userId;
+  } else if (role === 'seller') {
+    whereClause.sellerId = userId;
+  } else if (role === 'renter') {
+    whereClause.renterId = userId;
+  } else if (role === 'landlord') {
+    whereClause.landlordId = userId;
+  } else {
+    // Get all messages where user is involved
+    whereClause = {
+      [sequelize.Op.or]: [
+        { buyerId: userId },
+        { sellerId: userId },
+        { renterId: userId },
+        { landlordId: userId }
+      ]
+    };
+  }
+  
+  return this.findAll({
+    where: whereClause,
+    include: [
+      {
+        model: sequelize.models.Property,
+        as: 'property',
+        attributes: ['id', 'title', 'price', 'address', 'photos']
+      },
+      {
+        model: sequelize.models.User,
+        as: 'buyer',
+        attributes: ['id', 'firstName', 'lastName', 'email']
+      },
+      {
+        model: sequelize.models.User,
+        as: 'seller',
+        attributes: ['id', 'firstName', 'lastName', 'email']
+      },
+      {
+        model: sequelize.models.User,
+        as: 'renter',
+        attributes: ['id', 'firstName', 'lastName', 'email']
+      },
+      {
+        model: sequelize.models.User,
+        as: 'landlord',
+        attributes: ['id', 'firstName', 'lastName', 'email']
+      }
+    ],
+    order: [['lastMessageAt', 'DESC']]
+  });
+};
+
+Message.findByProperty = function(propertyId) {
+  return this.findAll({
+    where: { propertyId: propertyId },
+    include: [
+      {
+        model: sequelize.models.User,
+        as: 'buyer',
+        attributes: ['id', 'firstName', 'lastName', 'email']
+      },
+      {
+        model: sequelize.models.User,
+        as: 'seller',
+        attributes: ['id', 'firstName', 'lastName', 'email']
+      },
+      {
+        model: sequelize.models.User,
+        as: 'renter',
+        attributes: ['id', 'firstName', 'lastName', 'email']
+      },
+      {
+        model: sequelize.models.User,
+        as: 'landlord',
+        attributes: ['id', 'firstName', 'lastName', 'email']
+      }
+    ],
+    order: [['lastMessageAt', 'DESC']]
+  });
+};
+
+module.exports = Message;
