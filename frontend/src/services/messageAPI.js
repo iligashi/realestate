@@ -13,8 +13,11 @@ export const messageAPI = {
     return api.get('/messages', { params: cleanParams });
   },
 
-  // Get a specific message thread
+  // Get a specific message thread/conversation
   getMessageThread: (messageId) => api.get(`/messages/${messageId}`),
+
+  // Get conversations for a specific property
+  getPropertyConversations: (propertyId) => api.get(`/messages/property/${propertyId}`),
 
   // Reply to a message
   replyToMessage: (messageId, message) => api.post(`/messages/${messageId}/reply`, { message }),
@@ -26,7 +29,10 @@ export const messageAPI = {
   getUnreadCount: () => api.get('/messages/unread-count'),
 
   // Close a message thread
-  closeMessage: (messageId) => api.patch(`/messages/${messageId}/close`)
+  closeMessage: (messageId) => api.patch(`/messages/${messageId}/close`),
+
+  // Delete a message thread/conversation
+  deleteMessageThread: (messageId) => api.delete(`/messages/${messageId}`)
 };
 
 export default messageAPI;
