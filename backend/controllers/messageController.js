@@ -46,6 +46,7 @@ const createMessage = async (req, res) => {
     if (existingMessage) {
       // Add to existing thread instead of creating new message
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       await existingMessage.addReply(buyerId, message);
       
       const updatedMessage = await Message.findById(existingMessage._id)
@@ -53,6 +54,8 @@ const createMessage = async (req, res) => {
         .populate('seller', 'name email')
         .populate('property', 'title price location');
 =======
+=======
+>>>>>>> Stashed changes
       const currentThread = existingMessage.thread || [];
       const newMessage = {
         id: Date.now() + Math.random(),
@@ -66,6 +69,15 @@ const createMessage = async (req, res) => {
         },
         isRead: false
       };
+<<<<<<< Updated upstream
+=======
+
+      const updatedMessage = await existingMessage.update({
+        thread: [...currentThread, newMessage],
+        status: 'replied',
+        lastMessageAt: new Date()
+      });
+>>>>>>> Stashed changes
 
       const updatedMessage = await existingMessage.update({
         thread: [...currentThread, newMessage],
@@ -134,7 +146,10 @@ const createMessage = async (req, res) => {
     }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
     // Create new message thread with proper structure
     const initialMessage = {
       id: Date.now() + Math.random(),
@@ -187,6 +202,7 @@ const createMessage = async (req, res) => {
 const getMessages = async (req, res) => {
   try {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     const userId = req.user._id;
     // Normalize empty query parameters to prevent duplicate cache keys
     const { role, status, page = 1, limit = 10 } = req.query;
@@ -224,6 +240,11 @@ const getMessages = async (req, res) => {
     const userId = req.user.id;
     const { page = 1, limit = 10, status, role } = req.query;
 
+=======
+    const userId = req.user.id;
+    const { page = 1, limit = 10, status, role } = req.query;
+
+>>>>>>> Stashed changes
     let whereClause = {};
 
     // Handle role-based filtering
@@ -796,6 +817,204 @@ const getMessageThread = async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to view this conversation' });
     }
 
+<<<<<<< Updated upstream
+    res.json({
+      success: true,
+      data: {
+        messageId: messageThread.id,
+        property: messageThread.property,
+        buyer: messageThread.buyer,
+        seller: messageThread.seller,
+        renter: messageThread.renter,
+        landlord: messageThread.landlord,
+        subject: messageThread.subject,
+        status: messageThread.status,
+        thread: messageThread.thread || [],
+        readBy: messageThread.readBy || {},
+        lastMessageAt: messageThread.lastMessageAt,
+        createdAt: messageThread.createdAt,
+        updatedAt: messageThread.updatedAt
+=======
+    // Get sender info for the thread
+    const senderInfo = {
+      id: senderId,
+      name: req.user.firstName + ' ' + req.user.lastName,
+      email: req.user.email
+    };
+
+    // Add reply to thread with proper structure
+    const currentThread = messageThread.thread || [];
+    const newMessage = {
+      id: Date.now() + Math.random(), // Generate unique ID for the message
+      message: message,
+      sentAt: new Date().toISOString(),
+      senderId: senderId,
+      sender: senderInfo,
+      isRead: false
+    };
+
+    const updatedThread = [...currentThread, newMessage];
+
+    // Update the message with new thread and mark as replied
+    const updatedMessage = await messageThread.update({
+      thread: updatedThread,
+      status: 'replied',
+      lastMessageAt: new Date()
+    });
+
+    // Update read status - mark as unread for the recipient
+    const readBy = messageThread.readBy || {};
+    if (messageThread.buyerId === senderId) {
+      readBy.seller = false;
+    } else if (messageThread.sellerId === senderId) {
+      readBy.buyer = false;
+    } else if (messageThread.renterId === senderId) {
+      readBy.landlord = false;
+    } else if (messageThread.landlordId === senderId) {
+      readBy.renter = false;
+    }
+
+    await updatedMessage.update({ readBy });
+
+    // Determine recipient for notification
+    let recipientId = null;
+    if (messageThread.buyerId === senderId) {
+      recipientId = messageThread.sellerId;
+    } else if (messageThread.sellerId === senderId) {
+      recipientId = messageThread.buyerId;
+    } else if (messageThread.renterId === senderId) {
+      recipientId = messageThread.landlordId;
+    } else if (messageThread.landlordId === senderId) {
+      recipientId = messageThread.renterId;
+    }
+
+    res.json({
+      success: true,
+      message: 'Reply sent successfully',
+      data: {
+        messageId: updatedMessage.id,
+        buyer: updatedMessage.buyerId,
+        seller: updatedMessage.sellerId,
+        renter: updatedMessage.renterId,
+        landlord: updatedMessage.landlordId,
+        thread: updatedMessage.thread,
+        recipientId: recipientId,
+        lastMessage: newMessage
+>>>>>>> Stashed changes
+      }
+    });
+
+  } catch (error) {
+    console.error('Get message thread error:', error);
+    res.status(500).json({ error: 'Failed to fetch message thread' });
+  }
+};
+
+// Delete a message thread/conversation
+const deleteMessageThread = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user.id;
+
+    const messageThread = await Message.findByPk(messageId);
+
+    if (!messageThread) {
+      return res.status(404).json({ error: 'Message thread not found' });
+    }
+
+    // Check if user is part of this conversation
+    const isParticipant = 
+      (messageThread.buyerId === userId) ||
+      (messageThread.sellerId === userId) ||
+      (messageThread.renterId === userId) ||
+      (messageThread.landlordId === userId);
+
+    if (!isParticipant) {
+      return res.status(403).json({ error: 'Not authorized to delete this conversation' });
+    }
+
+    // Soft delete by marking as closed, or hard delete
+    await messageThread.destroy();
+
+    res.json({
+      success: true,
+      message: 'Conversation deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Delete message thread error:', error);
+    res.status(500).json({ error: 'Failed to delete conversation' });
+  }
+};
+
+// Get conversation history for a specific property
+const getPropertyConversations = async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+    const userId = req.user.id;
+
+    const conversations = await Message.findAll({
+      where: {
+        property_id: propertyId,
+        [Op.or]: [
+          { buyer_id: userId },
+          { seller_id: userId },
+          { renter_id: userId },
+          { landlord_id: userId }
+        ]
+      },
+      include: [
+        { model: Property, attributes: ['id', 'title', 'price'] },
+        { model: User, as: 'buyer', attributes: ['id', 'firstName', 'lastName'] },
+        { model: User, as: 'seller', attributes: ['id', 'firstName', 'lastName'] },
+        { model: User, as: 'renter', attributes: ['id', 'firstName', 'lastName'] },
+        { model: User, as: 'landlord', attributes: ['id', 'firstName', 'lastName'] }
+      ],
+      order: [['lastMessageAt', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      conversations: conversations
+    });
+
+  } catch (error) {
+    console.error('Get property conversations error:', error);
+    res.status(500).json({ error: 'Failed to fetch property conversations' });
+  }
+};
+
+// Get a specific message thread/conversation
+const getMessageThread = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user.id;
+
+    const messageThread = await Message.findByPk(messageId, {
+      include: [
+        { model: Property, attributes: ['id', 'title', 'price', 'photos'] },
+        { model: User, as: 'buyer', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] },
+        { model: User, as: 'seller', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] },
+        { model: User, as: 'renter', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] },
+        { model: User, as: 'landlord', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] }
+      ]
+    });
+
+    if (!messageThread) {
+      return res.status(404).json({ error: 'Message thread not found' });
+    }
+
+    // Check if user is part of this conversation
+    const isParticipant = 
+      (messageThread.buyerId === userId) ||
+      (messageThread.sellerId === userId) ||
+      (messageThread.renterId === userId) ||
+      (messageThread.landlordId === userId);
+
+    if (!isParticipant) {
+      return res.status(403).json({ error: 'Not authorized to view this conversation' });
+    }
+
     res.json({
       success: true,
       data: {
@@ -912,5 +1131,9 @@ module.exports = {
   getMessageThread,
   deleteMessageThread,
   getPropertyConversations
+<<<<<<< Updated upstream
+};
+>>>>>>> Stashed changes
+=======
 };
 >>>>>>> Stashed changes

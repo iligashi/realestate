@@ -8,6 +8,9 @@ const PlatformSettings = require('../models/PlatformSettings');
 =======
 const { User, Property, Report, Announcement, PlatformSettings } = require('../models');
 const { Op, sequelize } = require('sequelize');
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 // ==================== USER MANAGEMENT ====================
@@ -166,6 +169,9 @@ const getAllListings = async (req, res) => {
     // Parse JSON fields for each listing
     const parsedListings = listings.map(listing => listing.toJSON());
 
+    // Parse JSON fields for each listing
+    const parsedListings = listings.map(listing => listing.toJSON());
+
     res.json({
       listings: parsedListings,
       total,
@@ -240,8 +246,11 @@ const deleteListing = async (req, res) => {
     const { id } = req.params;
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     const listing = await Property.findByIdAndDelete(id);
 =======
+=======
+>>>>>>> Stashed changes
     console.log('Delete listing request for ID:', id);
 
     const listing = await Property.findByPk(id);
@@ -251,9 +260,12 @@ const deleteListing = async (req, res) => {
     }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     // Also delete associated reports
     await Report.deleteMany({ reportedItem: id, reportedItemModel: 'Property' });
 =======
+=======
+>>>>>>> Stashed changes
     console.log('Found listing:', listing.title);
 
     // Delete associated records first to avoid foreign key constraints
@@ -307,6 +319,9 @@ const deleteListing = async (req, res) => {
     // Finally delete the listing
     await listing.destroy();
     console.log('Listing deleted successfully');
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
     res.json({ message: 'Listing deleted successfully.' });
@@ -391,6 +406,7 @@ const resolveReport = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
+<<<<<<< Updated upstream
 
     const report = await Report.findByIdAndUpdate(
       id,
@@ -404,13 +420,18 @@ const resolveReport = async (req, res) => {
       { new: true, runValidators: true }
     ).populate('reportedBy', 'firstName lastName email')
      .populate('resolvedBy', 'firstName lastName');
+=======
+>>>>>>> Stashed changes
 
     if (!report) {
       return res.status(404).json({ error: 'Report not found.' });
     }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
     // Only update the status field since that's what exists in the database
     await report.update({
       status

@@ -630,6 +630,7 @@ const SellerDashboard = () => {
                     }}
                     className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-xl text-sm font-medium hover:bg-gray-200 transition-all duration-200"
                   >
+<<<<<<< Updated upstream
                     View All
                     <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -843,6 +844,8 @@ const SellerDashboard = () => {
                   </p>
                   <button className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                     Learn More
+=======
+>>>>>>> Stashed changes
                     View Details
                   </button>
                 </div>
