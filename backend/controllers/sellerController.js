@@ -7,15 +7,11 @@ const User = require('../models/User');
 =======
 const { Property, Inquiry, OpenHouse, ListingAnalytics, User, sequelize } = require('../models');
 const { Op } = require('sequelize');
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
 >>>>>>> Stashed changes
 
 // ===== DASHBOARD OVERVIEW =====
 const getSellerDashboard = async (req, res) => {
   try {
-<<<<<<< Updated upstream
 <<<<<<< Updated upstream
     const sellerId = req.user._id;
     
@@ -28,12 +24,6 @@ const getSellerDashboard = async (req, res) => {
     console.log('Seller dashboard request for user ID:', sellerId);
     
     // Get seller's properties with basic stats
-=======
-    const sellerId = req.user.id;
-    console.log('Seller dashboard request for user ID:', sellerId);
-    
-    // Get seller's properties with basic stats
->>>>>>> Stashed changes
     console.log('Fetching properties for seller...');
     const properties = await Property.findAll({
       where: { ownerId: sellerId },
@@ -41,9 +31,6 @@ const getSellerDashboard = async (req, res) => {
       order: [['createdAt', 'DESC']]
     });
     console.log('Found properties:', properties.length);
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
 >>>>>>> Stashed changes
     
     // Get inquiry stats
@@ -58,7 +45,6 @@ const getSellerDashboard = async (req, res) => {
     ]);
     
     // Get open house stats
-<<<<<<< Updated upstream
 <<<<<<< Updated upstream
     const upcomingOpenHouses = await OpenHouse.countDocuments({
       seller: sellerId,
@@ -95,16 +81,6 @@ const getSellerDashboard = async (req, res) => {
       }
     });
     
-=======
-    const upcomingOpenHouses = await OpenHouse.count({
-      where: {
-        sellerId: sellerId,
-        startDate: { [Op.gte]: new Date() },
-        status: { [Op.in]: ['scheduled', 'active'] }
-      }
-    });
-    
->>>>>>> Stashed changes
     // Get analytics summary - since these are JSON fields, we need to get all records and calculate manually
     const analyticsRecords = await ListingAnalytics.findAll({
       where: { sellerId: sellerId },
@@ -166,18 +142,6 @@ const getSellerDashboard = async (req, res) => {
     // Get recent activity - simplified for now
     const recentInquiries = [];
     
-    const avgResponseTime = responseTimeCount > 0 ? totalResponseTime / responseTimeCount : 0;
-    
-    const analyticsSummary = [{
-      totalViews,
-      totalInquiries,
-      totalSaves,
-      avgResponseTime
-    }];
-    
-    // Get recent activity - simplified for now
-    const recentInquiries = [];
-    
     // Calculate workflow status for each property
     const propertiesWithWorkflow = properties.map(property => {
       let workflowStage = 'List';
@@ -209,12 +173,9 @@ const getSellerDashboard = async (req, res) => {
           upcomingOpenHouses
         },
 <<<<<<< Updated upstream
-<<<<<<< Updated upstream
         inquiryStats: inquiryStats.reduce((acc, stat) => {
           acc[stat._id] = stat.count;
 =======
-=======
->>>>>>> Stashed changes
         inquiryStats: inquiryStats.length > 0 ? inquiryStats.reduce((acc, stat) => {
           acc[stat.status] = parseInt(stat.count);
 >>>>>>> Stashed changes
@@ -513,13 +474,8 @@ const getListingAnalytics = async (req, res) => {
     const { propertyId, period = '30d' } = req.query;
     
 <<<<<<< Updated upstream
-<<<<<<< Updated upstream
     let filter = { seller: req.user._id };
     if (propertyId) filter.property = propertyId;
-=======
-    let filter = { sellerId: req.user.id };
-    if (propertyId) filter.propertyId = propertyId;
->>>>>>> Stashed changes
 =======
     let filter = { sellerId: req.user.id };
     if (propertyId) filter.propertyId = propertyId;

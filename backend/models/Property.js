@@ -15,7 +15,7 @@ const propertySchema = new mongoose.Schema({
   },
   propertyType: {
     type: String,
-    enum: ['house', 'apartment', 'office'],
+    enum: ['house', 'apartment', 'office', 'land', 'commercial'],
     required: true
   },
   listingType: {
@@ -48,123 +48,90 @@ const propertySchema = new mongoose.Schema({
   
   // Rental-specific details
   rentalDetails: {
-    monthlyRent: { type: Number, min: 0 },
-    availableFrom: Date,
-    availableUntil: Date,
-    minimumLeaseMonths: { type: Number, min: 1 },
-    maximumLeaseMonths: { type: Number, min: 1 },
-    depositRequired: { type: Number, min: 0 },
-    utilitiesIncluded: { type: Boolean, default: false },
-    furnished: { type: Boolean, default: false }
-  },
-  
-  // Location & Address
-  address: {
-    street: String,
-    city: { type: String, required: true },
-    state: String,
-    zipCode: String,
-    country: { type: String, required: true },
-    neighborhood: String
-  },
-  location: {
-    type: {
+    securityDeposit: Number,
+    petDeposit: Number,
+    petRent: Number,
+    utilities: [String],
+    leaseLength: Number,
+    leaseType: {
       type: String,
-      enum: ['Point'],
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number], // [longitude, latitude]
-      required: true,
-      index: '2dsphere'
+      enum: ['fixed', 'month-to-month', 'flexible']
     }
   },
-  mapData: {
-    placeId: String,
-    formattedAddress: String,
-    streetNumber: String,
-    route: String,
-    locality: String,
-    administrativeArea: String,
+  
+  // Location
+  address: {
+    street: String,
+    city: String,
+    state: String,
+    zipCode: String,
     country: String,
-    postalCode: String
+    coordinates: {
+      lat: Number,
+      lng: Number
+    }
   },
   
   // Property Details
   details: {
-    bedrooms: { type: Number, min: 0 },
-    bathrooms: { type: Number, min: 0 },
-    halfBathrooms: { type: Number, min: 0 },
-    totalRooms: { type: Number, min: 0 },
-    squareMeters: { type: Number, min: 0 },
-    squareFeet: { type: Number, min: 0 },
-    lotSize: { type: Number, min: 0 },
+    bedrooms: Number,
+    bathrooms: Number,
+    squareMeters: Number,
+    squareFeet: Number,
     yearBuilt: Number,
+    lotSize: Number,
+    parking: {
+      type: String,
+      enum: ['none', 'street', 'garage', 'covered', 'uncovered']
+    },
+    parkingSpaces: Number,
     floors: Number,
-    parkingSpaces: { type: Number, min: 0 },
-    garageType: String
+    basement: Boolean,
+    attic: Boolean,
+    garden: Boolean,
+    balcony: Boolean,
+    terrace: Boolean,
+    pool: Boolean,
+    fireplace: Boolean,
+    airConditioning: Boolean,
+    heating: {
+      type: String,
+      enum: ['none', 'central', 'electric', 'gas', 'oil', 'wood']
+    },
+    cooling: {
+      type: String,
+      enum: ['none', 'central', 'window', 'portable']
+    }
   },
   
-  // Features & Amenities
-  features: {
-    parkingAvailable: { type: Boolean, default: false },
-    furnished: { type: Boolean, default: false },
-    petFriendly: { type: Boolean, default: false },
-    featured: { type: Boolean, default: false }
-  },
+  // Features and Amenities
+  features: [String],
   amenities: [String],
-  appliances: [String],
-  heating: String,
-  
-  // Featured Listing
-  isFeatured: {
-    type: Boolean,
-    default: false
-  },
-  featuredAt: Date,
-  featuredUntil: Date,
-  featuredPrice: {
-    type: Number,
-    min: 0
-  },
-  cooling: String,
-  utilities: [String],
   
   // Media
   photos: [{
     url: String,
     caption: String,
     isPrimary: { type: Boolean, default: false },
-    order: Number
+    uploadedAt: { type: Date, default: Date.now }
   }],
-  videos: [{
-    url: String,
-    type: { type: String, enum: ['youtube', 'vimeo', 'upload', '360', 'drone'] },
-    caption: String,
-    duration: Number
-  }],
-  virtualTours: [{
-    url: String,
-    type: { type: String, enum: ['3d', '360', 'ar', 'vr'] },
-    description: String
-  }],
+  virtualTour: String,
+  videoUrl: String,
   
-  // Status & Availability
+  // Status and Availability
   status: {
     type: String,
-    enum: ['active', 'pending', 'sold', 'rented', 'inactive', 'under-contract'],
+    enum: ['active', 'inactive', 'pending', 'sold', 'rented'],
     default: 'active'
   },
   availability: {
     type: String,
-    enum: ['immediate', '30-days', '60-days', '90-days', 'custom'],
+    enum: ['immediate', 'custom', 'negotiable'],
     default: 'immediate'
   },
-  availableFrom: Date,
-  featured: { type: Boolean, default: false },
-  premium: { type: Boolean, default: false },
+  availabilityDate: Date,
   
-  // Ownership & Agent
+  // Ownership and Management
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -174,153 +141,106 @@ const propertySchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
-  agency: String,
   
-  // Financial & Legal
-  propertyTax: Number,
-  hoaFees: Number,
-  hoaFrequency: String,
-  insurance: Number,
-  utilities: {
-    electricity: Number,
-    water: Number,
-    gas: Number,
-    internet: Number
+  // Analytics
+  views: {
+    type: Number,
+    default: 0
   },
-  documents: [{
-    name: String,
-    url: String,
-    type: String,
-    verified: { type: Boolean, default: false }
-  }],
-  
-  // Neighborhood & School Info
-  neighborhood: {
-    walkScore: Number,
-    transitScore: Number,
-    bikeScore: Number,
-    crimeRate: String,
-    demographics: {
-      population: Number,
-      medianAge: Number,
-      medianIncome: Number
-    }
-  },
-  schools: [{
-    name: String,
-    type: String,
-    rating: Number,
-    distance: Number,
-    grades: String
-  }],
-  
-  // Transportation
-  transportation: {
-    nearbyStations: [{
-      name: String,
-      type: String,
-      distance: Number,
-      lines: [String]
-    }],
-    highways: [{
-      name: String,
-      distance: Number
-    }]
-  },
-  
-  // Sustainability & Energy
-  sustainability: {
-    energyRating: String,
-    solarPotential: String,
-    greenScore: Number,
-    energyEfficient: Boolean,
-    renewableEnergy: [String]
-  },
-  
-  // Analytics & Performance
-  analytics: {
-    views: { type: Number, default: 0 },
-    saves: { type: Number, default: 0 },
-    shares: { type: Number, default: 0 },
-    inquiries: { type: Number, default: 0 },
-    lastViewed: Date,
-    viewHistory: [{
-      userId: mongoose.Schema.Types.ObjectId,
-      timestamp: { type: Date, default: Date.now }
-    }]
-  },
-  
-  // SEO & Marketing
-  seo: {
-    keywords: [String],
-    metaDescription: String,
-    slug: String
-  },
-  
-  // Verification & Trust
-  verified: { type: Boolean, default: false },
-  verificationDate: Date,
-  verifiedBy: {
+  favorites: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
+  }],
+  
+  // SEO and Marketing
+  featured: {
+    type: Boolean,
+    default: false
+  },
+  priority: {
+    type: Number,
+    default: 0
+  },
+  tags: [String],
+  
+  // Legal and Compliance
+  legalInfo: {
+    propertyTax: Number,
+    hoaFees: Number,
+    hoaFrequency: {
+      type: String,
+      enum: ['monthly', 'quarterly', 'annually']
+    },
+    zoning: String,
+    permits: [String]
   },
   
-  // Custom Fields (for different property types)
-  customFields: mongoose.Schema.Types.Mixed,
-  
-  // Timestamps
-  listedAt: { type: Date, default: Date.now },
-  lastUpdated: { type: Date, default: Date.now }
+  // Additional Information
+  notes: String,
+  restrictions: [String],
+  disclosures: [String]
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-// Indexes
-propertySchema.index({ 'location.coordinates': '2dsphere' });
-propertySchema.index({ status: 1, featured: 1 });
+// Indexes for better performance
+propertySchema.index({ propertyType: 1 });
+propertySchema.index({ listingType: 1 });
 propertySchema.index({ price: 1 });
-propertySchema.index({ 'address.city': 1, 'address.state': 1 });
-propertySchema.index({ propertyType: 1, listingType: 1 });
+propertySchema.index({ status: 1 });
 propertySchema.index({ owner: 1 });
-propertySchema.index({ agent: 1 });
-propertySchema.index({ verified: 1 });
+propertySchema.index({ 'address.city': 1 });
+propertySchema.index({ 'address.state': 1 });
+propertySchema.index({ 'address.coordinates': '2dsphere' });
+propertySchema.index({ featured: 1, priority: -1 });
 propertySchema.index({ createdAt: -1 });
-
-// Text search index
-propertySchema.index({
-  title: 'text',
-  description: 'text',
-  'address.city': 'text',
-  'address.neighborhood': 'text'
-});
 
 // Virtual fields
 propertySchema.virtual('fullAddress').get(function() {
   const addr = this.address;
+  if (!addr) return '';
   return `${addr.street || ''} ${addr.city || ''} ${addr.state || ''} ${addr.zipCode || ''} ${addr.country || ''}`.trim();
 });
 
 propertySchema.virtual('pricePerSqMeter').get(function() {
-  if (this.details.squareMeters && this.details.squareMeters > 0) {
+  if (this.details && this.details.squareMeters && this.details.squareMeters > 0) {
     return this.price / this.details.squareMeters;
   }
   return null;
 });
 
-propertySchema.virtual('isAvailable').get(function() {
-  return this.status === 'active' && this.availability !== 'custom';
-});
+// Instance methods
+propertySchema.methods.getFullAddress = function() {
+  const addr = this.address;
+  if (!addr || typeof addr !== 'object') {
+    return '';
+  }
+  return `${addr.street || ''} ${addr.city || ''} ${addr.state || ''} ${addr.zipCode || ''} ${addr.country || ''}`.trim();
+};
 
-// Pre-save middleware
-propertySchema.pre('save', function(next) {
-  this.lastUpdated = new Date();
-  next();
-});
+propertySchema.methods.getPricePerSqMeter = function() {
+  if (this.details && this.details.squareMeters && this.details.squareMeters > 0) {
+    return this.price / this.details.squareMeters;
+  }
+  return null;
+};
+
+propertySchema.methods.checkAvailability = function() {
+  return this.status === 'active' && this.availability !== 'custom';
+};
 
 // Static methods
+propertySchema.statics.findByPriceRange = function(minPrice, maxPrice) {
+  return this.find({
+    price: { $gte: minPrice, $lte: maxPrice }
+  });
+};
+
 propertySchema.statics.findNearby = function(coordinates, maxDistance = 10000) {
   return this.find({
-    'location.coordinates': {
+    'address.coordinates': {
       $near: {
         $geometry: {
           type: 'Point',
@@ -332,104 +252,16 @@ propertySchema.statics.findNearby = function(coordinates, maxDistance = 10000) {
   });
 };
 
-  // Instance methods
-  Property.prototype.getFullAddress = function() {
-    const addr = this.address;
-    if (!addr || typeof addr !== 'object') {
-      return '';
+// Pre-save middleware
+propertySchema.pre('save', function(next) {
+  // Ensure at least one photo is marked as primary
+  if (this.photos && this.photos.length > 0) {
+    const hasPrimary = this.photos.some(photo => photo.isPrimary);
+    if (!hasPrimary) {
+      this.photos[0].isPrimary = true;
     }
-    return `${addr.street || ''} ${addr.city || ''} ${addr.state || ''} ${addr.zipCode || ''} ${addr.country || ''}`.trim();
-  };
+  }
+  next();
+});
 
-  Property.prototype.getPricePerSqMeter = function() {
-    if (this.details && this.details.squareMeters && this.details.squareMeters > 0) {
-      return this.price / this.details.squareMeters;
-    }
-    return null;
-  };
-
-  Property.prototype.isAvailable = function() {
-    return this.status === 'active' && this.availability !== 'custom';
-  };
-
-  // Static methods
-  Property.findNearby = function(coordinates, maxDistance = 10000) {
-    return this.findAll({
-      where: sequelize.where(
-        sequelize.fn('ST_Distance_Sphere', 
-          sequelize.col('location'), 
-          sequelize.fn('ST_GeomFromText', `POINT(${coordinates[0]} ${coordinates[1]})`)
-        ),
-        '<=',
-        maxDistance
-      )
-    });
-  };
-
-  Property.findByPriceRange = function(minPrice, maxPrice) {
-    return this.findAll({
-      where: {
-        price: {
-          [sequelize.Op.between]: [minPrice, maxPrice]
-        }
-      }
-    });
-  };
-
-  // Virtual fields (computed properties)
-  Property.prototype.toJSON = function() {
-    const values = Object.assign({}, this.get());
-    
-    // Parse JSON fields that might be stored as strings
-    if (values.photos && typeof values.photos === 'string') {
-      try {
-        values.photos = JSON.parse(values.photos);
-      } catch (e) {
-        console.error('Error parsing photos JSON:', e);
-        values.photos = [];
-      }
-    }
-    
-    if (values.address && typeof values.address === 'string') {
-      try {
-        values.address = JSON.parse(values.address);
-      } catch (e) {
-        console.error('Error parsing address JSON:', e);
-        values.address = {};
-      }
-    }
-    
-    if (values.details && typeof values.details === 'string') {
-      try {
-        values.details = JSON.parse(values.details);
-      } catch (e) {
-        console.error('Error parsing details JSON:', e);
-        values.details = {};
-      }
-    }
-    
-    if (values.features && typeof values.features === 'string') {
-      try {
-        values.features = JSON.parse(values.features);
-      } catch (e) {
-        console.error('Error parsing features JSON:', e);
-        values.features = {};
-      }
-    }
-    
-    if (values.amenities && typeof values.amenities === 'string') {
-      try {
-        values.amenities = JSON.parse(values.amenities);
-      } catch (e) {
-        console.error('Error parsing amenities JSON:', e);
-        values.amenities = [];
-      }
-    }
-    
-    values.fullAddress = this.getFullAddress();
-    values.pricePerSqMeter = this.getPricePerSqMeter();
-    values.isAvailable = this.isAvailable();
-    return values;
-  };
-
-  return Property;
+module.exports = mongoose.model('Property', propertySchema);
