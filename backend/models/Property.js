@@ -433,4 +433,3 @@ propertySchema.statics.findNearby = function(coordinates, maxDistance = 10000) {
   };
 
   return Property;
-};
