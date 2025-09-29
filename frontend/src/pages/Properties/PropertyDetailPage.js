@@ -17,11 +17,13 @@ import {
   KeyIcon,
   ClockIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  FlagIcon
 } from '@heroicons/react/24/outline';
 import { getProperty } from '../../services/propertyService';
 import MessageModal from '../../components/MessageModal';
 import ModernRentalApplicationForm from '../../components/Renter/ModernRentalApplicationForm';
+import ReportForm from '../../components/ReportForm';
 import rentalApplicationAPI from '../../services/rentalApplicationAPI';
 
 const PropertyDetailPage = () => {
@@ -34,6 +36,8 @@ const PropertyDetailPage = () => {
   const [error, setError] = useState(null);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+
 
   // Fetch real property data from backend
   useEffect(() => {
@@ -86,8 +90,13 @@ const PropertyDetailPage = () => {
     }
 
     // Check if user is trying to contact themselves
-    if (property && property.owner && user && property.owner._id === user._id) {
+    if (property && property.owner && user && (property.owner._id === user._id || property.owner.id === user.id)) {
       toast.error('You cannot contact yourself about your own property');
+      return;
+    }
+
+    if (!property || !property.owner) {
+      toast.error('Property owner information not available');
       return;
     }
 
@@ -121,6 +130,40 @@ const PropertyDetailPage = () => {
     }
 
     setShowApplicationModal(true);
+  };
+
+  // Handle report button click
+  const handleReport = () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to report this property');
+      navigate('/login');
+      return;
+    }
+
+    // Check if user is trying to report their own property
+    if (property && property.owner && user && (property.owner._id === user._id || property.owner.id === user.id)) {
+      toast.error('You cannot report your own property');
+      return;
+    }
+
+    setShowReportModal(true);
+  };
+
+  // Handle schedule viewing button click
+  const handleScheduleViewing = () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to schedule a viewing');
+      navigate('/login');
+      return;
+    }
+
+    // Check if user is trying to schedule viewing for their own property
+    if (property && property.owner && user && (property.owner._id === user._id || property.owner.id === user.id)) {
+      toast.error('You cannot schedule viewing for your own property');
+      return;
+    }
+
+    toast.info('Schedule viewing feature coming soon!');
   };
 
   const nextImage = () => {
@@ -217,6 +260,7 @@ const PropertyDetailPage = () => {
       </div>
     );
   }
+
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
@@ -533,22 +577,43 @@ const PropertyDetailPage = () => {
             {/* Contact Actions */}
             <div className="space-y-3 mb-6">
               <button 
+                type="button"
                 onClick={handleContactOwner}
                 className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors"
               >
                 {isRentalProperty ? 'Contact Landlord' : 'Contact Owner'}
               </button>
-              <button className="w-full border border-green-600 text-green-600 py-3 px-4 rounded-lg font-medium hover:bg-green-50 transition-colors">
+              <button 
+                type="button"
+                onClick={handleScheduleViewing}
+                className="w-full border border-green-600 text-green-600 py-3 px-4 rounded-lg font-medium hover:bg-green-50 transition-colors"
+              >
                 {isRentalProperty ? 'Schedule Viewing' : 'Schedule Viewing'}
               </button>
+              
+              <button 
+                type="button"
+                onClick={handleReport}
+                className="w-full border border-red-600 text-red-600 py-3 px-4 rounded-lg font-medium hover:bg-red-50 transition-colors"
+              >
+                Report Property
+              </button>
+              
               {isRentalProperty && (
-                <button 
+                <button
                   onClick={handleApplyForRental}
                   className="w-full border border-blue-600 text-blue-600 py-3 px-4 rounded-lg font-medium hover:bg-blue-50 transition-colors"
                 >
                   Apply for Rental
                 </button>
               )}
+              <button
+                onClick={handleReport}
+                className="w-full border border-red-600 text-red-600 py-3 px-4 rounded-lg font-medium hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+              >
+                <FlagIcon className="h-4 w-4" />
+                Report Property
+              </button>
             </div>
 
             {/* Owner/Landlord Information */}
@@ -637,7 +702,7 @@ const PropertyDetailPage = () => {
       </div>
 
       {/* Message Modal */}
-      {property && property.owner && (
+      {showMessageModal && property && property.owner && (
         <MessageModal
           isOpen={showMessageModal}
           onClose={() => setShowMessageModal(false)}
@@ -653,6 +718,16 @@ const PropertyDetailPage = () => {
           onClose={() => setShowApplicationModal(false)}
           property={property}
           onSubmit={handleApplicationSubmit}
+        />
+      )}
+
+      {/* Report Modal */}
+      {showReportModal && property && (
+        <ReportForm
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          reportedItem={property}
+          reportedItemType="Property"
         />
       )}
     </div>

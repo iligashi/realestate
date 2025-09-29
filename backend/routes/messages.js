@@ -8,7 +8,10 @@ const {
   replyToMessage,
   markAsRead,
   getUnreadCount,
-  closeMessage
+  closeMessage,
+  getMessageThread,
+  deleteMessageThread,
+  getPropertyConversations
 } = require('../controllers/messageController');
 
 // All routes require authentication
@@ -26,8 +29,11 @@ router.get('/', getMessages);
 // Get unread message count for notifications
 router.get('/unread-count', getUnreadCount);
 
-// Get a specific message thread (using getMessages with ID filter)
-// router.get('/:messageId', getMessageThread);
+// Get a specific message thread/conversation
+router.get('/:messageId', getMessageThread);
+
+// Get conversations for a specific property
+router.get('/property/:propertyId', getPropertyConversations);
 
 // Reply to a message
 router.post('/:messageId/reply', replyToMessage);
@@ -37,5 +43,8 @@ router.patch('/:messageId/read', markAsRead);
 
 // Close a message thread
 router.patch('/:messageId/close', closeMessage);
+
+// Delete a message thread/conversation
+router.delete('/:messageId', deleteMessageThread);
 
 module.exports = router;

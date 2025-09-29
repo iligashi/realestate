@@ -1,5 +1,5 @@
 const { User, Property, Report, Announcement, PlatformSettings } = require('../models');
-const { Op } = require('sequelize');
+const { Op, sequelize } = require('sequelize');
 
 // ==================== USER MANAGEMENT ====================
 
@@ -19,8 +19,8 @@ const getAllUsers = async (req, res) => {
     
     if (search) {
       filter[Op.or] = [
-        { firstName: { [Op.like]: `%${search}%` } },
-        { lastName: { [Op.like]: `%${search}%` } },
+        { first_name: { [Op.like]: `%${search}%` } },
+        { last_name: { [Op.like]: `%${search}%` } },
         { email: { [Op.like]: `%${search}%` } }
       ];
     }
@@ -150,8 +150,11 @@ const getAllListings = async (req, res) => {
 
     const total = await Property.count({ where: filter });
 
+    // Parse JSON fields for each listing
+    const parsedListings = listings.map(listing => listing.toJSON());
+
     res.json({
-      listings,
+      listings: parsedListings,
       total,
       totalPages: Math.ceil(total / options.limit),
       currentPage: options.page
@@ -224,20 +227,79 @@ const deleteListing = async (req, res) => {
   try {
     const { id } = req.params;
 
+    console.log('Delete listing request for ID:', id);
+
     const listing = await Property.findByPk(id);
     if (!listing) {
       return res.status(404).json({ error: 'Listing not found.' });
     }
 
-    await listing.destroy();
+    console.log('Found listing:', listing.title);
 
-    // Also delete associated reports
-    await Report.destroy({ where: { reported_item: id, reported_item_model: 'Property' } });
+    // Delete associated records first to avoid foreign key constraints
+    const deletedReports = await Report.destroy({ 
+      where: { 
+        reportedItemId: id, 
+        reportedItemModel: 'property' 
+      } 
+    });
+    console.log('Deleted reports:', deletedReports);
+
+    // Delete other associated records (only those that exist in the database)
+    const { Appointment, Favorite, Inquiry, ListingAnalytics, Message, OpenHouse, Payment, RentalApplication, Review } = require('../models');
+    
+    // Delete rental applications FIRST (has foreign key constraint)
+    const deletedRentalApplications = await RentalApplication.destroy({ where: { property_id: id } });
+    console.log('Deleted rental applications:', deletedRentalApplications);
+
+    // Delete appointments
+    const deletedAppointments = await Appointment.destroy({ where: { property_id: id } });
+    console.log('Deleted appointments:', deletedAppointments);
+
+    // Delete favorites
+    const deletedFavorites = await Favorite.destroy({ where: { property_id: id } });
+    console.log('Deleted favorites:', deletedFavorites);
+
+    // Delete inquiries
+    const deletedInquiries = await Inquiry.destroy({ where: { property_id: id } });
+    console.log('Deleted inquiries:', deletedInquiries);
+
+    // Delete listing analytics
+    const deletedAnalytics = await ListingAnalytics.destroy({ where: { property_id: id } });
+    console.log('Deleted analytics:', deletedAnalytics);
+
+    // Delete messages
+    const deletedMessages = await Message.destroy({ where: { property_id: id } });
+    console.log('Deleted messages:', deletedMessages);
+
+    // Delete open houses
+    const deletedOpenHouses = await OpenHouse.destroy({ where: { property_id: id } });
+    console.log('Deleted open houses:', deletedOpenHouses);
+
+    // Delete payments
+    const deletedPayments = await Payment.destroy({ where: { property_id: id } });
+    console.log('Deleted payments:', deletedPayments);
+
+    // Delete reviews
+    const deletedReviews = await Review.destroy({ where: { target_id: id } });
+    console.log('Deleted reviews:', deletedReviews);
+
+    // Finally delete the listing
+    await listing.destroy();
+    console.log('Listing deleted successfully');
 
     res.json({ message: 'Listing deleted successfully.' });
   } catch (error) {
     console.error('Delete listing error:', error);
-    res.status(500).json({ error: 'Failed to delete listing.' });
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      error: 'Failed to delete listing.',
+      details: error.message
+    });
   }
 };
 
@@ -251,8 +313,7 @@ const getAllReports = async (req, res) => {
       limit = 10,
       search = '',
       status = '',
-      type = '',
-      priority = ''
+      type = ''
     } = req.query;
 
     // Build filter object
@@ -264,29 +325,27 @@ const getAllReports = async (req, res) => {
     
     if (status) filter.status = status;
     if (type) filter.type = type;
-    if (priority) filter.priority = priority;
 
     const options = {
       page: parseInt(page),
-      limit: parseInt(limit),
-      sort: { priority: -1, createdAt: -1 }
+      limit: parseInt(limit)
     };
 
     const reports = await Report.findAll({
       where: filter,
       include: [
-        { model: User, as: 'reporter', attributes: ['firstName', 'lastName', 'email'] },
-        { model: User, as: 'resolver', attributes: ['firstName', 'lastName'] }
+        { model: User, as: 'reporter', attributes: ['first_name', 'last_name', 'email'] }
       ],
       limit: options.limit,
       offset: (options.page - 1) * options.limit,
-      order: [['priority', 'DESC'], ['createdAt', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
 
     const total = await Report.count({ where: filter });
 
     res.json({
-      reports,
+      success: true,
+      reports: reports,
       total,
       totalPages: Math.ceil(total / options.limit),
       currentPage: options.page
@@ -301,29 +360,26 @@ const getAllReports = async (req, res) => {
 const resolveReport = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, action, adminNotes } = req.body;
+    const { status } = req.body;
 
     const report = await Report.findByPk(id);
     if (!report) {
       return res.status(404).json({ error: 'Report not found.' });
     }
 
+    // Only update the status field since that's what exists in the database
     await report.update({
-      status,
-      action,
-      admin_notes: adminNotes,
-      resolved_by: req.user.id,
-      resolved_at: new Date()
+      status
     });
 
+    // Fetch the updated report with reporter information
     const reportWithUsers = await Report.findByPk(id, {
       include: [
-        { model: User, as: 'reporter', attributes: ['first_name', 'last_name', 'email'] },
-        { model: User, as: 'resolver', attributes: ['first_name', 'last_name'] }
+        { model: User, as: 'reporter', attributes: ['first_name', 'last_name', 'email'] }
       ]
     });
-
     res.json({
+      success: true,
       message: 'Report resolved successfully',
       report: reportWithUsers
     });
@@ -367,14 +423,14 @@ const getDashboardAnalytics = async (req, res) => {
 
     // Recent activity
     const recentUsers = await User.findAll({
-      attributes: ['firstName', 'lastName', 'userType', 'createdAt'],
+      attributes: ['first_name', 'last_name', 'userType', 'createdAt'],
       order: [['createdAt', 'DESC']],
       limit: 5
     });
 
     const recentListings = await Property.findAll({
       attributes: ['title', 'status', 'propertyType', 'createdAt'],
-      include: [{ model: User, as: 'owner', attributes: ['firstName', 'lastName'] }],
+      include: [{ model: User, as: 'owner', attributes: ['first_name', 'last_name'] }],
       order: [['createdAt', 'DESC']],
       limit: 5
     });
@@ -518,7 +574,7 @@ const getAllAnnouncements = async (req, res) => {
 
     const announcements = await Announcement.findAll({
       where: filter,
-      include: [{ model: User, as: 'creator', attributes: ['firstName', 'lastName'] }],
+      include: [{ model: User, as: 'creator', attributes: ['first_name', 'last_name'] }],
       limit: options.limit,
       offset: (options.page - 1) * options.limit,
       order: [['priority', 'DESC'], ['createdAt', 'DESC']]
@@ -548,7 +604,7 @@ const createAnnouncement = async (req, res) => {
 
     const announcement = await Announcement.create(announcementData);
     const announcementWithUser = await Announcement.findByPk(announcement.id, {
-      include: [{ model: User, as: 'creator', attributes: ['firstName', 'lastName'] }]
+      include: [{ model: User, as: 'creator', attributes: ['first_name', 'last_name'] }]
     });
 
     res.status(201).json({
@@ -575,9 +631,8 @@ const updateAnnouncement = async (req, res) => {
     await announcement.update(updateData);
 
     const announcementWithUser = await Announcement.findByPk(id, {
-      include: [{ model: User, as: 'creator', attributes: ['firstName', 'lastName'] }]
+      include: [{ model: User, as: 'creator', attributes: ['first_name', 'last_name'] }]
     });
-
     res.json({
       message: 'Announcement updated successfully',
       announcement: announcementWithUser

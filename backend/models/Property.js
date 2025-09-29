@@ -282,9 +282,11 @@ module.exports = (sequelize, DataTypes) => {
   // Instance methods
   Property.prototype.getFullAddress = function() {
     const addr = this.address;
+    if (!addr || typeof addr !== 'object') {
+      return '';
+    }
     return `${addr.street || ''} ${addr.city || ''} ${addr.state || ''} ${addr.zipCode || ''} ${addr.country || ''}`.trim();
   };
-
   Property.prototype.getPricePerSqMeter = function() {
     if (this.details && this.details.squareMeters && this.details.squareMeters > 0) {
       return this.price / this.details.squareMeters;
@@ -323,6 +325,52 @@ module.exports = (sequelize, DataTypes) => {
   // Virtual fields (computed properties)
   Property.prototype.toJSON = function() {
     const values = Object.assign({}, this.get());
+    
+    // Parse JSON fields that might be stored as strings
+    if (values.photos && typeof values.photos === 'string') {
+      try {
+        values.photos = JSON.parse(values.photos);
+      } catch (e) {
+        console.error('Error parsing photos JSON:', e);
+        values.photos = [];
+      }
+    }
+    
+    if (values.address && typeof values.address === 'string') {
+      try {
+        values.address = JSON.parse(values.address);
+      } catch (e) {
+        console.error('Error parsing address JSON:', e);
+        values.address = {};
+      }
+    }
+    
+    if (values.details && typeof values.details === 'string') {
+      try {
+        values.details = JSON.parse(values.details);
+      } catch (e) {
+        console.error('Error parsing details JSON:', e);
+        values.details = {};
+      }
+    }
+    
+    if (values.features && typeof values.features === 'string') {
+      try {
+        values.features = JSON.parse(values.features);
+      } catch (e) {
+        console.error('Error parsing features JSON:', e);
+        values.features = {};
+      }
+    }
+    
+    if (values.amenities && typeof values.amenities === 'string') {
+      try {
+        values.amenities = JSON.parse(values.amenities);
+      } catch (e) {
+        console.error('Error parsing amenities JSON:', e);
+        values.amenities = [];
+      }
+    }
     values.fullAddress = this.getFullAddress();
     values.pricePerSqMeter = this.getPricePerSqMeter();
     values.isAvailable = this.isAvailable();

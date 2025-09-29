@@ -8,7 +8,7 @@ module.exports = (sequelize, DataTypes) => {
     reportedById: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: 'reported_by_id',
+      field: 'reporter_id',
       references: {
         model: 'users',
         key: 'id'
@@ -20,12 +20,12 @@ module.exports = (sequelize, DataTypes) => {
       field: 'reported_item_id'
     },
     reportedItemModel: {
-      type: DataTypes.ENUM('Property', 'User', 'Message'),
+      type: DataTypes.ENUM('property', 'user', 'message', 'review'),
       allowNull: false,
-      field: 'reported_item_model'
+      field: 'reported_item_type'
     },
     type: {
-      type: DataTypes.ENUM('spam', 'inappropriate', 'fake', 'harassment', 'copyright', 'fraud', 'other'),
+      type: DataTypes.ENUM('spam', 'inappropriate', 'fraud', 'harassment', 'other'),
       allowNull: false
     },
     reason: {
@@ -33,35 +33,8 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     status: {
-      type: DataTypes.ENUM('pending', 'resolved', 'dismissed'),
+      type: DataTypes.ENUM('pending', 'under_review', 'resolved', 'dismissed'),
       defaultValue: 'pending'
-    },
-    adminNotes: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      field: 'admin_notes'
-    },
-    action: {
-      type: DataTypes.ENUM('warning', 'suspension', 'ban', 'content_removal', 'no_action', 'other'),
-      allowNull: true
-    },
-    resolvedAt: {
-      type: DataTypes.DATE,
-      allowNull: true,
-      field: 'resolved_at'
-    },
-    resolvedById: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      field: 'resolved_by_id',
-      references: {
-        model: 'users',
-        key: 'id'
-      }
-    },
-    priority: {
-      type: DataTypes.ENUM('low', 'medium', 'high', 'urgent'),
-      defaultValue: 'medium'
     },
     // Evidence/attachments (stored as JSON)
     evidence: {
@@ -85,7 +58,7 @@ module.exports = (sequelize, DataTypes) => {
         fields: ['type', 'status']
       },
       {
-        fields: ['reported_by_id']
+        fields: ['reporter_id']
       },
       {
         fields: ['reported_item_id']
