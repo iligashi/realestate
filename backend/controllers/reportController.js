@@ -14,7 +14,7 @@ const createReport = async (req, res) => {
         message: 'Missing required fields: reportedItemId, reportedItemModel, type, and reason are required'
       });
     }
-
+ 
     // Validate reportedItemModel
     const validModels = ['property', 'user', 'message', 'review'];
     if (!validModels.includes(reportedItemModel)) {
