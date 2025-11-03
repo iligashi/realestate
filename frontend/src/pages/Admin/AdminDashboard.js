@@ -820,7 +820,7 @@ const AdminDashboard = () => {
                   
                   <div className="mt-4 flex justify-end space-x-2">
                     <button
-                      onClick={() => handleListingEdit(listing)}
+                      onClick={() => setEditingListing(listing)}
                       className="text-blue-600 hover:text-blue-900 p-1 rounded"
                       title="Edit listing"
                     >
@@ -841,134 +841,6 @@ const AdminDashboard = () => {
         </div>
       </div>
     );
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Listing Management</h2>
-                <p className="text-gray-600 mt-1">{listings.total || 0} listings found</p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <div className="relative">
-                  <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search listings..."
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <select
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Listings Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {listings.list.map((listing) => (
-              <div key={listing.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                <div className="aspect-w-16 aspect-h-9 bg-gray-200">
-                  {listing.photos && listing.photos.length > 0 && listing.photos[0].url ? (
-                    <img
-                      src={`http://localhost:5000${listing.photos[0].url}`}
-                      alt={listing.title}
-                      className="w-full h-48 object-cover"
-                      onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
-                ) : null}
-                <div className="w-full h-48 bg-gray-200 flex items-center justify-center" style={{ display: listing.photos && listing.photos.length > 0 && listing.photos[0].url ? 'none' : 'flex' }}>
-                  <HomeIcon className="h-12 w-12 text-gray-400" />
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900 truncate">{listing.title}</h3>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    listing.status === 'active' ? 'bg-green-100 text-green-800' :
-                    listing.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    listing.status === 'sold' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {listing.status}
-                  </span>
-                </div>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{listing.description}</p>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900">${listing.price?.toLocaleString()}</p>
-                    <p className="text-sm text-gray-500">{listing.propertyType}</p>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setEditingListing(listing)}
-                      className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
-                    >
-                      <PencilIcon className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleListingDelete(listing.id)}
-                      className="text-red-600 hover:text-red-900"
-                      title="Delete listing"
-                      className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-          </div>
-      </div>
-
-      {/* Listing Edit Modal */}
-      {editingListing && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Edit Listing Status</h3>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.target);
-              const statusData = {
-                status: formData.get('status')
-              };
-              handleListingStatusUpdate(editingListing.id, statusData);
-            }}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Status</label>
-                  <select
-                    name="status"
-                    defaultValue={editingListing.status}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="sold">Sold</option>
-                    <option value="rented">Rented</option>
-                    <option value="under-contract">Under Contract</option>
-                  </select>
-                </div>
-          ))}
-              </div>
-    </div>
-  );
   };
 
   // Reports Management Component
@@ -1023,80 +895,56 @@ const AdminDashboard = () => {
               <ArrowPathIcon className="h-4 w-4" />
             </button>
           </div>
+          </div>
         </div>
-      </div>
 
         {/* Reports List */}
         <div className="space-y-4">
             {reports.list.map((report) => (
-              <tr key={report.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 h-10 w-10">
-                      <div className="h-10 w-10 rounded bg-red-100 flex items-center justify-center">
-                        <FlagIcon className="h-5 w-5 text-red-600" />
-                      </div>
+              <div key={report.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        report.status === 'under_review' ? 'bg-blue-100 text-blue-800' :
+                        report.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {report.status.replace('_', ' ')}
+                      </span>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        {report.type}
+                      </span>
                     </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        Reported by {report.reportedBy?.firstName} {report.reportedBy?.lastName}
-                      </div>
-                      <div className="text-sm text-gray-500">{report.reason}</div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      Report #{report.id}
+                    </h3>
+                    <p className="text-gray-600 mb-4">{report.reason}</p>
+                    <div className="flex items-center text-sm text-gray-500">
+                      <ClockIcon className="h-4 w-4 mr-1" />
+                      {new Date(report.createdAt).toLocaleDateString()}
                     </div>
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                    {report.type}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    report.status === 'resolved' ? 'bg-green-100 text-green-800' :
-            <div key={report.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      report.status === 'under_review' ? 'bg-blue-100 text-blue-800' :
-                      report.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                      {report.status.replace('_', ' ')}
-                  </span>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      {report.type}
-                  </span>
+                  <div className="flex space-x-2 ml-4">
+                    <button
+                      onClick={() => setEditingReport(report)}
+                      className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
+                    >
+                      Review
+                    </button>
+                    <button
+                      onClick={() => handleReportResolution(report.id, { status: 'resolved' })}
+                      className="px-4 py-2 text-sm font-medium text-green-600 hover:text-green-900 hover:bg-green-50 rounded-lg transition-colors"
+                    >
+                      Resolve
+                    </button>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Report #{report.id}
-                  </h3>
-                  <p className="text-gray-600 mb-4">{report.reason}</p>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <ClockIcon className="h-4 w-4 mr-1" />
-                    {new Date(report.createdAt).toLocaleDateString()}
-          </div>
-      </div>
-                <div className="flex space-x-2 ml-4">
-                <button
-                    onClick={() => setEditingReport(report)}
-                    className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
-                >
-                    Review
-                </button>
-                <button
-                    onClick={() => handleReportResolution(report.id, { status: 'resolved' })}
-                    className="px-4 py-2 text-sm font-medium text-green-600 hover:text-green-900 hover:bg-green-50 rounded-lg transition-colors"
-                >
-                    Resolve
-                </button>
+                </div>
               </div>
-          </div>
+            ))}
         </div>
-          ))}
-          </div>
-        </div>
+      </div>
       );
   };
 
@@ -1117,8 +965,8 @@ const AdminDashboard = () => {
             <p className="text-green-100">This quarter</p>
           </div>
         </div>
-              </div>
-              </div>
+      </div>
+      </div>
   );
 
   // Settings Component
@@ -1126,29 +974,29 @@ const AdminDashboard = () => {
     <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Platform Settings</h2>
-            <div className="space-y-4">
+        <div className="space-y-4">
           <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-              <div>
+            <div>
               <h3 className="font-medium text-gray-900">Email Notifications</h3>
               <p className="text-sm text-gray-500">Send email notifications to users</p>
-              </div>
+            </div>
             <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-blue-600">
               <span className="inline-block h-4 w-4 transform rounded-full bg-white transition translate-x-6" />
             </button>
-              </div>
+          </div>
           <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-          <div>
+            <div>
               <h3 className="font-medium text-gray-900">Maintenance Mode</h3>
               <p className="text-sm text-gray-500">Enable maintenance mode for the platform</p>
-          </div>
+            </div>
             <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200">
               <span className="inline-block h-4 w-4 transform rounded-full bg-white transition translate-x-1" />
-                    </button>
-                  </div>
-                </div>
+            </button>
+          </div>
         </div>
       </div>
-    );
+    </div>
+  );
 
   // Render content based on active tab
   const renderContent = () => {
@@ -1169,6 +1017,17 @@ const AdminDashboard = () => {
         return <DashboardOverview />;
     }
   };
+
+  if (!user || user.userType !== 'admin') {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+          <p className="text-gray-600">You need admin privileges to access this page.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -1296,54 +1155,6 @@ const AdminDashboard = () => {
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.target);
-              const resolutionData = {
-                status: formData.get('status'),
-                adminNotes: formData.get('adminNotes'),
-                action: formData.get('action')
-              };
-              handleReportResolution(editingReport.id, resolutionData);
-            }}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Resolution Status</label>
-                  <select
-                    name="status"
-                    defaultValue={editingReport.status}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="resolved">Resolved</option>
-                    <option value="dismissed">Dismissed</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Action Taken</label>
-                  <select
-                    name="action"
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  >
-                    <option value="">Select action</option>
-                    <option value="warning">Warning</option>
-                    <option value="suspension">Suspension</option>
-                    <option value="ban">Ban</option>
-                    <option value="content_removal">Content Removal</option>
-                    <option value="no_action">No Action</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Admin Notes</label>
-                  <textarea
-                    name="adminNotes"
-                    rows={3}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                    placeholder="Add notes about the resolution..."
-                  />
-                </div>
-            
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1508,6 +1319,7 @@ const AdminDashboard = () => {
 
   // NEW: Platform Settings Component
   const PlatformSettings = () => {
+    const dispatch = useDispatch();
     const { platformSettings } = useSelector(state => state.admin);
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState(platformSettings || {
@@ -1734,6 +1546,7 @@ const AdminDashboard = () => {
 
   // NEW: System Announcements Component
   const SystemAnnouncements = () => {
+    const dispatch = useDispatch();
     const { announcements } = useSelector(state => state.admin);
     const [isCreating, setIsCreating] = useState(false);
     const [editingAnnouncement, setEditingAnnouncement] = useState(null);
@@ -2045,81 +1858,5 @@ const AdminDashboard = () => {
       </div>
     );
   };
-
-  // Main Component
-  if (!user || user.userType !== 'admin') {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600">You need admin privileges to access this page.</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="px-4 sm:px-0 mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="mt-2 text-gray-600">Manage users, listings, and platform content</p>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="border-b border-gray-200 mb-8">
-          <nav className="-mb-px flex space-x-8">
-            {[
-              { id: 'dashboard', name: 'Dashboard', icon: ChartBarIcon },
-              { id: 'users', name: 'Users', icon: UsersIcon },
-              { id: 'listings', name: 'Listings', icon: HomeIcon },
-              { id: 'reports', name: 'Reports', icon: FlagIcon },
-              { id: 'platform-settings', name: 'Platform Settings', icon: Cog6ToothIcon },
-              { id: 'featured-listings', name: 'Featured Listings', icon: StarIcon },
-              { id: 'system-announcements', name: 'System Announcements', icon: MegaphoneIcon },
-              { id: 'enhanced-analytics', name: 'Enhanced Analytics', icon: CurrencyDollarIcon }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`${
-                  activeTab === tab.id
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center`}
-              >
-                <tab.icon className="h-5 w-5 mr-2" />
-                {tab.name}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Content */}
-        <div className="px-4 sm:px-0">
-          {activeTab === 'dashboard' && <DashboardAnalytics />}
-          {activeTab === 'users' && <UserManagement />}
-          {activeTab === 'listings' && <ListingManagement />}
-          {activeTab === 'reports' && <ReportsManagement />}
-          {activeTab === 'platform-settings' && <PlatformSettings />}
-          {activeTab === 'featured-listings' && <FeaturedListings />}
-          {activeTab === 'system-announcements' && <SystemAnnouncements />}
-          {activeTab === 'enhanced-analytics' && <EnhancedAnalytics />}
-        </div>
-
-        {/* Loading State */}
-        {loading && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-              <p className="mt-2 text-sm text-gray-600">Loading...</p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 export default AdminDashboard;
