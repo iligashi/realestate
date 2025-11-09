@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   fetchProperties
@@ -17,19 +17,43 @@ import {
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import { toast } from 'react-toastify';
+import favoriteAPI from '../../services/favoriteAPI';
 
 const PropertyComparison = () => {
   const dispatch = useDispatch();
   const { properties = [] } = useSelector(state => state.property || {});
-  const [favorites, setFavorites] = useState([]);
-  
   const [comparisonList, setComparisonList] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [favoriteIds, setFavoriteIds] = useState(new Set());
+  const [favoriteMap, setFavoriteMap] = useState({});
 
   useEffect(() => {
     dispatch(fetchProperties());
   }, [dispatch]);
+
+  const loadFavorites = useCallback(async () => {
+    try {
+      const response = await favoriteAPI.getFavorites();
+      const favorites = response.favorites || [];
+      const ids = new Set(favorites.map(fav => fav.propertyId || fav.property?.id || fav.property?._id));
+      const map = {};
+      favorites.forEach(fav => {
+        const propertyId = fav.propertyId || fav.property?.id || fav.property?._id;
+        if (propertyId) {
+          map[propertyId] = fav.favoriteId || fav.id;
+        }
+      });
+      setFavoriteIds(ids);
+      setFavoriteMap(map);
+    } catch (error) {
+      console.error('Failed to load favorites:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadFavorites();
+  }, [loadFavorites]);
 
   const handleAddToComparison = (property) => {
     if (comparisonList.length >= 4) {
@@ -37,7 +61,8 @@ const PropertyComparison = () => {
       return;
     }
     
-    if (comparisonList.some(p => p._id === property._id)) {
+    const propertyId = property._id || property.id;
+    if (comparisonList.some(p => (p._id || p.id) === propertyId)) {
       toast.error('Property already in comparison');
       return;
     }
@@ -48,23 +73,37 @@ const PropertyComparison = () => {
   };
 
   const handleRemoveFromComparison = (propertyId) => {
-    setComparisonList(prev => prev.filter(p => p._id !== propertyId));
+    setComparisonList(prev => prev.filter(p => (p._id || p.id) !== propertyId));
   };
 
   const handleAddToFavorites = async (propertyId) => {
-    // TODO: Implement favorites functionality
-    toast.success('Added to wishlist!');
+    try {
+      await favoriteAPI.addFavorite(propertyId);
+      toast.success('Added to wishlist!');
+      await loadFavorites();
+    } catch (error) {
+      console.error('Add favorite error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to add to wishlist');
+    }
   };
 
   const handleRemoveFromFavorites = async (propertyId) => {
-    // TODO: Implement favorites functionality
-    toast.success('Removed from wishlist!');
+    try {
+      const favoriteId = favoriteMap[propertyId];
+      if (favoriteId) {
+        await favoriteAPI.removeFavorite(favoriteId);
+      } else {
+        await favoriteAPI.removeFavoriteByProperty(propertyId);
+      }
+      toast.success('Removed from wishlist!');
+      await loadFavorites();
+    } catch (error) {
+      console.error('Remove favorite error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to remove from wishlist');
+    }
   };
 
-  const isFavorite = (propertyId) => {
-    // TODO: Implement favorites functionality
-    return false;
-  };
+  const isFavorite = useCallback((propertyId) => favoriteIds.has(propertyId), [favoriteIds]);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', {
@@ -80,11 +119,14 @@ const PropertyComparison = () => {
     return formatPrice(price / sqft);
   };
 
-  const filteredProperties = properties.filter(property =>
-    property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    property.address?.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    property.address?.state.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProperties = useMemo(() => properties.filter(property => {
+    const title = (property.title || '').toLowerCase();
+    const city = (property.address?.city || '').toLowerCase();
+    const state = (property.address?.state || '').toLowerCase();
+    const term = searchTerm.toLowerCase();
+
+    return title.includes(term) || city.includes(term) || state.includes(term);
+  }), [properties, searchTerm]);
 
   const ComparisonTable = () => (
     <div className="overflow-x-auto">
@@ -95,15 +137,15 @@ const PropertyComparison = () => {
               Property
             </th>
             {comparisonList.map((property) => (
-              <th key={property._id} className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th key={property._id || property.id} className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <div className="relative">
                   <img
-                    src={property.photos?.[0]?.url || '/api/placeholder/200/150'}
+                    src={property.photos?.[0]?.url || property.photos?.[0] || '/api/placeholder/200/150'}
                     alt={property.title}
                     className="w-24 h-16 object-cover rounded mx-auto mb-2"
                   />
                   <button
-                    onClick={() => handleRemoveFromComparison(property._id)}
+                    onClick={() => handleRemoveFromComparison(property._id || property.id)}
                     className="absolute -top-2 -right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
                   >
                     <XMarkIcon className="h-4 w-4" />
@@ -122,7 +164,7 @@ const PropertyComparison = () => {
               Price
             </td>
             {comparisonList.map((property) => (
-              <td key={property._id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+              <td key={property._id || property.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
                 <div className="text-lg font-bold text-blue-600">
                   {formatPrice(property.price)}
                 </div>
@@ -138,7 +180,7 @@ const PropertyComparison = () => {
               Location
             </td>
             {comparisonList.map((property) => (
-              <td key={property._id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+              <td key={property._id || property.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
                 <div className="flex items-center justify-center">
                   <MapPinIcon className="h-4 w-4 mr-1 text-gray-400" />
                   <span>{property.address?.city}, {property.address?.state}</span>
@@ -152,7 +194,7 @@ const PropertyComparison = () => {
               Property Type
             </td>
             {comparisonList.map((property) => (
-              <td key={property._id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+              <td key={property._id || property.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                   {property.propertyType}
                 </span>
@@ -165,7 +207,7 @@ const PropertyComparison = () => {
               Bedrooms
             </td>
             {comparisonList.map((property) => (
-              <td key={property._id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+              <td key={property._id || property.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
                 <div className="flex items-center justify-center">
                   <HomeIcon className="h-4 w-4 mr-1 text-gray-400" />
                   <span>{property.details?.bedrooms || 0}</span>
@@ -179,7 +221,7 @@ const PropertyComparison = () => {
               Bathrooms
             </td>
             {comparisonList.map((property) => (
-              <td key={property._id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+              <td key={property._id || property.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
                 {property.details?.bathrooms || 0}
               </td>
             ))}
@@ -190,7 +232,7 @@ const PropertyComparison = () => {
               Square Meters
             </td>
             {comparisonList.map((property) => (
-              <td key={property._id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+              <td key={property._id || property.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
                 {property.details?.squareMeters?.toLocaleString() || '0'} m²
               </td>
             ))}
@@ -201,7 +243,7 @@ const PropertyComparison = () => {
               Year Built
             </td>
             {comparisonList.map((property) => (
-              <td key={property._id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+              <td key={property._id || property.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
                 {property.yearBuilt || 'N/A'}
               </td>
             ))}
@@ -212,7 +254,7 @@ const PropertyComparison = () => {
               Days on Market
             </td>
             {comparisonList.map((property) => (
-              <td key={property._id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+              <td key={property._id || property.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
                 {property.daysOnMarket || 0} days
               </td>
             ))}
@@ -223,28 +265,28 @@ const PropertyComparison = () => {
               Actions
             </td>
             {comparisonList.map((property) => (
-              <td key={property._id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+              <td key={property._id || property.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
                 <div className="flex space-x-2 justify-center">
                   <button
-                    onClick={() => window.open(`/properties/${property.id}`, '_blank')}
+                    onClick={() => window.open(`/properties/${property.id || property._id}`, '_blank')}
                     className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors flex items-center"
                   >
                     <EyeIcon className="h-3 w-3 mr-1" />
                     View
                   </button>
                   <button
-                    onClick={() => isFavorite(property._id) 
-                      ? handleRemoveFromFavorites(property._id)
-                      : handleAddToFavorites(property._id)
+                    onClick={() => isFavorite(property._id || property.id) 
+                      ? handleRemoveFromFavorites(property._id || property.id)
+                      : handleAddToFavorites(property._id || property.id)
                     }
                     className={`px-3 py-1 rounded text-xs transition-colors flex items-center ${
-                      isFavorite(property._id)
+                      isFavorite(property._id || property.id)
                         ? 'bg-red-600 text-white hover:bg-red-700'
                         : 'bg-gray-600 text-white hover:bg-gray-700'
                     }`}
                   >
                     <HeartIcon className="h-3 w-3 mr-1" />
-                    {isFavorite(property._id) ? 'Remove' : 'Save'}
+                    {isFavorite(property._id || property.id) ? 'Remove' : 'Save'}
                   </button>
                 </div>
               </td>

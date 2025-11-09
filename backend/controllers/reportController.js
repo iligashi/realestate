@@ -5,7 +5,7 @@ const { Op } = require('sequelize');
 const createReport = async (req, res) => {
   try {
     const { reportedItemId, reportedItemModel, type, reason, evidence, metadata } = req.body;
-    const reportedById = req.user.id;
+    const reporterId = req.user.id;
 
     // Validate required fields
     if (!reportedItemId || !reportedItemModel || !type || !reason) {
@@ -52,7 +52,7 @@ const createReport = async (req, res) => {
     // Check if user has already reported this item
     const existingReport = await Report.findOne({
       where: {
-        reportedById,
+        reporterId,
         reportedItemId,
         reportedItemModel
       }
@@ -67,7 +67,7 @@ const createReport = async (req, res) => {
 
     // Create the report
     const report = await Report.create({
-      reportedById,
+      reporterId,
       reportedItemId,
       reportedItemModel,
       type,
@@ -104,9 +104,9 @@ const createReport = async (req, res) => {
 const getMyReports = async (req, res) => {
   try {
     const { page = 1, limit = 10, status = '' } = req.query;
-    const reportedById = req.user.id;
+    const reporterId = req.user.id;
 
-    const filter = { reportedById };
+    const filter = { reporterId };
     if (status) filter.status = status;
 
     const reports = await Report.findAll({
@@ -207,7 +207,7 @@ const getReport = async (req, res) => {
     }
 
     // Check if user can view this report (either reporter, reported item, or admin)
-    const canView = report.reportedById === userId || 
+    const canView = report.reporterId === userId || 
                    report.reportedItemId === userId || 
                    req.user.userType === 'admin';
     

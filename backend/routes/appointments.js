@@ -8,7 +8,8 @@ const {
   confirmAppointment,
   cancelAppointment,
   rescheduleAppointment,
-  getAppointmentDetails
+  getAppointmentDetails,
+  completeAppointment
 } = require('../controllers/appointmentController');
 
 // Apply authentication middleware to all routes
@@ -34,5 +35,8 @@ router.patch('/:appointmentId/cancel', cancelAppointment);
 
 // Reschedule an appointment
 router.patch('/:appointmentId/reschedule', rescheduleAppointment);
+
+// Complete an appointment
+router.patch('/:appointmentId/complete', completeAppointment);
 
 module.exports = router;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
 import { 
@@ -71,7 +71,9 @@ const AdminDashboard = () => {
     reports, 
     loading, 
     error, 
-    successMessage 
+    successMessage,
+    enhancedAnalytics,
+    revenueAnalytics
   } = useSelector(state => state.admin);
   const { user } = useSelector(state => state.auth);
 
@@ -238,248 +240,509 @@ const AdminDashboard = () => {
     );
   };
 
+  const defaultCurrency = revenueAnalytics?.primaryCurrency || 'USD';
+
+  const formatNumber = (value) => {
+    const number = Number(value ?? 0);
+    if (!Number.isFinite(number)) {
+      return '0';
+    }
+    return number.toLocaleString();
+  };
+
+  const formatCurrency = (value, currency = defaultCurrency) => {
+    const number = Number(value ?? 0);
+    const formatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency
+    });
+    if (!Number.isFinite(number)) {
+      return formatter.format(0);
+    }
+    return formatter.format(number);
+  };
+
+  const toTitleCase = (text = '') => {
+    if (!text) return '';
+    return text
+      .replace(/_/g, ' ')
+      .replace(/\w\S*/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
+  };
+
+  const computeSeriesTrend = (series = [], key = 'count') => {
+    if (!Array.isArray(series) || series.length < 2) {
+      return { direction: null, label: null };
+    }
+    const latest = series[series.length - 1] || {};
+    const previous = series[series.length - 2] || {};
+    const latestValue = Number(latest?.[key] ?? latest?.count ?? 0);
+    const previousValue = Number(previous?.[key] ?? previous?.count ?? 0);
+
+    if (!Number.isFinite(latestValue) || !Number.isFinite(previousValue)) {
+      return { direction: null, label: null };
+    }
+
+    if (previousValue === 0) {
+      if (latestValue === 0) {
+        return { direction: null, label: null };
+      }
+      return { direction: 'up', label: '+100%' };
+    }
+
+    const change = ((latestValue - previousValue) / previousValue) * 100;
+    if (!Number.isFinite(change)) {
+      return { direction: null, label: null };
+    }
+
+    const roundedChange = change.toFixed(1);
+    return {
+      direction: change >= 0 ? 'up' : 'down',
+      label: `${change >= 0 ? '+' : ''}${roundedChange}%`
+    };
+  };
+
+  const getRelativeTime = (input) => {
+    if (!input) return '—';
+    const date = new Date(input);
+    if (Number.isNaN(date.getTime())) return '—';
+
+    const now = new Date();
+    const diffMs = now - date;
+    if (diffMs < 0) return 'just now';
+
+    const diffMinutes = Math.floor(diffMs / 60000);
+    if (diffMinutes < 1) return 'just now';
+    if (diffMinutes < 60) {
+      return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+    }
+
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) {
+      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    }
+
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 30) {
+      return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    }
+
+    const diffMonths = Math.floor(diffDays / 30);
+    if (diffMonths < 12) {
+      return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago`;
+    }
+
+    const diffYears = Math.floor(diffMonths / 12);
+    return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
+  };
+
+  const activityFeed = useMemo(() => {
+    const userEvents = (analytics.recentUsers || []).map((userItem, index) => ({
+      id: `user-${userItem?.id ?? userItem?.email ?? index}`,
+      type: 'user',
+      title: `${userItem.firstName || ''} ${userItem.lastName || ''}`.trim() || 'New user',
+      description: `Joined as ${toTitleCase(userItem.userType)}`,
+      timestamp: userItem.createdAt
+    }));
+
+    const listingEvents = (analytics.recentListings || []).map((listing, index) => ({
+      id: `listing-${listing?.id ?? listing?.title ?? index}`,
+      type: 'listing',
+      title: listing.title || 'Listing update',
+      description: `${toTitleCase(listing.status || 'pending')} listing`,
+      timestamp: listing.createdAt
+    }));
+
+    const reportEvents = (analytics.recentReports || []).map((report, index) => ({
+      id: `report-${report?.id ?? index}`,
+      type: 'report',
+      title: `Report #${report.id}`,
+      description: `${toTitleCase(report.type)} · ${toTitleCase(report.status)}`,
+      timestamp: report.createdAt
+    }));
+
+    return [...userEvents, ...listingEvents, ...reportEvents]
+      .filter((item) => item.timestamp)
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 6);
+  }, [analytics.recentUsers, analytics.recentListings, analytics.recentReports]);
+
+  const alerts = useMemo(() => {
+    const pendingListings = analytics.listings?.pending || 0;
+    const pendingReports = analytics.reports?.pending || 0;
+    const blockedUsers = analytics.users?.blocked || 0;
+
+    const alertItems = [];
+
+    if (pendingListings > 0) {
+      alertItems.push({
+        id: 'pending-listings',
+        type: 'warning',
+        title: 'Listings awaiting review',
+        message: `${pendingListings} listing${pendingListings !== 1 ? 's' : ''} pending approval.`
+      });
+    }
+
+    if (pendingReports > 0) {
+      alertItems.push({
+        id: 'pending-reports',
+        type: 'alert',
+        title: 'Reports awaiting action',
+        message: `${pendingReports} report${pendingReports !== 1 ? 's' : ''} pending resolution.`
+      });
+    }
+
+    if (blockedUsers > 0) {
+      alertItems.push({
+        id: 'blocked-users',
+        type: 'info',
+        title: 'Blocked accounts',
+        message: `${blockedUsers} user${blockedUsers !== 1 ? 's' : ''} currently blocked.`
+      });
+    }
+
+    if (alertItems.length === 0) {
+      alertItems.push({
+        id: 'all-clear',
+        type: 'success',
+        title: 'All systems operational',
+        message: 'No outstanding alerts detected.'
+      });
+    }
+
+    return alertItems;
+  }, [analytics.listings, analytics.reports, analytics.users]);
+
   // Dashboard Overview Component
-  const DashboardOverview = () => (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 sm:p-6 text-white">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-          <div className="flex-1">
-            <h1 className="text-xl sm:text-2xl font-bold mb-2">Welcome back, {user?.firstName || 'Admin'}!</h1>
-            <p className="text-blue-100 text-sm sm:text-base">Here's what's happening with your platform today.</p>
-          </div>
-          <div className="flex items-center justify-between sm:block">
-            <div className="text-left sm:text-right">
-              <p className="text-xs sm:text-sm text-blue-100">Last updated</p>
-              <p className="text-sm sm:text-lg font-semibold">{new Date().toLocaleTimeString()}</p>
-          </div>
-        </div>
-        </div>
-      </div>
+  const DashboardOverview = () => {
+    const lastUpdated = analytics.lastUpdated ? new Date(analytics.lastUpdated) : null;
+    const lastUpdatedLabel = lastUpdated ? lastUpdated.toLocaleString() : '—';
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
-        <StatsCard
-          title="Total Users"
-          value={analytics.users?.total || 0}
-          subtitle={`${analytics.users?.active || 0} active`}
-          icon={UsersIcon}
-          color="blue"
-          trend="up"
-          trendValue="+12%"
-        />
-        <StatsCard
-          title="Total Listings"
-          value={analytics.listings?.total || 0}
-          subtitle={`${analytics.listings?.pending || 0} pending`}
-          icon={HomeIcon}
-          color="green"
-          trend="up"
-          trendValue="+8%"
-        />
-        <StatsCard
-          title="Reports"
-          value={analytics.reports?.total || 0}
-          subtitle={`${analytics.reports?.pending || 0} pending`}
-          icon={FlagIcon}
-          color="red"
-          trend="down"
-          trendValue="-5%"
-        />
-        <StatsCard
-          title="Revenue"
-          value="$12,345"
-          subtitle="This month"
-          icon={CurrencyDollarIcon}
-          color="purple"
-          trend="up"
-          trendValue="+15%"
-        />
-          </div>
+    const periodLabels = {
+      '7d': 'Last 7 days',
+      '30d': 'Last 30 days',
+      '90d': 'Last 90 days',
+      '1y': 'Last 12 months'
+    };
+    const revenuePeriodLabel = periodLabels[revenueAnalytics.period] || 'Current period';
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-        {/* Recent Activity */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-            <BellIcon className="h-5 w-5 text-gray-400" />
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900 truncate">New user registered</p>
-                <p className="text-xs text-gray-500">2 minutes ago</p>
-        </div>
+    const userTrend = computeSeriesTrend(enhancedAnalytics?.userGrowth);
+    const listingTrend = computeSeriesTrend(enhancedAnalytics?.listingPerformance);
+    const revenueTrend = (() => {
+      if (revenueAnalytics.revenueChange === null || revenueAnalytics.revenueChange === undefined) {
+        return { direction: null, label: null };
+      }
+      const changeValue = Number(revenueAnalytics.revenueChange);
+      if (!Number.isFinite(changeValue)) {
+        return { direction: null, label: null };
+      }
+      return {
+        direction: changeValue >= 0 ? 'up' : 'down',
+        label: `${changeValue >= 0 ? '+' : ''}${changeValue.toFixed(1)}%`
+      };
+    })();
+
+    const reportResolutionRate = analytics.reports?.total
+      ? (analytics.reports.resolved / analytics.reports.total) * 100
+      : null;
+    const reportTrend = reportResolutionRate !== null
+      ? {
+          direction: reportResolutionRate >= 50 ? 'up' : 'down',
+          label: `${reportResolutionRate.toFixed(1)}% resolved`
+        }
+      : { direction: null, label: null };
+
+    const quickStats = [
+      {
+        id: 'payments',
+        label: 'Completed Payments',
+        value: formatNumber(revenueAnalytics.transactionsCount),
+        hint: revenuePeriodLabel
+      },
+      {
+        id: 'average-transaction',
+        label: 'Avg Transaction',
+        value: formatCurrency(revenueAnalytics.averageTransactionValue),
+        hint: `Across ${formatNumber(revenueAnalytics.transactionsCount)} payments`
+      },
+      {
+        id: 'commission',
+        label: 'Commission Earned',
+        value: formatCurrency(revenueAnalytics.commissionEarnings),
+        hint: 'Platform fees collected'
+      },
+      {
+        id: 'featured',
+        label: 'Featured Listing Revenue',
+        value: formatCurrency(revenueAnalytics.featuredListingRevenue),
+        hint: 'Premium placements'
+      }
+    ];
+
+    const listingBreakdown = [
+      {
+        label: 'Pending',
+        value: formatNumber(analytics.listings?.pending),
+        badgeClass: 'bg-yellow-100 text-yellow-800'
+      },
+      {
+        label: 'Approved',
+        value: formatNumber(analytics.listings?.approved),
+        badgeClass: 'bg-green-100 text-green-800'
+      },
+      {
+        label: 'Rejected',
+        value: formatNumber(analytics.listings?.rejected),
+        badgeClass: 'bg-red-100 text-red-800'
+      }
+    ];
+
+    const roleDistribution = (analytics.roleDistribution || []).map((role) => ({
+      label: role.userType,
+      value: formatNumber(role.count)
+    }));
+
+    const topPaymentMethod = revenueAnalytics.topPaymentMethod
+      ? toTitleCase(revenueAnalytics.topPaymentMethod)
+      : 'No payments yet';
+    const primaryCurrency = revenueAnalytics.primaryCurrency || defaultCurrency;
+
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 sm:p-6 text-white">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+            <div className="flex-1">
+              <h1 className="text-xl sm:text-2xl font-bold mb-2">Welcome back, {user?.firstName || 'Admin'}!</h1>
+              <p className="text-blue-100 text-sm sm:text-base">Here's what's happening with your platform today.</p>
             </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900 truncate">Property listing approved</p>
-                <p className="text-xs text-gray-500">15 minutes ago</p>
+            <div className="flex items-center justify-between sm:block">
+              <div className="text-left sm:text-right">
+                <p className="text-xs sm:text-sm text-blue-100">Last updated</p>
+                <p className="text-sm sm:text-lg font-semibold">{lastUpdatedLabel}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full flex-shrink-0"></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900 truncate">Report submitted</p>
-                <p className="text-xs text-gray-500">1 hour ago</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0"></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900 truncate">System maintenance completed</p>
-                <p className="text-xs text-gray-500">3 hours ago</p>
-              </div>
-            </div>
+          </div>
         </div>
-      </div>
 
-        {/* Quick Stats */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Quick Stats</h3>
-            <ChartBarIcon className="h-5 w-5 text-gray-400" />
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
-              <p className="text-xl sm:text-2xl font-bold text-green-600">98%</p>
-              <p className="text-xs sm:text-sm text-gray-600">Uptime</p>
-          </div>
-            <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
-              <p className="text-xl sm:text-2xl font-bold text-blue-600">1.2s</p>
-              <p className="text-xs sm:text-sm text-gray-600">Avg Response</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
+          <StatsCard
+            title="Total Users"
+            value={formatNumber(analytics.users?.total)}
+            subtitle={`${formatNumber(analytics.users?.active)} active`}
+            icon={UsersIcon}
+            color="blue"
+            trend={userTrend.direction}
+            trendValue={userTrend.label}
+          />
+          <StatsCard
+            title="Total Listings"
+            value={formatNumber(analytics.listings?.total)}
+            subtitle={`${formatNumber(analytics.listings?.pending)} pending`}
+            icon={HomeIcon}
+            color="green"
+            trend={listingTrend.direction}
+            trendValue={listingTrend.label}
+          />
+          <StatsCard
+            title="Reports"
+            value={formatNumber(analytics.reports?.total)}
+            subtitle={`${formatNumber(analytics.reports?.pending)} pending`}
+            icon={FlagIcon}
+            color="red"
+            trend={reportTrend.direction}
+            trendValue={reportTrend.label}
+          />
+          <StatsCard
+            title="Platform Revenue"
+            value={formatCurrency(revenueAnalytics.totalRevenue)}
+            subtitle={revenuePeriodLabel}
+            icon={CurrencyDollarIcon}
+            color="purple"
+            trend={revenueTrend.direction}
+            trendValue={revenueTrend.label}
+          />
         </div>
-            <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
-              <p className="text-xl sm:text-2xl font-bold text-purple-600">24/7</p>
-              <p className="text-xs sm:text-sm text-gray-600">Support</p>
-            </div>
-            <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
-              <p className="text-xl sm:text-2xl font-bold text-yellow-600">99.9%</p>
-              <p className="text-xs sm:text-sm text-gray-600">Reliability</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Additional Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Performance Metrics */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Performance</h3>
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+              <BellIcon className="h-5 w-5 text-gray-400" />
+            </div>
+            <div className="space-y-3">
+              {activityFeed.length === 0 ? (
+                <p className="text-sm text-gray-500">No recent activity recorded.</p>
+              ) : (
+                activityFeed.map((item) => {
+                  const typeStyles = {
+                    user: { dot: 'bg-green-500', icon: UsersIcon },
+                    listing: { dot: 'bg-blue-500', icon: HomeIcon },
+                    report: { dot: 'bg-red-500', icon: FlagIcon }
+                  };
+                  const IconComponent = typeStyles[item.type]?.icon || InformationCircleIcon;
+                  const dotClass = typeStyles[item.type]?.dot || 'bg-gray-400';
+                  return (
+                    <div key={item.id} className="flex items-center space-x-3">
+                      <div className={`w-2 h-2 ${dotClass} rounded-full flex-shrink-0`}></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-900 truncate flex items-center space-x-2">
+                          <IconComponent className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                          <span className="truncate">{item.title}</span>
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">{item.description}</p>
+                      </div>
+                      <span className="text-xs text-gray-400 flex-shrink-0">{getRelativeTime(item.timestamp)}</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Quick Stats</h3>
+              <ChartBarIcon className="h-5 w-5 text-gray-400" />
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              {quickStats.map((stat) => (
+                <div key={stat.id} className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-base sm:text-lg font-bold text-gray-900">{stat.value}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">{stat.label}</p>
+                  {stat.hint && <p className="text-[11px] text-gray-400 mt-1">{stat.hint}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Listing Performance</h3>
               <CheckIcon className="h-5 w-5 text-green-600" />
             </div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Page Load Time</span>
-              <span className="text-sm font-semibold text-gray-900">0.8s</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Database Queries</span>
-              <span className="text-sm font-semibold text-gray-900">45ms</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Memory Usage</span>
-              <span className="text-sm font-semibold text-gray-900">68%</span>
+            <div className="space-y-3">
+              {listingBreakdown.map((item) => (
+                <div key={item.label} className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">{item.label}</span>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.badgeClass}`}>
+                    {item.value}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
 
-        {/* User Activity */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">User Activity</h3>
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">User Distribution</h3>
               <UserGroupIcon className="h-5 w-5 text-blue-600" />
             </div>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Active users</span>
+                <span className="text-sm font-semibold text-gray-900">{formatNumber(analytics.users?.active)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Blocked users</span>
+                <span className="text-sm font-semibold text-gray-900">{formatNumber(analytics.users?.blocked)}</span>
+              </div>
+              <div className="border-t border-gray-100 pt-3">
+                {roleDistribution.length === 0 ? (
+                  <p className="text-sm text-gray-500">No role data available.</p>
+                ) : (
+                  roleDistribution.map((role) => (
+                    <div key={role.label} className="flex justify-between items-center text-sm text-gray-600">
+                      <span className="capitalize">{role.label}</span>
+                      <span className="font-medium text-gray-900">{role.value}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Online Now</span>
-              <span className="text-sm font-semibold text-gray-900">127</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">New Today</span>
-              <span className="text-sm font-semibold text-gray-900">23</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Active Sessions</span>
-              <span className="text-sm font-semibold text-gray-900">89</span>
-            </div>
-          </div>
-        </div>
 
-        {/* System Status */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 sm:col-span-2 lg:col-span-1">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">System Status</h3>
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 sm:col-span-2 lg:col-span-1">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Payment Overview</h3>
               <ShieldCheckIcon className="h-5 w-5 text-green-600" />
             </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Top payment method</span>
+                <span className="text-sm font-semibold text-gray-900 capitalize">{topPaymentMethod}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Primary currency</span>
+                <span className="text-sm font-semibold text-gray-900">{primaryCurrency}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Transactions</span>
+                <span className="text-sm font-semibold text-gray-900">{formatNumber(revenueAnalytics.transactionsCount)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">System Alerts</h3>
+            <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
           </div>
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">API Server</span>
-              </div>
-              <span className="text-sm font-semibold text-green-600">Healthy</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Database</span>
-              </div>
-              <span className="text-sm font-semibold text-green-600">Healthy</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Cache</span>
-              </div>
-              <span className="text-sm font-semibold text-yellow-600">Warning</span>
-            </div>
+            {alerts.map((alert) => {
+              const alertConfig = {
+                warning: {
+                  icon: ExclamationTriangleIcon,
+                  wrapper: 'bg-yellow-50',
+                  titleColor: 'text-yellow-800',
+                  messageColor: 'text-yellow-600',
+                  iconColor: 'text-yellow-500'
+                },
+                alert: {
+                  icon: FlagIcon,
+                  wrapper: 'bg-red-50',
+                  titleColor: 'text-red-800',
+                  messageColor: 'text-red-600',
+                  iconColor: 'text-red-500'
+                },
+                info: {
+                  icon: InformationCircleIcon,
+                  wrapper: 'bg-blue-50',
+                  titleColor: 'text-blue-800',
+                  messageColor: 'text-blue-600',
+                  iconColor: 'text-blue-500'
+                },
+                success: {
+                  icon: CheckIcon,
+                  wrapper: 'bg-green-50',
+                  titleColor: 'text-green-800',
+                  messageColor: 'text-green-600',
+                  iconColor: 'text-green-500'
+                }
+              }[alert.type] || {
+                icon: InformationCircleIcon,
+                wrapper: 'bg-gray-50',
+                titleColor: 'text-gray-800',
+                messageColor: 'text-gray-600',
+                iconColor: 'text-gray-500'
+              };
+              const AlertIcon = alertConfig.icon;
+              return (
+                <div key={alert.id} className={`flex items-start space-x-3 p-3 rounded-lg ${alertConfig.wrapper}`}>
+                  <AlertIcon className={`h-5 w-5 flex-shrink-0 mt-0.5 ${alertConfig.iconColor}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium ${alertConfig.titleColor}`}>{alert.title}</p>
+                    <p className={`text-xs mt-1 ${alertConfig.messageColor}`}>{alert.message}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
-
-      {/* Alerts & Notifications */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">System Alerts</h3>
-          <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
-        </div>
-        <div className="space-y-3">
-          <div className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg">
-            <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-yellow-800">High server load detected</p>
-              <p className="text-xs text-yellow-600 mt-1">Consider scaling resources - CPU usage at 85%</p>
-            </div>
-          </div>
-          <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
-            <InformationCircleIcon className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-blue-800">Database backup completed</p>
-              <p className="text-xs text-blue-600 mt-1">Last backup: 2 hours ago - Size: 2.3GB</p>
-            </div>
-          </div>
-          <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
-            <CheckIcon className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-green-800">Security scan completed</p>
-              <p className="text-xs text-green-600 mt-1">No vulnerabilities found - Last scan: 1 hour ago</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   // User Management Component
   const UserManagement = () => {

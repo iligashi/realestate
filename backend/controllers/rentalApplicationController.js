@@ -14,7 +14,7 @@ const createRentalApplication = async (req, res) => {
     }
 
     const { propertyId } = req.params;
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
 
     // Check if property exists and is for rent
     const property = await Property.findByPk(propertyId, {
@@ -67,9 +67,9 @@ const createRentalApplication = async (req, res) => {
     // Get the populated application with related data
     const populatedApplication = await RentalApplication.findByPk(application.id, {
       include: [
-        { model: Property, as: 'property', attributes: ['title', 'address', 'property_type'] },
-        { model: User, as: 'applicant', attributes: ['first_name', 'last_name', 'email'] },
-        { model: User, as: 'landlord', attributes: ['first_name', 'last_name', 'email'] }
+        { model: Property, as: 'property', attributes: ['id', 'title', 'address', 'propertyType'] },
+        { model: User, as: 'applicant', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: User, as: 'landlord', attributes: ['id', 'firstName', 'lastName', 'email'] }
       ]
     });
 
@@ -116,8 +116,8 @@ const getLandlordApplications = async (req, res) => {
     const applications = await RentalApplication.findAll({
       where: whereClause,
       include: [
-        { model: Property, as: 'property', attributes: ['title', 'address', 'property_type', 'photos'] },
-        { model: User, as: 'applicant', attributes: ['first_name', 'last_name', 'email', 'phone', 'profile_picture'] }
+        { model: Property, as: 'property', attributes: ['id', 'title', 'address', 'propertyType', 'photos'] },
+        { model: User, as: 'applicant', attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'profilePicture'] }
       ],
       order: [['application_date', 'DESC']],
       limit: parseInt(limit),
@@ -160,8 +160,8 @@ const getApplicantApplications = async (req, res) => {
     const applications = await RentalApplication.findAll({
       where: whereClause,
       include: [
-        { model: Property, as: 'property', attributes: ['title', 'address', 'property_type', 'photos'] },
-        { model: User, as: 'landlord', attributes: ['first_name', 'last_name', 'email', 'phone'] }
+        { model: Property, as: 'property', attributes: ['id', 'title', 'address', 'propertyType', 'photos'] },
+        { model: User, as: 'landlord', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] }
       ],
       order: [['application_date', 'DESC']],
       limit: parseInt(limit),
@@ -223,9 +223,9 @@ const getApplication = async (req, res) => {
 
     const application = await RentalApplication.findByPk(applicationId, {
       include: [
-        { model: Property, as: 'property', attributes: ['title', 'address', 'property_type', 'photos', 'rental_details'] },
-        { model: User, as: 'applicant', attributes: ['first_name', 'last_name', 'email', 'phone', 'profile_picture'] },
-        { model: User, as: 'landlord', attributes: ['first_name', 'last_name', 'email', 'phone'] }
+        { model: Property, as: 'property', attributes: ['id', 'title', 'address', 'propertyType', 'photos', 'rentalDetails'] },
+        { model: User, as: 'applicant', attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'profilePicture'] },
+        { model: User, as: 'landlord', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] }
       ]
     });
 
@@ -237,7 +237,10 @@ const getApplication = async (req, res) => {
     }
 
     // Check if user has permission to view this application
-    if (application.applicant.id.toString() !== userId && application.landlord.id.toString() !== userId) {
+    const applicantId = Number(application.applicantId || application.applicant_id || (application.applicant && application.applicant.id));
+    const landlordId = Number(application.landlordId || application.landlord_id || (application.landlord && application.landlord.id));
+
+    if (applicantId !== userId && landlordId !== userId) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -297,15 +300,29 @@ const updateApplicationStatus = async (req, res) => {
     }
 
     // Update application
-    await application.update({
-      status: status,
-      decision: {
-        status,
-        decision_date: new Date(),
-        decision_reason: reason,
-        decision_notes: notes,
-        decided_by: userId
+    const decisionPayload = {
+      status,
+      decisionDate: new Date().toISOString(),
+      decisionReason: reason || null,
+      decisionNotes: notes || null,
+      decidedBy: {
+        id: userId,
+        role: 'landlord',
+        name: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || null
       }
+    };
+
+    await application.update({
+      status,
+      decision: decisionPayload
+    });
+
+    await application.reload({
+      include: [
+        { model: User, as: 'applicant', attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'profilePicture'] },
+        { model: User, as: 'landlord', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: Property, as: 'property', attributes: ['id', 'title', 'address', 'propertyType', 'photos'] }
+      ]
     });
 
     // Create notification for applicant
@@ -313,10 +330,10 @@ const updateApplicationStatus = async (req, res) => {
       recipientId: application.applicant.id,
       type: 'application_decision',
       title: `Application ${status === 'approved' ? 'Approved' : 'Rejected'}`,
-      content: `Your rental application for ${application.property.title} has been ${status}.`,
+      content: `Your rental application for ${application.property?.title || 'the property'} has been ${status}.`,
       data: {
         application_id: application.id,
-        property_id: application.property.id,
+        property_id: application.property?.id || application.propertyId,
         status
       }
     });
@@ -329,6 +346,106 @@ const updateApplicationStatus = async (req, res) => {
 
   } catch (error) {
     console.error('Error updating application status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Applicant responds to application (approve/decline)
+const applicantUpdateApplicationStatus = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+    const userId = Number(req.user.id);
+    const { status, reason, notes } = req.body;
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be approved or rejected'
+      });
+    }
+
+    const application = await RentalApplication.findByPk(applicationId, {
+      include: [
+        { model: User, as: 'applicant' },
+        { model: User, as: 'landlord' },
+        { model: Property, as: 'property' }
+      ]
+    });
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found'
+      });
+    }
+
+    const applicantId = Number(application.applicantId || application.applicant_id || (application.applicant && application.applicant.id));
+    if (applicantId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the applicant can perform this action'
+      });
+    }
+
+    if (application.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only pending applications can be approved or rejected by the applicant'
+      });
+    }
+
+    const decisionPayload = {
+      status,
+      decisionDate: new Date().toISOString(),
+      decisionReason: reason || null,
+      decisionNotes: notes || null,
+      decidedBy: {
+        id: userId,
+        role: 'applicant',
+        name: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || null
+      }
+    };
+
+    await application.update({
+      status,
+      decision: decisionPayload
+    });
+
+    await application.reload({
+      include: [
+        { model: User, as: 'applicant', attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'profilePicture'] },
+        { model: User, as: 'landlord', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: Property, as: 'property', attributes: ['id', 'title', 'address', 'propertyType', 'photos'] }
+      ]
+    });
+
+    // Notify landlord about applicant decision
+    const landlordId = Number(application.landlordId || application.landlord_id || (application.landlord && application.landlord.id));
+    if (landlordId) {
+      await Notification.create({
+        recipientId: landlordId,
+        type: 'application_response',
+        title: `Application ${status === 'approved' ? 'Accepted' : 'Declined'}`,
+        content: `${req.user.firstName || req.user.lastName ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : 'The applicant'} has ${status === 'approved' ? 'accepted' : 'declined'} the rental application for ${application.property?.title || 'your property'}.`,
+        data: {
+          application_id: application.id,
+          property_id: application.property?.id || application.propertyId,
+          status
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Application ${status === 'approved' ? 'approved' : 'rejected'} successfully`,
+      application
+    });
+  } catch (error) {
+    console.error('Applicant update application status error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -397,8 +514,8 @@ const addApplicationMessage = async (req, res) => {
       message: 'Message added successfully',
       application: await RentalApplication.findByPk(applicationId, {
         include: [
-          { model: User, as: 'applicant', attributes: ['first_name', 'last_name', 'email'] },
-          { model: User, as: 'landlord', attributes: ['first_name', 'last_name', 'email'] },
+          { model: User, as: 'applicant', attributes: ['id', 'firstName', 'lastName', 'email'] },
+          { model: User, as: 'landlord', attributes: ['id', 'firstName', 'lastName', 'email'] },
           { model: Property, as: 'property', attributes: ['title', 'address'] }
         ]
       })
@@ -471,6 +588,7 @@ module.exports = {
   getApplicantApplications,
   getApplication,
   updateApplicationStatus,
+  applicantUpdateApplicationStatus,
   addApplicationMessage,
   withdrawApplication
 };

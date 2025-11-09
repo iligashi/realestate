@@ -275,7 +275,12 @@ const initialState = {
   analytics: {
     users: { total: 0, active: 0, blocked: 0 },
     listings: { total: 0, pending: 0, approved: 0, rejected: 0 },
-    reports: { total: 0, pending: 0, resolved: 0 }
+    reports: { total: 0, pending: 0, resolved: 0 },
+    roleDistribution: [],
+    recentUsers: [],
+    recentListings: [],
+    recentReports: [],
+    lastUpdated: null
   },
 
   // Users
@@ -341,7 +346,17 @@ const initialState = {
     totalRevenue: 0,
     monthlyRevenue: [],
     commissionEarnings: 0,
-    featuredListingRevenue: 0
+    featuredListingRevenue: 0,
+    transactionsCount: 0,
+    averageTransactionValue: 0,
+    paymentMethodBreakdown: {},
+    currencyBreakdown: {},
+    topPaymentMethod: null,
+    primaryCurrency: 'USD',
+    period: '30d',
+    periodRange: { start: null, end: null },
+    revenueChange: null,
+    previousTotalRevenue: 0
   },
 
   // UI State
@@ -398,7 +413,12 @@ const adminSlice = createSlice({
         state.analytics = {
           users: action.payload.users || { total: 0, active: 0, blocked: 0 },
           listings: action.payload.listings || { total: 0, pending: 0, approved: 0, rejected: 0 },
-          reports: action.payload.reports || { total: 0, pending: 0, resolved: 0 }
+          reports: action.payload.reports || { total: 0, pending: 0, resolved: 0 },
+          roleDistribution: action.payload.roleDistribution || [],
+          recentUsers: action.payload.recentUsers || [],
+          recentListings: action.payload.recentListings || [],
+          recentReports: action.payload.recentReports || [],
+          lastUpdated: action.payload.generatedAt || new Date().toISOString()
         };
       })
       .addCase(fetchDashboardAnalytics.rejected, (state, action) => {
@@ -687,7 +707,10 @@ const adminSlice = createSlice({
       })
       .addCase(fetchRevenueAnalytics.fulfilled, (state, action) => {
         state.loading = false;
-        state.revenueAnalytics = action.payload;
+        state.revenueAnalytics = {
+          ...initialState.revenueAnalytics,
+          ...action.payload
+        };
       })
       .addCase(fetchRevenueAnalytics.rejected, (state, action) => {
         state.loading = false;

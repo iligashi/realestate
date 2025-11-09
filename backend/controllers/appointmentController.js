@@ -1,4 +1,59 @@
 const { Appointment, Property, User } = require('../models');
+const { Op } = require('sequelize');
+
+const normalizeJSONField = (value, fallback = null) => {
+  if (!value) return fallback;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      return fallback;
+    }
+  }
+  return value;
+};
+
+const buildLocationSummary = (address) => {
+  const normalized = normalizeJSONField(address, {});
+  const parts = [
+    normalized?.street,
+    normalized?.city,
+    normalized?.state,
+    normalized?.zipCode,
+    normalized?.country
+  ].filter(Boolean);
+
+  if (parts.length === 0) {
+    return 'Address provided after confirmation';
+  }
+
+  return parts.join(', ');
+};
+
+const normalizeTimeString = (timeStr) => {
+  if (!timeStr) return null;
+
+  const trimmed = timeStr.trim();
+  if (/^\d{2}:\d{2}$/.test(trimmed)) {
+    return `${trimmed}:00`;
+  }
+
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) {
+    return null;
+  }
+
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const meridiem = match[3].toUpperCase();
+
+  hours = hours % 12;
+  if (meridiem === 'PM') {
+    hours += 12;
+  }
+
+  return `${hours.toString().padStart(2, '0')}:${minutes}:00`;
+};
 
 // Create a new viewing request
 const createViewingRequest = async (req, res) => {
@@ -34,29 +89,43 @@ const createViewingRequest = async (req, res) => {
     }
 
     // Parse date and time
-    const startDateTime = new Date(`${preferredDate}T${preferredTime}`);
+    const normalizedTime = normalizeTimeString(preferredTime);
+    if (!normalizedTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid time format. Please select a valid time slot.'
+      });
+    }
+
+    const startDateTime = new Date(`${preferredDate}T${normalizedTime}`);
+    if (Number.isNaN(startDateTime.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date or time selection. Please try again.'
+      });
+    }
+
     const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
 
     // Check for conflicts
-    const { Op } = require('sequelize');
     const conflicts = await Appointment.findAll({
       where: {
-        property_id: propertyId,
+        propertyId,
         [Op.or]: [
           {
-            start_time: { [Op.between]: [startDateTime, endDateTime] }
+            startTime: { [Op.between]: [startDateTime, endDateTime] }
           },
           {
-            end_time: { [Op.between]: [startDateTime, endDateTime] }
+            endTime: { [Op.between]: [startDateTime, endDateTime] }
           },
           {
             [Op.and]: [
-              { start_time: { [Op.lte]: startDateTime } },
-              { end_time: { [Op.gte]: endDateTime } }
+              { startTime: { [Op.lte]: startDateTime } },
+              { endTime: { [Op.gte]: endDateTime } }
             ]
           }
         ],
-        status: { [Op.in]: ['scheduled', 'confirmed'] }
+        status: { [Op.in]: ['pending', 'confirmed'] }
       }
     });
     
@@ -65,8 +134,8 @@ const createViewingRequest = async (req, res) => {
         success: false,
         message: 'This time slot conflicts with an existing appointment. Please choose a different time.',
         conflicts: conflicts.map(conflict => ({
-          start_time: conflict.start_time,
-          end_time: conflict.end_time,
+          start_time: conflict.startTime,
+          end_time: conflict.endTime,
           status: conflict.status
         }))
       });
@@ -76,21 +145,14 @@ const createViewingRequest = async (req, res) => {
     const appointment = await Appointment.create({
       title: `Property Viewing - ${property.title}`,
       description: message || `Viewing request for ${property.title}`,
-      requester_id: requesterId,
-      host_id: property.owner.id,
-      property_id: propertyId,
-      start_time: startDateTime,
-      end_time: endDateTime,
+      requesterId: requesterId,
+      hostId: property.owner.id,
+      propertyId,
+      startTime: startDateTime,
+      endTime: endDateTime,
       duration: 60, // 1 hour
       type: 'viewing',
-      status: 'pending',
-      location: {
-        address: `${property.address.street}, ${property.address.city}, ${property.address.state}`,
-        meeting_point: 'Property entrance',
-        access_instructions: 'Please contact the property owner for access instructions'
-      },
-      special_requirements: contactMethod === 'phone' ? ['Phone contact preferred'] : ['Email contact preferred'],
-      priority: 'normal'
+      status: 'pending'
     });
 
     // Get the populated appointment for response
@@ -98,7 +160,7 @@ const createViewingRequest = async (req, res) => {
       include: [
         { model: User, as: 'requester', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
         { model: User, as: 'host', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
-        { model: Property, as: 'property', attributes: ['title', 'photos', 'address', 'price'] }
+        { model: Property, as: 'property', attributes: ['id', 'title', 'photos', 'address', 'price'] }
       ]
     });
 
@@ -124,9 +186,8 @@ const getUserAppointments = async (req, res) => {
     const userId = req.user.id;
     const { status, type, propertyId } = req.query;
 
-    const { Op } = require('sequelize');
     let whereClause = {
-      [Op.or]: [{ requester_id: userId }, { host_id: userId }]
+      [Op.or]: [{ requesterId: userId }, { hostId: userId }]
     };
 
     if (status) {
@@ -138,7 +199,7 @@ const getUserAppointments = async (req, res) => {
     }
 
     if (propertyId) {
-      whereClause.property_id = propertyId;
+      whereClause.propertyId = propertyId;
     }
 
     const appointments = await Appointment.findAll({
@@ -146,9 +207,9 @@ const getUserAppointments = async (req, res) => {
       include: [
         { model: User, as: 'requester', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
         { model: User, as: 'host', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
-        { model: Property, as: 'property', attributes: ['title', 'photos', 'address', 'price'] }
+        { model: Property, as: 'property', attributes: ['id', 'title', 'photos', 'address', 'price'] }
       ],
-      order: [['start_time', 'ASC']]
+      order: [['startTime', 'ASC']]
     });
 
     res.json({
@@ -172,15 +233,14 @@ const getUpcomingAppointments = async (req, res) => {
     const userId = req.user.id;
     const { propertyId } = req.query;
 
-    const { Op } = require('sequelize');
     let whereClause = {
-      [Op.or]: [{ requester_id: userId }, { host_id: userId }],
-      start_time: { [Op.gte]: new Date() },
+      [Op.or]: [{ requesterId: userId }, { hostId: userId }],
+      startTime: { [Op.gte]: new Date() },
       status: { [Op.in]: ['pending', 'confirmed'] }
     };
 
     if (propertyId) {
-      whereClause.property_id = propertyId;
+      whereClause.propertyId = propertyId;
     }
 
     const appointments = await Appointment.findAll({
@@ -188,9 +248,9 @@ const getUpcomingAppointments = async (req, res) => {
       include: [
         { model: User, as: 'requester', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
         { model: User, as: 'host', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
-        { model: Property, as: 'property', attributes: ['title', 'photos', 'address', 'price'] }
+        { model: Property, as: 'property', attributes: ['id', 'title', 'photos', 'address', 'price'] }
       ],
-      order: [['start_time', 'ASC']]
+      order: [['startTime', 'ASC']]
     });
 
     res.json({
@@ -238,9 +298,7 @@ const confirmAppointment = async (req, res) => {
     }
 
     await appointment.update({
-      status: 'confirmed',
-      confirmed_at: new Date(),
-      confirmed_by: userId
+      status: 'confirmed'
     });
 
     res.json({
@@ -276,8 +334,8 @@ const cancelAppointment = async (req, res) => {
     }
 
     // Check if user is either requester or host
-    const isRequester = appointment.requester_id.toString() === userId.toString();
-    const isHost = appointment.host_id.toString() === userId.toString();
+    const isRequester = appointment.requesterId.toString() === userId.toString();
+    const isHost = appointment.hostId.toString() === userId.toString();
 
     if (!isRequester && !isHost) {
       return res.status(403).json({
@@ -287,10 +345,7 @@ const cancelAppointment = async (req, res) => {
     }
 
     await appointment.update({
-      status: 'cancelled',
-      cancellation_reason: reason || 'Cancelled by user',
-      cancelled_at: new Date(),
-      cancelled_by: userId
+      status: 'cancelled'
     });
 
     res.json({
@@ -326,8 +381,8 @@ const rescheduleAppointment = async (req, res) => {
     }
 
     // Check if user is either requester or host
-    const isRequester = appointment.requester_id.toString() === userId.toString();
-    const isHost = appointment.host_id.toString() === userId.toString();
+    const isRequester = appointment.requesterId.toString() === userId.toString();
+    const isHost = appointment.hostId.toString() === userId.toString();
 
     if (!isRequester && !isHost) {
       return res.status(403).json({
@@ -341,26 +396,25 @@ const rescheduleAppointment = async (req, res) => {
     const newEndDateTime = new Date(newStartDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
 
     // Check for conflicts
-    const { Op } = require('sequelize');
     const conflicts = await Appointment.findAll({
       where: {
-        property_id: appointment.property_id,
+        propertyId: appointment.propertyId,
         id: { [Op.ne]: appointmentId },
         [Op.or]: [
           {
-            start_time: { [Op.between]: [newStartDateTime, newEndDateTime] }
+            startTime: { [Op.between]: [newStartDateTime, newEndDateTime] }
           },
           {
-            end_time: { [Op.between]: [newStartDateTime, newEndDateTime] }
+            endTime: { [Op.between]: [newStartDateTime, newEndDateTime] }
           },
           {
             [Op.and]: [
-              { start_time: { [Op.lte]: newStartDateTime } },
-              { end_time: { [Op.gte]: newEndDateTime } }
+              { startTime: { [Op.lte]: newStartDateTime } },
+              { endTime: { [Op.gte]: newEndDateTime } }
             ]
           }
         ],
-        status: { [Op.in]: ['scheduled', 'confirmed'] }
+        status: { [Op.in]: ['pending', 'confirmed'] }
       }
     });
     
@@ -369,20 +423,17 @@ const rescheduleAppointment = async (req, res) => {
         success: false,
         message: 'This time slot conflicts with an existing appointment. Please choose a different time.',
         conflicts: conflicts.map(conflict => ({
-          start_time: conflict.start_time,
-          end_time: conflict.end_time,
+          start_time: conflict.startTime,
+          end_time: conflict.endTime,
           status: conflict.status
         }))
       });
     }
 
     await appointment.update({
-      start_time: newStartDateTime,
-      end_time: newEndDateTime,
-      reschedule_reason: reason,
-      rescheduled_at: new Date(),
-      rescheduled_by: userId,
-      status: 'pending' // Reset to pending when rescheduled
+      startTime: newStartDateTime,
+      endTime: newEndDateTime,
+      status: 'pending'
     });
 
     const populatedAppointment = await Appointment.findByPk(appointment.id, {
@@ -419,7 +470,7 @@ const getAppointmentDetails = async (req, res) => {
       include: [
         { model: User, as: 'requester', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
         { model: User, as: 'host', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
-        { model: Property, as: 'property', attributes: ['title', 'photos', 'address', 'price', 'description'] }
+        { model: Property, as: 'property', attributes: ['id', 'title', 'photos', 'address'] }
       ]
     });
 
@@ -456,6 +507,57 @@ const getAppointmentDetails = async (req, res) => {
   }
 };
 
+// Complete an appointment
+const completeAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    const userId = req.user.id;
+
+    const appointment = await Appointment.findByPk(appointmentId, {
+      include: [
+        { model: User, as: 'requester', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: User, as: 'host', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: Property, as: 'property', attributes: ['title', 'photos', 'address'] }
+      ]
+    });
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found'
+      });
+    }
+
+    const isParticipant =
+      appointment.requesterId.toString() === userId.toString() ||
+      appointment.hostId.toString() === userId.toString();
+
+    if (!isParticipant) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only complete appointments you are involved in'
+      });
+    }
+
+    await appointment.update({
+      status: 'completed'
+    });
+
+    res.json({
+      success: true,
+      message: 'Appointment marked as completed',
+      appointment
+    });
+  } catch (error) {
+    console.error('Complete appointment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to complete appointment',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createViewingRequest,
   getUserAppointments,
@@ -463,5 +565,6 @@ module.exports = {
   confirmAppointment,
   cancelAppointment,
   rescheduleAppointment,
+  completeAppointment,
   getAppointmentDetails
 };

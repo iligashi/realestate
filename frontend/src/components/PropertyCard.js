@@ -236,9 +236,9 @@ const PropertyCard = ({ property }) => {
           </Link>
         </div>
 
-        {/* Rental Application Actions */}
-        {isRentalProperty && (
-          <div className="space-y-2">
+        {/* Actions */}
+        <div className="space-y-2">
+          {isRentalProperty && (
             <button
               onClick={handleApplyForRental}
               disabled={isSubmittingApplication}
@@ -260,31 +260,31 @@ const PropertyCard = ({ property }) => {
                 </>
               )}
             </button>
-            <div className="flex gap-2">
-              <button 
-                onClick={handleMessage}
-                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-              >
-                <ChatBubbleLeftRightIcon className="h-3 w-3" />
-                Message
-              </button>
-              <button 
-                onClick={handleViewing}
-                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-              >
-                <CalendarIcon className="h-3 w-3" />
-                Viewing
-              </button>
-              <button 
-                onClick={handleReport}
-                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-              >
-                <FlagIcon className="h-3 w-3" />
-                Report
-              </button>
-            </div>
+          )}
+          <div className="flex gap-2">
+            <button 
+              onClick={handleMessage}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+            >
+              <ChatBubbleLeftRightIcon className="h-3 w-3" />
+              Message
+            </button>
+            <button 
+              onClick={handleViewing}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+            >
+              <CalendarIcon className="h-3 w-3" />
+              Viewing
+            </button>
+            <button 
+              onClick={handleReport}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+            >
+              <FlagIcon className="h-3 w-3" />
+              Report
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Rental Application Modal */}

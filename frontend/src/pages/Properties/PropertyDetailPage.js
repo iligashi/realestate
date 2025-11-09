@@ -18,13 +18,15 @@ import {
   ClockIcon,
   CheckCircleIcon,
   XCircleIcon,
-  FlagIcon
+  FlagIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import { getProperty } from '../../services/propertyService';
 import MessageModal from '../../components/MessageModal';
 import ModernRentalApplicationForm from '../../components/Renter/ModernRentalApplicationForm';
-import ReportForm from '../../components/ReportForm';
+import ViewingModal from '../../components/ViewingModal';
 import rentalApplicationAPI from '../../services/rentalApplicationAPI';
+import reportAPI from '../../services/reportAPI';
 
 const PropertyDetailPage = () => {
   const { id } = useParams();
@@ -37,6 +39,7 @@ const PropertyDetailPage = () => {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showViewingModal, setShowViewingModal] = useState(false);
 
 
   // Fetch real property data from backend
@@ -163,7 +166,7 @@ const PropertyDetailPage = () => {
       return;
     }
 
-    toast.info('Schedule viewing feature coming soon!');
+    setShowViewingModal(true);
   };
 
   const nextImage = () => {
@@ -591,14 +594,6 @@ const PropertyDetailPage = () => {
                 {isRentalProperty ? 'Schedule Viewing' : 'Schedule Viewing'}
               </button>
               
-              <button 
-                type="button"
-                onClick={handleReport}
-                className="w-full border border-red-600 text-red-600 py-3 px-4 rounded-lg font-medium hover:bg-red-50 transition-colors"
-              >
-                Report Property
-              </button>
-              
               {isRentalProperty && (
                 <button
                   onClick={handleApplyForRental}
@@ -722,14 +717,195 @@ const PropertyDetailPage = () => {
       )}
 
       {/* Report Modal */}
-      {showReportModal && property && (
-        <ReportForm
+      {property && (
+        <ReportPropertyModal
           isOpen={showReportModal}
           onClose={() => setShowReportModal(false)}
-          reportedItem={property}
-          reportedItemType="Property"
+          property={property}
         />
       )}
+
+      {/* Viewing Request Modal */}
+      {property && (
+        <ViewingModal
+          isOpen={showViewingModal}
+          onClose={() => setShowViewingModal(false)}
+          property={property}
+        />
+      )}
+    </div>
+  );
+};
+
+const reportReasons = [
+  { value: 'spam', label: 'Spam' },
+  { value: 'inappropriate', label: 'Inappropriate content' },
+  { value: 'fraud', label: 'Fraud or scam' },
+  { value: 'harassment', label: 'Harassment' },
+  { value: 'other', label: 'Other' }
+];
+
+const ReportPropertyModal = ({ isOpen, onClose, property }) => {
+  const [formData, setFormData] = useState({
+    type: '',
+    reason: '',
+    evidence: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  if (!isOpen || !property) return null;
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!formData.type || !formData.reason.trim()) {
+      toast.error('Select a reason and provide details before submitting.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const payload = {
+        type: formData.type,
+        reason: formData.reason.trim(),
+        evidence: formData.evidence.trim() || null,
+        metadata: {
+          reportedItemTitle: property.title,
+          reportedItemId: property.id || property._id,
+          reportedAt: new Date().toISOString()
+        }
+      };
+
+      await reportAPI.reportProperty(property.id || property._id, payload);
+      toast.success('Thanks! Your report has been submitted.');
+      setFormData({ type: '', reason: '', evidence: '' });
+      onClose();
+    } catch (error) {
+      console.error('Report submission error:', error);
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.status === 400) {
+        toast.error('You have already reported this property.');
+      } else {
+        toast.error('Unable to submit report. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (submitting) return;
+    setFormData({ type: '', reason: '', evidence: '' });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-red-100 p-2">
+              <FlagIcon className="h-5 w-5 text-red-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">Report this property</h2>
+              <p className="text-xs text-gray-500">Help us keep the marketplace safe.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="rounded-md p-2 transition hover:bg-gray-100 disabled:cursor-not-allowed"
+            disabled={submitting}
+          >
+            <XMarkIcon className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5 px-6 py-5">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+            <p className="font-medium text-gray-900">{property.title}</p>
+            <p className="text-xs text-gray-500">
+              {property.address?.street && `${property.address.street}, `}
+              {property.address?.city}, {property.address?.state}
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Reason *</label>
+            <select
+              name="type"
+              value={formData.type}
+              onChange={handleChange}
+              className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100"
+              required
+            >
+              <option value="">Select a reason</option>
+              {reportReasons.map((reason) => (
+                <option key={reason.value} value={reason.value}>
+                  {reason.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Describe the issue *</label>
+            <textarea
+              name="reason"
+              value={formData.reason}
+              onChange={handleChange}
+              rows={4}
+              className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100"
+              placeholder="Share details about what looks wrong."
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Supporting evidence (optional)
+            </label>
+            <textarea
+              name="evidence"
+              value={formData.evidence}
+              onChange={handleChange}
+              rows={2}
+              className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100"
+              placeholder="Links, references, or additional notes."
+            />
+          </div>
+
+          <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="rounded-md px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-red-400"
+              disabled={submitting}
+            >
+              {submitting && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              )}
+              Submit report
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

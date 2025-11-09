@@ -6,6 +6,7 @@ const {
   getApplicantApplications,
   getApplication,
   updateApplicationStatus,
+  applicantUpdateApplicationStatus,
   addApplicationMessage,
   withdrawApplication
 } = require('../controllers/rentalApplicationController');
@@ -26,6 +27,9 @@ router.get('/:applicationId', auth, getApplication);
 
 // Update application status (approve/reject)
 router.patch('/:applicationId/status', auth, updateApplicationStatus);
+
+// Applicant approve/decline application
+router.patch('/:applicationId/applicant-status', auth, applicantUpdateApplicationStatus);
 
 // Add message to application
 router.post('/:applicationId/messages', auth, addApplicationMessage);

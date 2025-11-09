@@ -41,7 +41,7 @@ const defineAssociations = () => {
   User.hasMany(Payment, { foreignKey: 'payee_id', as: 'paymentsReceived' });
   User.hasMany(RentalApplication, { foreignKey: 'applicant_id', as: 'applications' });
   User.hasMany(RentalApplication, { foreignKey: 'landlord_id', as: 'receivedApplications' });
-  User.hasMany(Report, { foreignKey: 'reported_by', as: 'reports' });
+  User.hasMany(Report, { foreignKey: 'reporterId', as: 'reports' });
   User.hasMany(Review, { foreignKey: 'author_id', as: 'reviews' });
 
   // Property associations
@@ -116,7 +116,7 @@ const defineAssociations = () => {
   RentalApplication.belongsTo(User, { foreignKey: 'landlord_id', as: 'landlord' });
 
   // Report associations
-  Report.belongsTo(User, { foreignKey: 'reported_by', as: 'reporter' });
+  Report.belongsTo(User, { foreignKey: 'reporterId', as: 'reporter' });
 
   // Review associations
   Review.belongsTo(User, { foreignKey: 'author_id', as: 'author' });

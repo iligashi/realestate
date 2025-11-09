@@ -91,9 +91,9 @@ function App() {
         <Route 
           path="/properties/:id/edit" 
           element={
-            <SellerRoute>
+            <ProtectedRoute>
               <PropertyFormPage />
-            </SellerRoute>
+            </ProtectedRoute>
           } 
         />
         <Route 

@@ -1,4 +1,4 @@
-const { User, Property, Report, Announcement, PlatformSettings } = require('../models');
+const { User, Property, Report, Announcement, PlatformSettings, Payment } = require('../models');
 const { Op, sequelize } = require('sequelize');
 
 // ==================== USER MANAGEMENT ====================
@@ -19,8 +19,8 @@ const getAllUsers = async (req, res) => {
     
     if (search) {
       filter[Op.or] = [
-        { first_name: { [Op.like]: `%${search}%` } },
-        { last_name: { [Op.like]: `%${search}%` } },
+        { firstName: { [Op.like]: `%${search}%` } },
+        { lastName: { [Op.like]: `%${search}%` } },
         { email: { [Op.like]: `%${search}%` } }
       ];
     }
@@ -98,7 +98,7 @@ const deleteUser = async (req, res) => {
 
     // Also delete associated properties and reports
     await Property.destroy({ where: { ownerId: id } });
-    await Report.destroy({ where: { reportedBy: id } });
+    await Report.destroy({ where: { reporterId: id } });
 
     res.json({ message: 'User deleted successfully.' });
   } catch (error) {
@@ -142,7 +142,7 @@ const getAllListings = async (req, res) => {
 
     const listings = await Property.findAll({
       where: filter,
-      include: [{ model: User, as: 'owner', attributes: ['first_name', 'last_name', 'email'] }],
+      include: [{ model: User, as: 'owner', attributes: ['id', 'firstName', 'lastName', 'email'] }],
       limit: options.limit,
       offset: (options.page - 1) * options.limit,
       order: [['created_at', 'DESC']]
@@ -201,7 +201,7 @@ const updateListingStatus = async (req, res) => {
     });
 
     const listingWithOwner = await Property.findByPk(id, {
-      include: [{ model: User, as: 'owner', attributes: ['first_name', 'last_name', 'email'] }]
+      include: [{ model: User, as: 'owner', attributes: ['id', 'firstName', 'lastName', 'email'] }]
     });
 
     res.json({
@@ -334,7 +334,7 @@ const getAllReports = async (req, res) => {
     const reports = await Report.findAll({
       where: filter,
       include: [
-        { model: User, as: 'reporter', attributes: ['first_name', 'last_name', 'email'] }
+        { model: User, as: 'reporter', attributes: ['id', 'firstName', 'lastName', 'email'] }
       ],
       limit: options.limit,
       offset: (options.page - 1) * options.limit,
@@ -351,7 +351,8 @@ const getAllReports = async (req, res) => {
       currentPage: options.page
     });
   } catch (error) {
-    console.error('Get all reports error:', error);
+    console.error('Get all reports error:', error.message);
+    console.error(error.stack);
     res.status(500).json({ error: 'Failed to fetch reports.' });
   }
 };
@@ -375,7 +376,7 @@ const resolveReport = async (req, res) => {
     // Fetch the updated report with reporter information
     const reportWithUsers = await Report.findByPk(id, {
       include: [
-        { model: User, as: 'reporter', attributes: ['first_name', 'last_name', 'email'] }
+        { model: User, as: 'reporter', attributes: ['id', 'firstName', 'lastName', 'email'] }
       ]
     });
     res.json({
@@ -394,6 +395,8 @@ const resolveReport = async (req, res) => {
 // Get dashboard analytics
 const getDashboardAnalytics = async (req, res) => {
   try {
+    const generatedAt = new Date();
+
     // User statistics
     const totalUsers = await User.count();
     const activeUsers = await User.count({ where: { isBlocked: false } });
@@ -423,25 +426,33 @@ const getDashboardAnalytics = async (req, res) => {
 
     // Recent activity
     const recentUsers = await User.findAll({
-      attributes: ['first_name', 'last_name', 'userType', 'createdAt'],
+      attributes: ['id', 'firstName', 'lastName', 'userType', 'createdAt'],
       order: [['createdAt', 'DESC']],
       limit: 5
     });
 
     const recentListings = await Property.findAll({
-      attributes: ['title', 'status', 'propertyType', 'createdAt'],
-      include: [{ model: User, as: 'owner', attributes: ['first_name', 'last_name'] }],
+      attributes: ['id', 'title', 'status', 'propertyType', 'createdAt'],
+      include: [{ model: User, as: 'owner', attributes: ['firstName', 'lastName'] }],
+      order: [['createdAt', 'DESC']],
+      limit: 5
+    });
+
+    const recentReports = await Report.findAll({
+      attributes: ['id', 'status', 'type', 'createdAt'],
       order: [['createdAt', 'DESC']],
       limit: 5
     });
 
     res.json({
+      generatedAt: generatedAt.toISOString(),
       users: { total: totalUsers, active: activeUsers, blocked: blockedUsers },
       listings: { total: totalListings, pending: pendingListings, approved: approvedListings, rejected: rejectedListings },
       reports: { total: totalReports, pending: pendingReports, resolved: resolvedReports },
       roleDistribution,
       recentUsers,
-      recentListings
+      recentListings,
+      recentReports
     });
   } catch (error) {
     console.error('Get dashboard analytics error:', error);
@@ -494,7 +505,7 @@ const getFeaturedListings = async (req, res) => {
   try {
     const featuredListings = await Property.findAll({
       where: { is_featured: true },
-      include: [{ model: User, as: 'owner', attributes: ['first_name', 'last_name', 'email'] }],
+      include: [{ model: User, as: 'owner', attributes: ['id', 'firstName', 'lastName', 'email'] }],
       order: [['featured_at', 'DESC']]
     });
 
@@ -527,7 +538,7 @@ const updateFeaturedListing = async (req, res) => {
     });
 
     const listingWithOwner = await Property.findByPk(id, {
-      include: [{ model: User, as: 'owner', attributes: ['first_name', 'last_name', 'email'] }]
+      include: [{ model: User, as: 'owner', attributes: ['id', 'firstName', 'lastName', 'email'] }]
     });
 
     res.json({
@@ -574,7 +585,7 @@ const getAllAnnouncements = async (req, res) => {
 
     const announcements = await Announcement.findAll({
       where: filter,
-      include: [{ model: User, as: 'creator', attributes: ['first_name', 'last_name'] }],
+      include: [{ model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] }],
       limit: options.limit,
       offset: (options.page - 1) * options.limit,
       order: [['priority', 'DESC'], ['createdAt', 'DESC']]
@@ -604,7 +615,7 @@ const createAnnouncement = async (req, res) => {
 
     const announcement = await Announcement.create(announcementData);
     const announcementWithUser = await Announcement.findByPk(announcement.id, {
-      include: [{ model: User, as: 'creator', attributes: ['first_name', 'last_name'] }]
+      include: [{ model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] }]
     });
 
     res.status(201).json({
@@ -631,7 +642,7 @@ const updateAnnouncement = async (req, res) => {
     await announcement.update(updateData);
 
     const announcementWithUser = await Announcement.findByPk(id, {
-      include: [{ model: User, as: 'creator', attributes: ['first_name', 'last_name'] }]
+      include: [{ model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] }]
     });
     res.json({
       message: 'Announcement updated successfully',
@@ -776,35 +787,129 @@ const getEnhancedAnalytics = async (req, res) => {
 const getRevenueAnalytics = async (req, res) => {
   try {
     const { period = '30d' } = req.query;
-    
-    // Calculate date range
+    const periodMap = {
+      '7d': 7,
+      '30d': 30,
+      '90d': 90,
+      '1y': 365
+    };
+
+    const daysInPeriod = periodMap[period] || periodMap['30d'];
+
     const endDate = new Date();
-    const startDate = new Date();
-    if (period === '7d') startDate.setDate(startDate.getDate() - 7);
-    else if (period === '30d') startDate.setDate(startDate.getDate() - 30);
-    else if (period === '90d') startDate.setDate(startDate.getDate() - 90);
-    else if (period === '1y') startDate.setFullYear(startDate.getFullYear() - 1);
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - daysInPeriod);
 
-    // Mock revenue data (replace with actual payment processing data)
-    const totalRevenue = 15420.50;
-    const commissionEarnings = 771.03;
-    const featuredListingRevenue = 1249.99;
+    const previousPeriodEnd = new Date(startDate);
+    previousPeriodEnd.setMilliseconds(previousPeriodEnd.getMilliseconds() - 1);
+    const previousPeriodStart = new Date(startDate);
+    previousPeriodStart.setDate(previousPeriodStart.getDate() - daysInPeriod);
 
-    // Monthly revenue breakdown
-    const monthlyRevenue = [
-      { month: 'Jan', revenue: 1250.00 },
-      { month: 'Feb', revenue: 1380.50 },
-      { month: 'Mar', revenue: 1420.75 },
-      { month: 'Apr', revenue: 1580.25 },
-      { month: 'May', revenue: 1620.00 },
-      { month: 'Jun', revenue: 1750.30 }
-    ];
+    const payments = await Payment.findAll({
+      where: {
+        status: 'completed',
+        createdAt: {
+          [Op.between]: [startDate, endDate]
+        }
+      },
+      attributes: ['amount', 'paymentType', 'paymentMethod', 'currency', 'fees', 'createdAt'],
+      order: [['createdAt', 'ASC']]
+    });
+
+    const previousPayments = await Payment.findAll({
+      where: {
+        status: 'completed',
+        createdAt: {
+          [Op.between]: [previousPeriodStart, previousPeriodEnd]
+        }
+      },
+      attributes: ['amount']
+    });
+
+    const paymentsPlain = payments.map(payment => payment.get({ plain: true }));
+
+    let totalRevenue = 0;
+    let commissionEarnings = 0;
+    let featuredListingRevenue = 0;
+    const paymentMethodBreakdown = {};
+    const currencyBreakdown = {};
+    const monthlyRevenueMap = new Map();
+
+    paymentsPlain.forEach((payment) => {
+      const amount = Number(payment.amount || 0);
+      totalRevenue += amount;
+
+      const platformFee = payment.fees?.platformFee ? Number(payment.fees.platformFee) : 0;
+      commissionEarnings += platformFee;
+
+      if (['service_fee', 'subscription', 'booking_fee'].includes(payment.paymentType)) {
+        featuredListingRevenue += amount;
+      }
+
+      const paymentMethod = payment.paymentMethod || 'unknown';
+      paymentMethodBreakdown[paymentMethod] = (paymentMethodBreakdown[paymentMethod] || 0) + 1;
+
+      const currency = payment.currency || 'USD';
+      currencyBreakdown[currency] = (currencyBreakdown[currency] || 0) + amount;
+
+      const createdAt = new Date(payment.createdAt);
+      const monthKey = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthlyRevenueMap.has(monthKey)) {
+        monthlyRevenueMap.set(monthKey, {
+          key: monthKey,
+          month: createdAt.toLocaleString('default', { month: 'short', year: 'numeric' }),
+          revenue: 0
+        });
+      }
+      const entry = monthlyRevenueMap.get(monthKey);
+      entry.revenue += amount;
+    });
+
+    const monthlyRevenue = Array.from(monthlyRevenueMap.values())
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .map(({ month, revenue }) => ({
+        month,
+        revenue: Number(revenue.toFixed(2))
+      }));
+
+    const transactionsCount = paymentsPlain.length;
+    const averageTransactionValue = transactionsCount ? totalRevenue / transactionsCount : 0;
+
+    const currencyBreakdownFormatted = Object.fromEntries(
+      Object.entries(currencyBreakdown).map(([currency, sum]) => [currency, Number(sum.toFixed(2))])
+    );
+
+    const topPaymentMethodEntry = Object.entries(paymentMethodBreakdown)
+      .sort((a, b) => b[1] - a[1])[0];
+    const topPaymentMethod = topPaymentMethodEntry ? topPaymentMethodEntry[0] : null;
+
+    const previousTotalRevenue = previousPayments.reduce(
+      (sum, payment) => sum + Number(payment.amount || 0),
+      0
+    );
+
+    const revenueChange = previousTotalRevenue
+      ? Number((((totalRevenue - previousTotalRevenue) / previousTotalRevenue) * 100).toFixed(2))
+      : null;
 
     res.json({
-      totalRevenue,
-      commissionEarnings,
-      featuredListingRevenue,
-      monthlyRevenue
+      period,
+      periodRange: {
+        start: startDate.toISOString(),
+        end: endDate.toISOString()
+      },
+      totalRevenue: Number(totalRevenue.toFixed(2)),
+      commissionEarnings: Number(commissionEarnings.toFixed(2)),
+      featuredListingRevenue: Number(featuredListingRevenue.toFixed(2)),
+      monthlyRevenue,
+      transactionsCount,
+      averageTransactionValue: Number(averageTransactionValue.toFixed(2)),
+      paymentMethodBreakdown,
+      currencyBreakdown: currencyBreakdownFormatted,
+      topPaymentMethod,
+      primaryCurrency: paymentsPlain[0]?.currency || 'USD',
+      revenueChange,
+      previousTotalRevenue: Number(previousTotalRevenue.toFixed(2))
     });
   } catch (error) {
     console.error('Get revenue analytics error:', error);

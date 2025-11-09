@@ -105,6 +105,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/preferences', require('./routes/userPreferences'));
 app.use('/api/rental-applications', require('./routes/rentalApplications'));
 app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/reports', require('./routes/reports'));
