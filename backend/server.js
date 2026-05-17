@@ -19,8 +19,12 @@ const getAllowedOrigins = () => {
     return [
       'http://localhost:3000', 
       'http://localhost:3001',
+      'http://localhost:3002',
+      'http://localhost:3003',
       'http://127.0.0.1:3000',
-      'http://127.0.0.1:3001'
+      'http://127.0.0.1:3001',
+      'http://127.0.0.1:3002',
+      'http://127.0.0.1:3003'
     ]; // Default fallback with both ports and IP variants
   }
   
@@ -109,6 +113,9 @@ app.use('/api/preferences', require('./routes/userPreferences'));
 app.use('/api/rental-applications', require('./routes/rentalApplications'));
 app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/reports', require('./routes/reports'));
+app.use('/api/work', require('./routes/work'));
+app.use('/api/fabrika', require('./routes/fabrika'));
+app.use('/api/ligjeruesi', require('./routes/ligjeruesi'));
 app.use('/api', require('./routes/public'));
 
 // Health check

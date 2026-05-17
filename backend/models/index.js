@@ -18,6 +18,12 @@ const PlatformSettings = require('./PlatformSettings')(sequelize, DataTypes);
 const RentalApplication = require('./RentalApplication')(sequelize, DataTypes);
 const Report = require('./Report')(sequelize, DataTypes);
 const Review = require('./Review')(sequelize, DataTypes);
+const Shkolla = require('./Shkolla')(sequelize, DataTypes);
+const Nxenesi = require('./Nxenesi')(sequelize, DataTypes);
+const Fabrika = require('./Fabrika')(sequelize, DataTypes);
+const Punetori = require('./Punetori')(sequelize, DataTypes);
+const Ligjeruesi = require('./Ligjeruesi')(sequelize, DataTypes);
+const Ligjerata = require('./Ligjerata')(sequelize, DataTypes);
 
 // Define associations
 const defineAssociations = () => {
@@ -120,6 +126,42 @@ const defineAssociations = () => {
 
   // Review associations
   Review.belongsTo(User, { foreignKey: 'author_id', as: 'author' });
+
+  // Work/lab associations
+  Shkolla.hasMany(Nxenesi, {
+    foreignKey: 'schoolId',
+    as: 'nxenesit',
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
+  });
+  Nxenesi.belongsTo(Shkolla, {
+    foreignKey: 'schoolId',
+    as: 'shkolla'
+  });
+
+  // Fabrika/lab associations
+  Fabrika.hasMany(Punetori, {
+    foreignKey: 'fabrikaId',
+    as: 'punetoret',
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
+  });
+  Punetori.belongsTo(Fabrika, {
+    foreignKey: 'fabrikaId',
+    as: 'fabrika'
+  });
+
+  // Ligjeruesi/lab associations
+  Ligjeruesi.hasMany(Ligjerata, {
+    foreignKey: 'lecturerId',
+    as: 'ligjeratat',
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
+  });
+  Ligjerata.belongsTo(Ligjeruesi, {
+    foreignKey: 'lecturerId',
+    as: 'ligjeruesi'
+  });
 };
 
 // Initialize associations
@@ -142,5 +184,11 @@ module.exports = {
   PlatformSettings,
   RentalApplication,
   Report,
-  Review
+  Review,
+  Shkolla,
+  Nxenesi,
+  Fabrika,
+  Punetori,
+  Ligjeruesi,
+  Ligjerata
 };
