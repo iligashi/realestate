@@ -3,9 +3,8 @@ const router = express.Router();
 const { auth } = require('../middleware/auth');
 const {
   createMessage,
-  createRentalMessage,
+  createRentalInquiry,
   getMessages,
-  getMessageThread,
   replyToMessage,
   markAsRead,
   getUnreadCount,
@@ -22,7 +21,7 @@ router.use(auth);
 router.post('/', createMessage);
 
 // Create a new rental message (renter contacting landlord)
-router.post('/rental', createRentalMessage);
+router.post('/rental', createRentalInquiry);
 
 // Get messages for the authenticated user
 router.get('/', getMessages);
@@ -30,16 +29,11 @@ router.get('/', getMessages);
 // Get unread message count for notifications
 router.get('/unread-count', getUnreadCount);
 
-<<<<<<< Updated upstream
-// Get a specific message thread
-router.get('/:messageId', getMessageThread);
-=======
 // Get a specific message thread/conversation
 router.get('/:messageId', getMessageThread);
 
 // Get conversations for a specific property
 router.get('/property/:propertyId', getPropertyConversations);
->>>>>>> Stashed changes
 
 // Reply to a message
 router.post('/:messageId/reply', replyToMessage);

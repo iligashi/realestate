@@ -97,6 +97,44 @@ export const propertyAPI = {
   }),
 };
 
+// Work/lab API
+export const workAPI = {
+  getSchools: () => api.get('/work/schools'),
+  createSchool: (schoolData) => api.post('/work/schools', schoolData),
+  updateSchool: (id, schoolData) => api.put(`/work/schools/${id}`, schoolData),
+  deleteSchool: (id) => api.delete(`/work/schools/${id}`),
+  getStudents: (schoolId) => api.get('/work/students', {
+    params: schoolId ? { schoolId } : {}
+  }),
+  createStudent: (studentData) => api.post('/work/students', studentData),
+};
+
+// Fabrika/lab API
+export const fabrikaAPI = {
+  getFabrikat: () => api.get('/fabrika/fabrikat'),
+  createFabrika: (fabrikaData) => api.post('/fabrika/fabrikat', fabrikaData),
+  updateFabrika: (id, fabrikaData) => api.put(`/fabrika/fabrikat/${id}`, fabrikaData),
+  deleteFabrika: (id) => api.delete(`/fabrika/fabrikat/${id}`),
+  getPunetoret: (fabrikaId) => api.get('/fabrika/punetoret', {
+    params: fabrikaId ? { fabrikaId } : {}
+  }),
+  createPunetori: (punetoriData) => api.post('/fabrika/punetoret', punetoriData),
+  deletePunetori: (id) => api.delete(`/fabrika/punetoret/${id}`),
+};
+
+// Ligjeruesi/lab API
+export const ligjeruesiAPI = {
+  getLigjeruesit: () => api.get('/ligjeruesi/ligjeruesit'),
+  createLigjeruesi: (ligjeruesiData) => api.post('/ligjeruesi/ligjeruesit', ligjeruesiData),
+  updateLigjeruesi: (id, ligjeruesiData) => api.put(`/ligjeruesi/ligjeruesit/${id}`, ligjeruesiData),
+  deleteLigjeruesi: (id) => api.delete(`/ligjeruesi/ligjeruesit/${id}`),
+  getLigjeratat: (lecturerId) => api.get('/ligjeruesi/ligjeratat', {
+    params: lecturerId ? { lecturerId } : {}
+  }),
+  createLigjerata: (ligjerataData) => api.post('/ligjeruesi/ligjeratat', ligjerataData),
+  deleteLigjerata: (id) => api.delete(`/ligjeruesi/ligjeratat/${id}`),
+};
+
 // User API
 export const userAPI = {
   getAllUsers: (token) => api.get('/users', {

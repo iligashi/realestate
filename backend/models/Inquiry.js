@@ -1,162 +1,184 @@
-const mongoose = require('mongoose');
-
-const inquirySchema = new mongoose.Schema({
-  // Basic Information
-  property: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Property',
-    required: true
-  },
-  seller: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  buyer: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  
-  // Inquiry Details
-  type: {
-    type: String,
-    enum: ['general', 'viewing', 'offer', 'negotiation', 'question'],
-    default: 'general'
-  },
-  subject: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  message: {
-    type: String,
-    required: true,
-    maxlength: 2000
-  },
-  
-  // Contact Information
-  contactMethod: {
-    type: String,
-    enum: ['email', 'phone', 'message'],
-    default: 'message'
-  },
-  preferredContactTime: String,
-  
-  // Status & Workflow
-  status: {
-    type: String,
-    enum: ['new', 'read', 'responded', 'scheduled', 'completed', 'closed'],
-    default: 'new'
-  },
-  priority: {
-    type: String,
-    enum: ['low', 'medium', 'high', 'urgent'],
-    default: 'medium'
-  },
-  
-  // Response Tracking
-  responseTime: Number, // in hours
-  lastResponse: Date,
-  responseCount: { type: Number, default: 0 },
-  
-  // Scheduling
-  scheduledViewing: {
-    date: Date,
-    time: String,
-    duration: Number, // in minutes
-    notes: String,
-    confirmed: { type: Boolean, default: false }
-  },
-  
-  // Offer Details (if applicable)
-  offer: {
-    amount: Number,
-    currency: String,
-    conditions: String,
-    validUntil: Date,
-    status: {
-      type: String,
-      enum: ['pending', 'accepted', 'rejected', 'countered', 'expired'],
-      default: 'pending'
-    }
-  },
-  
-  // Follow-up
-  followUpDate: Date,
-  followUpNotes: String,
-  
-  // Analytics
-  readAt: Date,
-  respondedAt: Date,
-  
-  // Timestamps
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
-}, {
-  timestamps: true
-});
-
-// Indexes
-inquirySchema.index({ property: 1, seller: 1 });
-inquirySchema.index({ seller: 1, status: 1 });
-inquirySchema.index({ buyer: 1 });
-inquirySchema.index({ createdAt: -1 });
-inquirySchema.index({ status: 1, priority: 1 });
-
-// Pre-save middleware
-inquirySchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  next();
-});
-
-// Instance methods
-inquirySchema.methods.markAsRead = function() {
-  this.status = 'read';
-  this.readAt = new Date();
-  return this.save();
-};
-
-inquirySchema.methods.markAsResponded = function() {
-  this.status = 'responded';
-  this.respondedAt = new Date();
-  this.responseCount += 1;
-  return this.save();
-};
-
-inquirySchema.methods.scheduleViewing = function(date, time, duration, notes) {
-  this.scheduledViewing = {
-    date,
-    time,
-    duration,
-    notes,
-    confirmed: false
-  };
-  this.status = 'scheduled';
-  return this.save();
-};
-
-// Static methods
-inquirySchema.statics.getInquiriesBySeller = function(sellerId, status = null) {
-  const filter = { seller: sellerId };
-  if (status) filter.status = status;
-  
-  return this.find(filter)
-    .populate('property', 'title address price photos')
-    .populate('buyer', 'firstName lastName email phone')
-    .sort({ createdAt: -1 });
-};
-
-inquirySchema.statics.getInquiryStats = function(sellerId) {
-  return this.aggregate([
-    { $match: { seller: mongoose.Types.ObjectId(sellerId) } },
-    {
-      $group: {
-        _id: '$status',
-        count: { $sum: 1 }
+module.exports = (sequelize, DataTypes) => {
+  const Inquiry = sequelize.define('Inquiry', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
+    propertyId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'property_id',
+      references: {
+        model: 'properties',
+        key: 'id'
       }
+    },
+    sellerId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'seller_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    buyerId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'buyer_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    type: {
+      type: DataTypes.ENUM('general', 'viewing', 'offer', 'negotiation', 'question'),
+      defaultValue: 'general'
+    },
+    subject: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    message: {
+      type: DataTypes.TEXT,
+      allowNull: false
+    },
+    contactMethod: {
+      type: DataTypes.ENUM('email', 'phone', 'message'),
+      defaultValue: 'message',
+      field: 'contact_method'
+    },
+    preferredContactTime: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'preferred_contact_time'
+    },
+    status: {
+      type: DataTypes.ENUM('new', 'read', 'responded', 'scheduled', 'completed', 'closed'),
+      defaultValue: 'new'
+    },
+    priority: {
+      type: DataTypes.ENUM('low', 'medium', 'high', 'urgent'),
+      defaultValue: 'medium'
+    },
+    responseTime: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'response_time',
+      comment: 'Response time in hours'
+    },
+    lastResponse: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'last_response'
+    },
+    responseCount: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      field: 'response_count'
+    },
+    // Scheduling (stored as JSON)
+    scheduledViewing: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: 'scheduled_viewing'
+    },
+    // Offer Details (stored as JSON)
+    offer: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    followUpDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'follow_up_date'
+    },
+    followUpNotes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'follow_up_notes'
+    },
+    readAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'read_at'
+    },
+    respondedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'responded_at'
     }
-  ]);
-};
+  }, {
+    tableName: 'inquiries',
+    timestamps: true,
+    underscored: true,
+    indexes: [
+      {
+        fields: ['property_id', 'seller_id']
+      },
+      {
+        fields: ['seller_id', 'status']
+      },
+      {
+        fields: ['buyer_id']
+      },
+      {
+        fields: ['created_at']
+      },
+      {
+        fields: ['status', 'priority']
+      }
+    ]
+  });
 
-module.exports = mongoose.model('Inquiry', inquirySchema);
+  // Instance methods
+  Inquiry.prototype.markAsRead = async function() {
+    this.status = 'read';
+    this.readAt = new Date();
+    return this.save();
+  };
+
+  Inquiry.prototype.markAsResponded = async function() {
+    this.status = 'responded';
+    this.respondedAt = new Date();
+    this.responseCount += 1;
+    return this.save();
+  };
+
+  Inquiry.prototype.scheduleViewing = async function(date, time, duration, notes) {
+    this.scheduledViewing = {
+      date,
+      time,
+      duration,
+      notes,
+      confirmed: false
+    };
+    this.status = 'scheduled';
+    return this.save();
+  };
+
+  // Static methods
+  Inquiry.getInquiriesBySeller = function(sellerId, status = null) {
+    const where = { sellerId: sellerId };
+    if (status) where.status = status;
+    
+    return this.findAll({
+      where,
+      order: [['created_at', 'DESC']]
+    });
+  };
+
+  Inquiry.getInquiryStats = function(sellerId) {
+    return this.findAll({
+      where: { sellerId: sellerId },
+      attributes: [
+        'status',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      group: ['status']
+    });
+  };
+
+  return Inquiry;
+};

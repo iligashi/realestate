@@ -141,6 +141,20 @@ export const rescheduleAppointment = async (appointmentId, newDate, newTime, rea
   }
 };
 
+// Complete an appointment
+export const completeAppointment = async (appointmentId) => {
+  try {
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/appointments/${appointmentId}/complete`, {
+      method: 'PATCH'
+    });
+
+    return response;
+  } catch (error) {
+    console.error('Error completing appointment:', error);
+    throw error;
+  }
+};
+
 export default {
   createViewingRequest,
   getUserAppointments,
@@ -148,5 +162,6 @@ export default {
   getAppointmentDetails,
   confirmAppointment,
   cancelAppointment,
-  rescheduleAppointment
+  rescheduleAppointment,
+  completeAppointment
 };

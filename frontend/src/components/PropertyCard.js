@@ -18,6 +18,10 @@ import rentalApplicationAPI from '../services/rentalApplicationAPI';
 const PropertyCard = ({ property }) => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useSelector(state => state.auth || {});
+  
+  console.log('PropertyCard - property data:', property);
+  console.log('PropertyCard - property.id:', property?.id);
+  console.log('PropertyCard - property._id:', property?._id);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [showViewingModal, setShowViewingModal] = useState(false);
@@ -76,7 +80,7 @@ const PropertyCard = ({ property }) => {
     }
 
     // Check if user is trying to apply for their own property
-    if (property && property.owner && user && property.owner._id === user._id) {
+    if (property && property.owner && user && property.owner.id === user.id) {
       toast.error('You cannot apply for your own property');
       return;
     }
@@ -93,7 +97,7 @@ const PropertyCard = ({ property }) => {
     }
 
     // Check if user is trying to message themselves
-    if (property && property.owner && user && property.owner._id === user._id) {
+    if (property && property.owner && user && property.owner.id === user.id) {
       toast.error('You cannot message yourself about your own property');
       return;
     }
@@ -110,7 +114,7 @@ const PropertyCard = ({ property }) => {
     }
 
     // Check if user is trying to schedule viewing for their own property
-    if (property && property.owner && user && property.owner._id === user._id) {
+    if (property && property.owner && user && property.owner.id === user.id) {
       toast.error('You cannot schedule a viewing for your own property');
       return;
     }
@@ -225,16 +229,16 @@ const PropertyCard = ({ property }) => {
           </span>
           
           <Link
-            to={`/properties/${property._id}`}
+            to={`/properties/${property.id}`}
             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 text-sm font-medium"
           >
             View Details
           </Link>
         </div>
 
-        {/* Rental Application Actions */}
-        {isRentalProperty && (
-          <div className="space-y-2">
+        {/* Actions */}
+        <div className="space-y-2">
+          {isRentalProperty && (
             <button
               onClick={handleApplyForRental}
               disabled={isSubmittingApplication}
@@ -256,31 +260,31 @@ const PropertyCard = ({ property }) => {
                 </>
               )}
             </button>
-            <div className="flex gap-2">
-              <button 
-                onClick={handleMessage}
-                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-              >
-                <ChatBubbleLeftRightIcon className="h-3 w-3" />
-                Message
-              </button>
-              <button 
-                onClick={handleViewing}
-                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-              >
-                <CalendarIcon className="h-3 w-3" />
-                Viewing
-              </button>
-              <button 
-                onClick={handleReport}
-                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-              >
-                <FlagIcon className="h-3 w-3" />
-                Report
-              </button>
-            </div>
+          )}
+          <div className="flex gap-2">
+            <button 
+              onClick={handleMessage}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+            >
+              <ChatBubbleLeftRightIcon className="h-3 w-3" />
+              Message
+            </button>
+            <button 
+              onClick={handleViewing}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+            >
+              <CalendarIcon className="h-3 w-3" />
+              Viewing
+            </button>
+            <button 
+              onClick={handleReport}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+            >
+              <FlagIcon className="h-3 w-3" />
+              Report
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Rental Application Modal */}

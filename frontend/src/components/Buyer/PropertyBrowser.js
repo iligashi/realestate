@@ -145,14 +145,14 @@ const PropertyBrowser = () => {
           
           <div className="flex space-x-2">
             <button
-              onClick={() => navigate(`/properties/${property._id}`)}
+              onClick={() => navigate(`/properties/${property.id}`)}
               className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center"
             >
               <EyeIcon className="h-4 w-4 mr-2" />
               View Details
             </button>
             <button
-              onClick={() => navigate(`/buyer?tab=messages&property=${property._id}`)}
+              onClick={() => navigate(`/buyer?tab=messages&property=${property.id}`)}
               className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition-colors flex items-center justify-center"
             >
               <ChatBubbleLeftRightIcon className="h-4 w-4 mr-2" />

@@ -1,5 +1,4 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -20,8 +19,12 @@ const getAllowedOrigins = () => {
     return [
       'http://localhost:3000', 
       'http://localhost:3001',
+      'http://localhost:3002',
+      'http://localhost:3003',
       'http://127.0.0.1:3000',
-      'http://127.0.0.1:3001'
+      'http://127.0.0.1:3001',
+      'http://127.0.0.1:3002',
+      'http://127.0.0.1:3003'
     ]; // Default fallback with both ports and IP variants
   }
   
@@ -90,7 +93,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Import database connection
-const connectDB = require('./config/database');
+const { connectDB } = require('./config/database');
 
 // Connect to database
 connectDB();
@@ -106,9 +109,13 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/preferences', require('./routes/userPreferences'));
 app.use('/api/rental-applications', require('./routes/rentalApplications'));
 app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/reports', require('./routes/reports'));
+app.use('/api/work', require('./routes/work'));
+app.use('/api/fabrika', require('./routes/fabrika'));
+app.use('/api/ligjeruesi', require('./routes/ligjeruesi'));
 app.use('/api', require('./routes/public'));
 
 // Health check
@@ -181,17 +188,16 @@ app.post('/test-property', async (req, res) => {
     console.log('Test property data:', testProperty);
     
     // Try to create the Property model
-    const Property = require('./models/Property');
-    const property = new Property(testProperty);
+    const { Property } = require('./models');
+    const property = await Property.create(testProperty);
     console.log('Property model created');
     
     // Try to save
-    const saved = await property.save();
-    console.log('Property saved successfully:', saved._id);
+    console.log('Property saved successfully:', property.id);
     
     res.json({ 
       message: 'Test property created successfully',
-      propertyId: saved._id
+      propertyId: property.id
     });
     
   } catch (error) {

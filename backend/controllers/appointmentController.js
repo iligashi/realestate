@@ -1,12 +1,65 @@
-const Appointment = require('../models/Appointment');
-const Property = require('../models/Property');
-const User = require('../models/User');
+const { Appointment, Property, User } = require('../models');
+const { Op } = require('sequelize');
+
+const normalizeJSONField = (value, fallback = null) => {
+  if (!value) return fallback;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      return fallback;
+    }
+  }
+  return value;
+};
+
+const buildLocationSummary = (address) => {
+  const normalized = normalizeJSONField(address, {});
+  const parts = [
+    normalized?.street,
+    normalized?.city,
+    normalized?.state,
+    normalized?.zipCode,
+    normalized?.country
+  ].filter(Boolean);
+
+  if (parts.length === 0) {
+    return 'Address provided after confirmation';
+  }
+
+  return parts.join(', ');
+};
+
+const normalizeTimeString = (timeStr) => {
+  if (!timeStr) return null;
+
+  const trimmed = timeStr.trim();
+  if (/^\d{2}:\d{2}$/.test(trimmed)) {
+    return `${trimmed}:00`;
+  }
+
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) {
+    return null;
+  }
+
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const meridiem = match[3].toUpperCase();
+
+  hours = hours % 12;
+  if (meridiem === 'PM') {
+    hours += 12;
+  }
+
+  return `${hours.toString().padStart(2, '0')}:${minutes}:00`;
+};
 
 // Create a new viewing request
 const createViewingRequest = async (req, res) => {
   try {
     const { propertyId, preferredDate, preferredTime, message, contactMethod } = req.body;
-    const requesterId = req.user._id;
+    const requesterId = req.user.id;
 
     // Validate required fields
     if (!propertyId || !preferredDate || !preferredTime) {
@@ -17,7 +70,9 @@ const createViewingRequest = async (req, res) => {
     }
 
     // Get property and owner
-    const property = await Property.findById(propertyId).populate('owner', 'firstName lastName email phone');
+    const property = await Property.findByPk(propertyId, {
+      include: [{ model: User, as: 'owner', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] }]
+    });
     if (!property) {
       return res.status(404).json({
         success: false,
@@ -26,7 +81,7 @@ const createViewingRequest = async (req, res) => {
     }
 
     // Check if user is trying to request viewing for their own property
-    if (property.owner._id.toString() === requesterId.toString()) {
+    if (property.owner.id.toString() === requesterId.toString()) {
       return res.status(400).json({
         success: false,
         message: 'You cannot request a viewing for your own property'
@@ -34,51 +89,80 @@ const createViewingRequest = async (req, res) => {
     }
 
     // Parse date and time
-    const startDateTime = new Date(`${preferredDate}T${preferredTime}`);
+    const normalizedTime = normalizeTimeString(preferredTime);
+    if (!normalizedTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid time format. Please select a valid time slot.'
+      });
+    }
+
+    const startDateTime = new Date(`${preferredDate}T${normalizedTime}`);
+    if (Number.isNaN(startDateTime.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date or time selection. Please try again.'
+      });
+    }
+
     const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
 
     // Check for conflicts
-    const conflicts = await Appointment.findConflicts(propertyId, startDateTime, endDateTime);
+    const conflicts = await Appointment.findAll({
+      where: {
+        propertyId,
+        [Op.or]: [
+          {
+            startTime: { [Op.between]: [startDateTime, endDateTime] }
+          },
+          {
+            endTime: { [Op.between]: [startDateTime, endDateTime] }
+          },
+          {
+            [Op.and]: [
+              { startTime: { [Op.lte]: startDateTime } },
+              { endTime: { [Op.gte]: endDateTime } }
+            ]
+          }
+        ],
+        status: { [Op.in]: ['pending', 'confirmed'] }
+      }
+    });
+    
     if (conflicts.length > 0) {
       return res.status(400).json({
         success: false,
         message: 'This time slot conflicts with an existing appointment. Please choose a different time.',
         conflicts: conflicts.map(conflict => ({
-          startTime: conflict.startTime,
-          endTime: conflict.endTime,
+          start_time: conflict.startTime,
+          end_time: conflict.endTime,
           status: conflict.status
         }))
       });
     }
 
     // Create appointment
-    const appointment = new Appointment({
+    const appointment = await Appointment.create({
       title: `Property Viewing - ${property.title}`,
       description: message || `Viewing request for ${property.title}`,
-      requester: requesterId,
-      host: property.owner._id,
-      property: propertyId,
+      requesterId: requesterId,
+      hostId: property.owner.id,
+      propertyId,
       startTime: startDateTime,
       endTime: endDateTime,
       duration: 60, // 1 hour
       type: 'viewing',
-      status: 'pending',
-      location: {
-        address: `${property.address.street}, ${property.address.city}, ${property.address.state}`,
-        meetingPoint: 'Property entrance',
-        accessInstructions: 'Please contact the property owner for access instructions'
-      },
-      specialRequirements: contactMethod === 'phone' ? ['Phone contact preferred'] : ['Email contact preferred'],
-      priority: 'normal'
+      status: 'pending'
     });
 
-    await appointment.save();
-
-    // Populate the appointment for response
-    const populatedAppointment = await Appointment.findById(appointment._id)
-      .populate('requester', 'firstName lastName email phone')
-      .populate('host', 'firstName lastName email phone')
-      .populate('property', 'title photos address price');
+    // Get the populated appointment for response
+    const populatedAppointment = await Appointment.findByPk(appointment.id, {
+      include: [
+        { model: User, as: 'requester', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: User, as: 'host', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: Property, as: 'property', attributes: ['id', 'title', 'photos', 'address', 'price'] }
+      ]
+    });
 
     res.status(201).json({
       success: true,
@@ -99,30 +183,34 @@ const createViewingRequest = async (req, res) => {
 // Get appointments for a user
 const getUserAppointments = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user.id;
     const { status, type, propertyId } = req.query;
 
-    let query = {
-      $or: [{ requester: userId }, { host: userId }]
+    let whereClause = {
+      [Op.or]: [{ requesterId: userId }, { hostId: userId }]
     };
 
     if (status) {
-      query.status = status;
+      whereClause.status = status;
     }
 
     if (type) {
-      query.type = type;
+      whereClause.type = type;
     }
 
     if (propertyId) {
-      query.property = propertyId;
+      whereClause.propertyId = propertyId;
     }
 
-    const appointments = await Appointment.find(query)
-      .populate('requester', 'firstName lastName email phone')
-      .populate('host', 'firstName lastName email phone')
-      .populate('property', 'title photos address price')
-      .sort({ startTime: 1 });
+    const appointments = await Appointment.findAll({
+      where: whereClause,
+      include: [
+        { model: User, as: 'requester', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: User, as: 'host', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: Property, as: 'property', attributes: ['id', 'title', 'photos', 'address', 'price'] }
+      ],
+      order: [['startTime', 'ASC']]
+    });
 
     res.json({
       success: true,
@@ -142,10 +230,28 @@ const getUserAppointments = async (req, res) => {
 // Get upcoming appointments
 const getUpcomingAppointments = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user.id;
     const { propertyId } = req.query;
 
-    const appointments = await Appointment.findUpcoming(userId, { property: propertyId });
+    let whereClause = {
+      [Op.or]: [{ requesterId: userId }, { hostId: userId }],
+      startTime: { [Op.gte]: new Date() },
+      status: { [Op.in]: ['pending', 'confirmed'] }
+    };
+
+    if (propertyId) {
+      whereClause.propertyId = propertyId;
+    }
+
+    const appointments = await Appointment.findAll({
+      where: whereClause,
+      include: [
+        { model: User, as: 'requester', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: User, as: 'host', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: Property, as: 'property', attributes: ['id', 'title', 'photos', 'address', 'price'] }
+      ],
+      order: [['startTime', 'ASC']]
+    });
 
     res.json({
       success: true,
@@ -166,12 +272,15 @@ const getUpcomingAppointments = async (req, res) => {
 const confirmAppointment = async (req, res) => {
   try {
     const { appointmentId } = req.params;
-    const userId = req.user._id;
+    const userId = req.user.id;
 
-    const appointment = await Appointment.findById(appointmentId)
-      .populate('requester', 'firstName lastName email phone')
-      .populate('host', 'firstName lastName email phone')
-      .populate('property', 'title photos address');
+    const appointment = await Appointment.findByPk(appointmentId, {
+      include: [
+        { model: User, as: 'requester', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: User, as: 'host', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: Property, as: 'property', attributes: ['title', 'photos', 'address'] }
+      ]
+    });
 
     if (!appointment) {
       return res.status(404).json({
@@ -181,14 +290,16 @@ const confirmAppointment = async (req, res) => {
     }
 
     // Check if user is the host
-    if (appointment.host._id.toString() !== userId.toString()) {
+    if (appointment.host.id.toString() !== userId.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Only the property owner can confirm appointments'
       });
     }
 
-    await appointment.confirm(userId, 'platform');
+    await appointment.update({
+      status: 'confirmed'
+    });
 
     res.json({
       success: true,
@@ -211,9 +322,9 @@ const cancelAppointment = async (req, res) => {
   try {
     const { appointmentId } = req.params;
     const { reason } = req.body;
-    const userId = req.user._id;
+    const userId = req.user.id;
 
-    const appointment = await Appointment.findById(appointmentId);
+    const appointment = await Appointment.findByPk(appointmentId);
 
     if (!appointment) {
       return res.status(404).json({
@@ -223,8 +334,8 @@ const cancelAppointment = async (req, res) => {
     }
 
     // Check if user is either requester or host
-    const isRequester = appointment.requester.toString() === userId.toString();
-    const isHost = appointment.host.toString() === userId.toString();
+    const isRequester = appointment.requesterId.toString() === userId.toString();
+    const isHost = appointment.hostId.toString() === userId.toString();
 
     if (!isRequester && !isHost) {
       return res.status(403).json({
@@ -233,7 +344,9 @@ const cancelAppointment = async (req, res) => {
       });
     }
 
-    await appointment.cancel(reason || 'Cancelled by user', userId);
+    await appointment.update({
+      status: 'cancelled'
+    });
 
     res.json({
       success: true,
@@ -256,9 +369,9 @@ const rescheduleAppointment = async (req, res) => {
   try {
     const { appointmentId } = req.params;
     const { newDate, newTime, reason } = req.body;
-    const userId = req.user._id;
+    const userId = req.user.id;
 
-    const appointment = await Appointment.findById(appointmentId);
+    const appointment = await Appointment.findByPk(appointmentId);
 
     if (!appointment) {
       return res.status(404).json({
@@ -268,8 +381,8 @@ const rescheduleAppointment = async (req, res) => {
     }
 
     // Check if user is either requester or host
-    const isRequester = appointment.requester.toString() === userId.toString();
-    const isHost = appointment.host.toString() === userId.toString();
+    const isRequester = appointment.requesterId.toString() === userId.toString();
+    const isHost = appointment.hostId.toString() === userId.toString();
 
     if (!isRequester && !isHost) {
       return res.status(403).json({
@@ -283,25 +396,53 @@ const rescheduleAppointment = async (req, res) => {
     const newEndDateTime = new Date(newStartDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
 
     // Check for conflicts
-    const conflicts = await Appointment.findConflicts(appointment.property, newStartDateTime, newEndDateTime, appointmentId);
+    const conflicts = await Appointment.findAll({
+      where: {
+        propertyId: appointment.propertyId,
+        id: { [Op.ne]: appointmentId },
+        [Op.or]: [
+          {
+            startTime: { [Op.between]: [newStartDateTime, newEndDateTime] }
+          },
+          {
+            endTime: { [Op.between]: [newStartDateTime, newEndDateTime] }
+          },
+          {
+            [Op.and]: [
+              { startTime: { [Op.lte]: newStartDateTime } },
+              { endTime: { [Op.gte]: newEndDateTime } }
+            ]
+          }
+        ],
+        status: { [Op.in]: ['pending', 'confirmed'] }
+      }
+    });
+    
     if (conflicts.length > 0) {
       return res.status(400).json({
         success: false,
         message: 'This time slot conflicts with an existing appointment. Please choose a different time.',
         conflicts: conflicts.map(conflict => ({
-          startTime: conflict.startTime,
-          endTime: conflict.endTime,
+          start_time: conflict.startTime,
+          end_time: conflict.endTime,
           status: conflict.status
         }))
       });
     }
 
-    await appointment.rescheduleAppointment(newStartDateTime, newEndDateTime, reason, userId);
+    await appointment.update({
+      startTime: newStartDateTime,
+      endTime: newEndDateTime,
+      status: 'pending'
+    });
 
-    const populatedAppointment = await Appointment.findById(appointment._id)
-      .populate('requester', 'firstName lastName email phone')
-      .populate('host', 'firstName lastName email phone')
-      .populate('property', 'title photos address');
+    const populatedAppointment = await Appointment.findByPk(appointment.id, {
+      include: [
+        { model: User, as: 'requester', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: User, as: 'host', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: Property, as: 'property', attributes: ['title', 'photos', 'address'] }
+      ]
+    });
 
     res.json({
       success: true,
@@ -323,12 +464,15 @@ const rescheduleAppointment = async (req, res) => {
 const getAppointmentDetails = async (req, res) => {
   try {
     const { appointmentId } = req.params;
-    const userId = req.user._id;
+    const userId = req.user.id;
 
-    const appointment = await Appointment.findById(appointmentId)
-      .populate('requester', 'firstName lastName email phone')
-      .populate('host', 'firstName lastName email phone')
-      .populate('property', 'title photos address price description');
+    const appointment = await Appointment.findByPk(appointmentId, {
+      include: [
+        { model: User, as: 'requester', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: User, as: 'host', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: Property, as: 'property', attributes: ['id', 'title', 'photos', 'address'] }
+      ]
+    });
 
     if (!appointment) {
       return res.status(404).json({
@@ -338,8 +482,8 @@ const getAppointmentDetails = async (req, res) => {
     }
 
     // Check if user is either requester or host
-    const isRequester = appointment.requester._id.toString() === userId.toString();
-    const isHost = appointment.host._id.toString() === userId.toString();
+    const isRequester = appointment.requester.id.toString() === userId.toString();
+    const isHost = appointment.host.id.toString() === userId.toString();
 
     if (!isRequester && !isHost) {
       return res.status(403).json({
@@ -363,6 +507,57 @@ const getAppointmentDetails = async (req, res) => {
   }
 };
 
+// Complete an appointment
+const completeAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    const userId = req.user.id;
+
+    const appointment = await Appointment.findByPk(appointmentId, {
+      include: [
+        { model: User, as: 'requester', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: User, as: 'host', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: Property, as: 'property', attributes: ['title', 'photos', 'address'] }
+      ]
+    });
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found'
+      });
+    }
+
+    const isParticipant =
+      appointment.requesterId.toString() === userId.toString() ||
+      appointment.hostId.toString() === userId.toString();
+
+    if (!isParticipant) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only complete appointments you are involved in'
+      });
+    }
+
+    await appointment.update({
+      status: 'completed'
+    });
+
+    res.json({
+      success: true,
+      message: 'Appointment marked as completed',
+      appointment
+    });
+  } catch (error) {
+    console.error('Complete appointment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to complete appointment',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createViewingRequest,
   getUserAppointments,
@@ -370,5 +565,6 @@ module.exports = {
   confirmAppointment,
   cancelAppointment,
   rescheduleAppointment,
+  completeAppointment,
   getAppointmentDetails
 };

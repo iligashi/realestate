@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const { User } = require('../models');
 
 const auth = async (req, res, next) => {
   try {
@@ -9,8 +9,10 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId).select('-password');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'a8f1fbe9065a9b969f1870efbc6d8d3ab8119d8ec35140d79f4b16d16ef3f398');
+    const user = await User.findByPk(decoded.userId, {
+      attributes: { exclude: ['password'] }
+    });
     
     if (!user) {
       return res.status(401).json({ error: 'Invalid token. User not found.' });
@@ -38,8 +40,10 @@ const optionalAuth = async (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (token) {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.userId).select('-password');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'a8f1fbe9065a9b969f1870efbc6d8d3ab8119d8ec35140d79f4b16d16ef3f398');
+      const user = await User.findByPk(decoded.userId, {
+        attributes: { exclude: ['password'] }
+      });
       if (user && user.isActive) {
         req.user = user;
       }

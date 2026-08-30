@@ -1,275 +1,356 @@
-const mongoose = require('mongoose');
-
-const notificationSchema = new mongoose.Schema({
-  // Recipient
-  recipient: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  
-  // Notification type
-  type: {
-    type: String,
-    enum: [
-      'price_change', 'new_listing', 'message_received', 'appointment_confirmed',
-      'offer_received', 'property_viewed', 'favorite_updated', 'status_change',
-      'verification_approved', 'verification_rejected', 'system_alert',
-      'market_update', 'similar_property', 'reminder', 'custom'
+module.exports = (sequelize, DataTypes) => {
+  const Notification = sequelize.define('Notification', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
+    recipientId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'recipient_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    type: {
+      type: DataTypes.ENUM(
+        'price_change', 'new_listing', 'message_received', 'appointment_confirmed',
+        'offer_received', 'property_viewed', 'favorite_updated', 'status_change',
+        'verification_approved', 'verification_rejected', 'system_alert',
+        'market_update', 'similar_property', 'reminder', 'custom'
+      ),
+      allowNull: false
+    },
+    title: {
+      type: DataTypes.STRING(100),
+      allowNull: false
+    },
+    content: {
+      type: DataTypes.STRING(500),
+      allowNull: false
+    },
+    relatedPropertyId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'related_property_id',
+      references: {
+        model: 'properties',
+        key: 'id'
+      }
+    },
+    relatedUserId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'related_user_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    relatedMessageId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'related_message_id',
+      references: {
+        model: 'messages',
+        key: 'id'
+      }
+    },
+    isRead: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: 'is_read'
+    },
+    readAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'read_at'
+    },
+    // Delivery status (stored as JSON)
+    deliveryStatus: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: 'delivery_status'
+    },
+    // Delivery attempts (stored as JSON)
+    deliveryAttempts: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: 'delivery_attempts'
+    },
+    // Delivery timestamps (stored as JSON)
+    deliveredAt: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: 'delivered_at'
+    },
+    priority: {
+      type: DataTypes.ENUM('low', 'normal', 'high', 'urgent'),
+      defaultValue: 'normal'
+    },
+    scheduledFor: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'scheduled_for'
+    },
+    expiresAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'expires_at'
+    },
+    // Action buttons (stored as JSON)
+    actions: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Template data (stored as JSON)
+    templateData: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: 'template_data'
+    },
+    // Grouping and threading
+    groupId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'group_id'
+    },
+    threadId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'thread_id'
+    },
+    // User preferences override (stored as JSON)
+    userPreferences: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: 'user_preferences'
+    },
+    // Analytics (stored as JSON)
+    analytics: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Metadata
+    source: {
+      type: DataTypes.ENUM('system', 'user', 'property', 'message', 'market'),
+      defaultValue: 'system'
+    },
+    category: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    tags: {
+      type: DataTypes.JSON,
+      allowNull: true
+    }
+  }, {
+    tableName: 'notifications',
+    timestamps: true,
+    underscored: true,
+    indexes: [
+      {
+        fields: ['recipient_id', 'created_at']
+      },
+      {
+        fields: ['recipient_id', 'is_read']
+      },
+      {
+        fields: ['type', 'created_at']
+      },
+      {
+        fields: ['scheduled_for', 'priority']
+      },
+      {
+        fields: ['group_id']
+      },
+      {
+        fields: ['expires_at']
+      }
     ],
-    required: true
-  },
-  
-  // Title and content
-  title: {
-    type: String,
-    required: true,
-    maxlength: 100
-  },
-  content: {
-    type: String,
-    required: true,
-    maxlength: 500
-  },
-  
-  // Related entities
-  relatedProperty: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Property'
-  },
-  relatedUser: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  relatedMessage: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Message'
-  },
-  
-  // Notification status
-  isRead: {
-    type: Boolean,
-    default: false
-  },
-  readAt: Date,
-  
-  // Delivery status
-  deliveryStatus: {
-    email: { type: String, enum: ['pending', 'sent', 'failed'], default: 'pending' },
-    push: { type: String, enum: ['pending', 'sent', 'failed'], default: 'pending' },
-    sms: { type: String, enum: ['pending', 'sent', 'failed'], default: 'pending' }
-  },
-  
-  // Delivery attempts
-  deliveryAttempts: {
-    email: { type: Number, default: 0 },
-    push: { type: Number, default: 0 },
-    sms: { type: Number, default: 0 }
-  },
-  
-  // Delivery timestamps
-  deliveredAt: {
-    email: Date,
-    push: Date,
-    sms: Date
-  },
-  
-  // Priority and scheduling
-  priority: {
-    type: String,
-    enum: ['low', 'normal', 'high', 'urgent'],
-    default: 'normal'
-  },
-  scheduledFor: Date,
-  expiresAt: Date,
-  
-  // Action buttons
-  actions: [{
-    label: String,
-    action: String, // 'view', 'reply', 'accept', 'decline', 'custom'
-    url: String,
-    data: mongoose.Schema.Types.Mixed
-  }],
-  
-  // Template data
-  templateData: {
-    templateId: String,
-    variables: mongoose.Schema.Types.Mixed
-  },
-  
-  // Grouping and threading
-  groupId: String, // for grouping related notifications
-  threadId: String, // for conversation threads
-  
-  // User preferences override
-  userPreferences: {
-    email: Boolean,
-    push: Boolean,
-    sms: Boolean
-  },
-  
-  // Analytics
-  analytics: {
-    openedAt: Date,
-    clickedAt: Date,
-    actionTaken: String,
-    timeToOpen: Number, // in seconds
-    timeToAction: Number // in seconds
-  },
-  
-  // Metadata
-  source: {
-    type: String,
-    enum: ['system', 'user', 'property', 'message', 'market'],
-    default: 'system'
-  },
-  category: String,
-  tags: [String]
-}, {
-  timestamps: true
-});
-
-// Indexes
-notificationSchema.index({ recipient: 1, createdAt: -1 });
-notificationSchema.index({ recipient: 1, isRead: 1 });
-notificationSchema.index({ type: 1, createdAt: -1 });
-notificationSchema.index({ scheduledFor: 1, priority: 1 });
-notificationSchema.index({ groupId: 1 });
-notificationSchema.index({ expiresAt: 1 });
-notificationSchema.index({ 'deliveryStatus.email': 1, 'deliveryStatus.push': 1 });
-
-// Virtual fields
-notificationSchema.virtual('isExpired').get(function() {
-  if (!this.expiresAt) return false;
-  return new Date() > this.expiresAt;
-});
-
-notificationSchema.virtual('isScheduled').get(function() {
-  return this.scheduledFor && new Date() < this.scheduledFor;
-});
-
-notificationSchema.virtual('canDeliver').get(function() {
-  return !this.isExpired && !this.isScheduled;
-});
-
-notificationSchema.virtual('deliveryChannels').get(function() {
-  const channels = [];
-  if (this.userPreferences.email !== false) channels.push('email');
-  if (this.userPreferences.push !== false) channels.push('push');
-  if (this.userPreferences.sms !== false) channels.push('sms');
-  return channels;
-});
-
-// Instance methods
-notificationSchema.methods.markAsRead = function() {
-  this.isRead = true;
-  this.readAt = new Date();
-  return this.save();
-};
-
-notificationSchema.methods.markAsDelivered = function(channel) {
-  if (this.deliveryStatus[channel]) {
-    this.deliveryStatus[channel] = 'sent';
-    this.deliveredAt[channel] = new Date();
-  }
-  return this.save();
-};
-
-notificationSchema.methods.markAsFailed = function(channel) {
-  if (this.deliveryStatus[channel]) {
-    this.deliveryStatus[channel] = 'failed';
-    this.deliveryAttempts[channel] += 1;
-  }
-  return this.save();
-};
-
-notificationSchema.methods.retryDelivery = function(channel) {
-  if (this.deliveryStatus[channel] === 'failed') {
-    this.deliveryStatus[channel] = 'pending';
-  }
-  return this.save();
-};
-
-notificationSchema.methods.addAction = function(label, action, url = null, data = null) {
-  this.actions.push({
-    label,
-    action,
-    url,
-    data
+    hooks: {
+      beforeCreate: (notification) => {
+        // Set default expiration if not set
+        if (!notification.expiresAt) {
+          notification.expiresAt = new Date();
+          notification.expiresAt.setDate(notification.expiresAt.getDate() + 30); // 30 days default
+        }
+        
+        // Set scheduled time if not set and priority is high/urgent
+        if (!notification.scheduledFor && ['high', 'urgent'].includes(notification.priority)) {
+          notification.scheduledFor = new Date();
+        }
+      }
+    }
   });
-  return this.save();
+
+  // Instance methods
+  Notification.prototype.isExpired = function() {
+    if (!this.expiresAt) return false;
+    return new Date() > this.expiresAt;
+  };
+
+  Notification.prototype.isScheduled = function() {
+    return this.scheduledFor && new Date() < this.scheduledFor;
+  };
+
+  Notification.prototype.canDeliver = function() {
+    return !this.isExpired() && !this.isScheduled();
+  };
+
+  Notification.prototype.getDeliveryChannels = function() {
+    const preferences = this.userPreferences || {};
+    const channels = [];
+    if (preferences.email !== false) channels.push('email');
+    if (preferences.push !== false) channels.push('push');
+    if (preferences.sms !== false) channels.push('sms');
+    return channels;
+  };
+
+  Notification.prototype.markAsRead = async function() {
+    this.isRead = true;
+    this.readAt = new Date();
+    return this.save();
+  };
+
+  Notification.prototype.markAsDelivered = async function(channel) {
+    const deliveryStatus = this.deliveryStatus || {};
+    const deliveredAt = this.deliveredAt || {};
+    
+    if (deliveryStatus[channel]) {
+      deliveryStatus[channel] = 'sent';
+      deliveredAt[channel] = new Date();
+      this.deliveryStatus = deliveryStatus;
+      this.deliveredAt = deliveredAt;
+    }
+    
+    return this.save();
+  };
+
+  Notification.prototype.markAsFailed = async function(channel) {
+    const deliveryStatus = this.deliveryStatus || {};
+    const deliveryAttempts = this.deliveryAttempts || {};
+    
+    if (deliveryStatus[channel]) {
+      deliveryStatus[channel] = 'failed';
+      deliveryAttempts[channel] = (deliveryAttempts[channel] || 0) + 1;
+      this.deliveryStatus = deliveryStatus;
+      this.deliveryAttempts = deliveryAttempts;
+    }
+    
+    return this.save();
+  };
+
+  Notification.prototype.retryDelivery = async function(channel) {
+    const deliveryStatus = this.deliveryStatus || {};
+    if (deliveryStatus[channel] === 'failed') {
+      deliveryStatus[channel] = 'pending';
+      this.deliveryStatus = deliveryStatus;
+    }
+    return this.save();
+  };
+
+  Notification.prototype.addAction = async function(label, action, url = null, data = null) {
+    const actions = this.actions || [];
+    actions.push({
+      label,
+      action,
+      url,
+      data
+    });
+    this.actions = actions;
+    return this.save();
+  };
+
+  Notification.prototype.trackOpen = async function() {
+    const analytics = this.analytics || {};
+    if (!analytics.openedAt) {
+      analytics.openedAt = new Date();
+      analytics.timeToOpen = Math.floor((analytics.openedAt - this.createdAt) / 1000);
+      this.analytics = analytics;
+    }
+    return this.save();
+  };
+
+  Notification.prototype.trackAction = async function(action) {
+    const analytics = this.analytics || {};
+    analytics.clickedAt = new Date();
+    analytics.actionTaken = action;
+    if (analytics.openedAt) {
+      analytics.timeToAction = Math.floor((analytics.clickedAt - analytics.openedAt) / 1000);
+    }
+    this.analytics = analytics;
+    return this.save();
+  };
+
+  // Static methods
+  Notification.findUnread = function(userId) {
+    return this.findAll({
+      where: {
+        recipientId: userId,
+        isRead: false
+      },
+      order: [['created_at', 'DESC']]
+    });
+  };
+
+  Notification.findByType = function(userId, type) {
+    return this.findAll({
+      where: {
+        recipientId: userId,
+        type: type
+      },
+      order: [['created_at', 'DESC']]
+    });
+  };
+
+  Notification.findPendingDelivery = function(channel) {
+    return this.findAll({
+      where: {
+        [sequelize.Op.and]: [
+          sequelize.where(
+            sequelize.fn('JSON_EXTRACT', sequelize.col('delivery_status'), `$.${channel}`),
+            'pending'
+          ),
+          { scheduledFor: { [sequelize.Op.lte]: new Date() } },
+          { expiresAt: { [sequelize.Op.gt]: new Date() } }
+        ]
+      },
+      order: [['priority', 'DESC'], ['created_at', 'ASC']]
+    });
+  };
+
+  Notification.findExpired = function() {
+    return this.findAll({
+      where: {
+        expiresAt: { [sequelize.Op.lt]: new Date() }
+      }
+    });
+  };
+
+  Notification.cleanupOld = function(daysOld = 90) {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+    
+    return this.destroy({
+      where: {
+        createdAt: { [sequelize.Op.lt]: cutoffDate },
+        isRead: true
+      }
+    });
+  };
+
+  // Virtual fields (computed properties)
+  Notification.prototype.toJSON = function() {
+    const values = Object.assign({}, this.get());
+    values.isExpired = this.isExpired();
+    values.isScheduled = this.isScheduled();
+    values.canDeliver = this.canDeliver();
+    values.deliveryChannels = this.getDeliveryChannels();
+    return values;
+  };
+
+  return Notification;
 };
-
-notificationSchema.methods.trackOpen = function() {
-  if (!this.analytics.openedAt) {
-    this.analytics.openedAt = new Date();
-    this.analytics.timeToOpen = Math.floor((this.analytics.openedAt - this.createdAt) / 1000);
-  }
-  return this.save();
-};
-
-notificationSchema.methods.trackAction = function(action) {
-  this.analytics.clickedAt = new Date();
-  this.analytics.actionTaken = action;
-  if (this.analytics.openedAt) {
-    this.analytics.timeToAction = Math.floor((this.analytics.clickedAt - this.analytics.openedAt) / 1000);
-  }
-  return this.save();
-};
-
-// Static methods
-notificationSchema.statics.findUnread = function(userId) {
-  return this.find({
-    recipient: userId,
-    isRead: false
-  }).sort({ createdAt: -1 });
-};
-
-notificationSchema.statics.findByType = function(userId, type) {
-  return this.find({
-    recipient: userId,
-    type: type
-  }).sort({ createdAt: -1 });
-};
-
-notificationSchema.statics.findPendingDelivery = function(channel) {
-  return this.find({
-    [`deliveryStatus.${channel}`]: 'pending',
-    scheduledFor: { $lte: new Date() },
-    expiresAt: { $gt: new Date() }
-  }).sort({ priority: -1, createdAt: 1 });
-};
-
-notificationSchema.statics.findExpired = function() {
-  return this.find({
-    expiresAt: { $lt: new Date() }
-  });
-};
-
-notificationSchema.statics.cleanupOld = function(daysOld = 90) {
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-  
-  return this.deleteMany({
-    createdAt: { $lt: cutoffDate },
-    isRead: true
-  });
-};
-
-// Pre-save middleware
-notificationSchema.pre('save', function(next) {
-  // Set default expiration if not set
-  if (!this.expiresAt) {
-    this.expiresAt = new Date();
-    this.expiresAt.setDate(this.expiresAt.getDate() + 30); // 30 days default
-  }
-  
-  // Set scheduled time if not set and priority is high/urgent
-  if (!this.scheduledFor && ['high', 'urgent'].includes(this.priority)) {
-    this.scheduledFor = new Date();
-  }
-  
-  next();
-});
-
-module.exports = mongoose.model('Notification', notificationSchema);

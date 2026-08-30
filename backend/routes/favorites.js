@@ -1,10 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const { auth } = require('../middleware/auth');
+const {
+  getFavorites,
+  addFavorite,
+  updateFavorite,
+  removeFavorite,
+  removeFavoriteByProperty
+} = require('../controllers/favoriteController');
 
-// Placeholder for favorites routes
-router.get('/', auth, (req, res) => {
-  res.json({ message: 'Favorites routes - to be implemented' });
-});
+router.use(auth);
+
+router.get('/', getFavorites);
+router.post('/', addFavorite);
+router.patch('/:favoriteId', updateFavorite);
+router.delete('/:favoriteId', removeFavorite);
+router.delete('/property/:propertyId', removeFavoriteByProperty);
 
 module.exports = router;

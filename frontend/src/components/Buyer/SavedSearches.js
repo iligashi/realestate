@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   MagnifyingGlassIcon,
   BellIcon,
@@ -12,56 +12,12 @@ import {
   ClockIcon
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-toastify';
+import buyerPreferenceAPI from '../../services/buyerPreferenceAPI';
 
 const SavedSearches = () => {
-  const [savedSearches, setSavedSearches] = useState([
-    {
-      id: 1,
-      name: 'Downtown Condos',
-      filters: {
-        location: 'Downtown',
-        propertyType: 'condo',
-        minPrice: 300000,
-        maxPrice: 500000,
-        bedrooms: 2
-      },
-      notifications: true,
-      lastSearch: '2024-01-15',
-      resultsCount: 12,
-      createdAt: '2024-01-01'
-    },
-    {
-      id: 2,
-      name: 'Family Homes Suburbs',
-      filters: {
-        location: 'Suburbs',
-        propertyType: 'house',
-        minPrice: 400000,
-        maxPrice: 800000,
-        bedrooms: 3,
-        bathrooms: 2
-      },
-      notifications: true,
-      lastSearch: '2024-01-14',
-      resultsCount: 8,
-      createdAt: '2024-01-05'
-    },
-    {
-      id: 3,
-      name: 'Luxury Properties',
-      filters: {
-        location: 'Any',
-        propertyType: 'any',
-        minPrice: 1000000,
-        maxPrice: 5000000,
-        bedrooms: 4
-      },
-      notifications: false,
-      lastSearch: '2024-01-10',
-      resultsCount: 5,
-      createdAt: '2024-01-08'
-    }
-  ]);
+  const [savedSearches, setSavedSearches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingSearch, setEditingSearch] = useState(null);
@@ -76,42 +32,52 @@ const SavedSearches = () => {
     notifications: true
   });
 
-  const handleCreateSearch = () => {
+  const loadSavedSearches = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await buyerPreferenceAPI.getSavedSearches();
+      setSavedSearches(response.savedSearches || []);
+    } catch (error) {
+      console.error('Failed to load saved searches:', error);
+      toast.error(error?.response?.data?.message || 'Failed to load saved searches');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSavedSearches();
+  }, [loadSavedSearches]);
+
+  const handleCreateSearch = async () => {
     if (!searchForm.name.trim()) {
       toast.error('Please enter a search name');
       return;
     }
 
-    const newSearch = {
-      id: Date.now(),
-      name: searchForm.name,
-      filters: {
+    setProcessing(true);
+    try {
+      const response = await buyerPreferenceAPI.createSavedSearch({
+        name: searchForm.name,
         location: searchForm.location,
         propertyType: searchForm.propertyType,
-        minPrice: searchForm.minPrice ? parseInt(searchForm.minPrice) : null,
-        maxPrice: searchForm.maxPrice ? parseInt(searchForm.maxPrice) : null,
-        bedrooms: searchForm.bedrooms ? parseInt(searchForm.bedrooms) : null,
-        bathrooms: searchForm.bathrooms ? parseInt(searchForm.bathrooms) : null
-      },
-      notifications: searchForm.notifications,
-      lastSearch: new Date().toISOString().split('T')[0],
-      resultsCount: Math.floor(Math.random() * 20) + 1,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
+        minPrice: searchForm.minPrice ? Number(searchForm.minPrice) : null,
+        maxPrice: searchForm.maxPrice ? Number(searchForm.maxPrice) : null,
+        bedrooms: searchForm.bedrooms ? Number(searchForm.bedrooms) : null,
+        bathrooms: searchForm.bathrooms ? Number(searchForm.bathrooms) : null,
+        notifications: searchForm.notifications
+      });
 
-    setSavedSearches(prev => [newSearch, ...prev]);
-    setShowCreateModal(false);
-    setSearchForm({
-      name: '',
-      location: '',
-      propertyType: '',
-      minPrice: '',
-      maxPrice: '',
-      bedrooms: '',
-      bathrooms: '',
-      notifications: true
-    });
-    toast.success('Search saved successfully!');
+      setSavedSearches(response.savedSearches || []);
+      setShowCreateModal(false);
+      resetForm();
+      toast.success('Search saved successfully!');
+    } catch (error) {
+      console.error('Create saved search error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to save search');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const handleEditSearch = (search) => {
@@ -129,34 +95,98 @@ const SavedSearches = () => {
     setShowCreateModal(true);
   };
 
-  const handleUpdateSearch = () => {
+  const handleUpdateSearch = async () => {
     if (!searchForm.name.trim()) {
       toast.error('Please enter a search name');
       return;
     }
 
-    setSavedSearches(prev => prev.map(search => 
-      search.id === editingSearch.id 
-        ? {
-            ...search,
-            name: searchForm.name,
-            filters: {
-              location: searchForm.location,
-              propertyType: searchForm.propertyType,
-              minPrice: searchForm.minPrice ? parseInt(searchForm.minPrice) : null,
-              maxPrice: searchForm.maxPrice ? parseInt(searchForm.maxPrice) : null,
-              bedrooms: searchForm.bedrooms ? parseInt(searchForm.bedrooms) : null,
-              bathrooms: searchForm.bathrooms ? parseInt(searchForm.bathrooms) : null
-            },
-            notifications: searchForm.notifications,
-            lastSearch: new Date().toISOString().split('T')[0],
-            resultsCount: Math.floor(Math.random() * 20) + 1
-          }
-        : search
-    ));
+    setProcessing(true);
+    try {
+      const response = await buyerPreferenceAPI.updateSavedSearch(editingSearch.id, {
+        name: searchForm.name,
+        location: searchForm.location,
+        propertyType: searchForm.propertyType,
+        minPrice: searchForm.minPrice ? Number(searchForm.minPrice) : null,
+        maxPrice: searchForm.maxPrice ? Number(searchForm.maxPrice) : null,
+        bedrooms: searchForm.bedrooms ? Number(searchForm.bedrooms) : null,
+        bathrooms: searchForm.bathrooms ? Number(searchForm.bathrooms) : null,
+        notifications: searchForm.notifications
+      });
 
-    setShowCreateModal(false);
-    setEditingSearch(null);
+      setSavedSearches(response.savedSearches || []);
+      setShowCreateModal(false);
+      setEditingSearch(null);
+      resetForm();
+      toast.success('Search updated successfully!');
+    } catch (error) {
+      console.error('Update saved search error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to update search');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleDeleteSearch = async (searchId) => {
+    setProcessing(true);
+    try {
+      const response = await buyerPreferenceAPI.deleteSavedSearch(searchId);
+      setSavedSearches(response.savedSearches || []);
+      toast.success('Search deleted successfully!');
+    } catch (error) {
+      console.error('Delete saved search error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to delete search');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleToggleNotifications = async (search) => {
+    try {
+      const response = await buyerPreferenceAPI.updateSavedSearch(search.id, {
+        notifications: !search.notifications
+      });
+      setSavedSearches(response.savedSearches || []);
+      toast.success('Notification settings updated!');
+    } catch (error) {
+      console.error('Toggle notifications error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to update notifications');
+    }
+  };
+
+  const handleRunSearch = async (search) => {
+    toast.success(`Running search: ${search.name}`);
+    try {
+      const response = await buyerPreferenceAPI.updateSavedSearch(search.id, {
+        lastSearch: new Date().toISOString(),
+        resultsCount: search.resultsCount || 0
+      });
+      setSavedSearches(response.savedSearches || []);
+    } catch (error) {
+      console.error('Run search update error:', error);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Never';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatPrice = (price) => {
+    if (price == null) return '';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
+  const resetForm = () => {
     setSearchForm({
       name: '',
       location: '',
@@ -167,44 +197,6 @@ const SavedSearches = () => {
       bathrooms: '',
       notifications: true
     });
-    toast.success('Search updated successfully!');
-  };
-
-  const handleDeleteSearch = (searchId) => {
-    setSavedSearches(prev => prev.filter(search => search.id !== searchId));
-    toast.success('Search deleted successfully!');
-  };
-
-  const handleToggleNotifications = (searchId) => {
-    setSavedSearches(prev => prev.map(search => 
-      search.id === searchId 
-        ? { ...search, notifications: !search.notifications }
-        : search
-    ));
-    toast.success('Notification settings updated!');
-  };
-
-  const handleRunSearch = (search) => {
-    // This would navigate to the property browser with the saved filters
-    toast.success(`Running search: ${search.name}`);
-    // In a real app, this would navigate to the property browser with filters applied
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
   };
 
   const SearchCard = ({ search }) => (
@@ -218,7 +210,7 @@ const SavedSearches = () => {
         </div>
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => handleToggleNotifications(search.id)}
+            onClick={() => handleToggleNotifications(search)}
             className={`p-2 rounded-full ${
               search.notifications 
                 ? 'bg-green-100 text-green-600' 
@@ -328,7 +320,11 @@ const SavedSearches = () => {
       </div>
 
       {/* Search List */}
-      {savedSearches.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+        </div>
+      ) : savedSearches.length === 0 ? (
         <div className="text-center py-12">
           <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No saved searches</h3>
@@ -362,6 +358,7 @@ const SavedSearches = () => {
 
             <form onSubmit={(e) => {
               e.preventDefault();
+              if (processing) return;
               editingSearch ? handleUpdateSearch() : handleCreateSearch();
             }}>
               <div className="space-y-4">
@@ -500,9 +497,10 @@ const SavedSearches = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+                  disabled={processing}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {editingSearch ? 'Update Search' : 'Create Search'}
+                  {processing ? 'Saving...' : (editingSearch ? 'Update Search' : 'Create Search')}
                 </button>
               </div>
             </form>

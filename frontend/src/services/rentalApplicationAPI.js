@@ -35,6 +35,16 @@ const rentalApplicationAPI = {
     return response.data;
   },
 
+  // Applicant approve/decline application
+  respondToApplicationStatus: async (applicationId, status, reason, notes) => {
+    const response = await api.patch(`/rental-applications/${applicationId}/applicant-status`, {
+      status,
+      reason,
+      notes
+    });
+    return response.data;
+  },
+
   // Add message to application
   addApplicationMessage: async (applicationId, message) => {
     const response = await api.post(`/rental-applications/${applicationId}/messages`, {

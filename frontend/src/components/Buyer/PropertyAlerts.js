@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   BellIcon,
   PlusIcon,
@@ -13,57 +13,12 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-toastify';
+import buyerPreferenceAPI from '../../services/buyerPreferenceAPI';
 
 const PropertyAlerts = () => {
-  const [alerts, setAlerts] = useState([
-    {
-      id: 1,
-      name: 'New Downtown Listings',
-      criteria: {
-        location: 'Downtown',
-        propertyType: 'condo',
-        minPrice: 300000,
-        maxPrice: 500000,
-        bedrooms: 2
-      },
-      frequency: 'daily',
-      isActive: true,
-      lastSent: '2024-01-15',
-      matchesCount: 3,
-      createdAt: '2024-01-01'
-    },
-    {
-      id: 2,
-      name: 'Family Homes Under $600k',
-      criteria: {
-        location: 'Suburbs',
-        propertyType: 'house',
-        maxPrice: 600000,
-        bedrooms: 3,
-        bathrooms: 2
-      },
-      frequency: 'weekly',
-      isActive: true,
-      lastSent: '2024-01-10',
-      matchesCount: 7,
-      createdAt: '2024-01-05'
-    },
-    {
-      id: 3,
-      name: 'Luxury Properties',
-      criteria: {
-        location: 'Any',
-        propertyType: 'any',
-        minPrice: 1000000,
-        maxPrice: 5000000
-      },
-      frequency: 'immediate',
-      isActive: false,
-      lastSent: '2024-01-08',
-      matchesCount: 2,
-      createdAt: '2024-01-08'
-    }
-  ]);
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingAlert, setEditingAlert] = useState(null);
@@ -79,32 +34,7 @@ const PropertyAlerts = () => {
     isActive: true
   });
 
-  const handleCreateAlert = () => {
-    if (!alertForm.name.trim()) {
-      toast.error('Please enter an alert name');
-      return;
-    }
-
-    const newAlert = {
-      id: Date.now(),
-      name: alertForm.name,
-      criteria: {
-        location: alertForm.location,
-        propertyType: alertForm.propertyType,
-        minPrice: alertForm.minPrice ? parseInt(alertForm.minPrice) : null,
-        maxPrice: alertForm.maxPrice ? parseInt(alertForm.maxPrice) : null,
-        bedrooms: alertForm.bedrooms ? parseInt(alertForm.bedrooms) : null,
-        bathrooms: alertForm.bathrooms ? parseInt(alertForm.bathrooms) : null
-      },
-      frequency: alertForm.frequency,
-      isActive: alertForm.isActive,
-      lastSent: null,
-      matchesCount: 0,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-
-    setAlerts(prev => [newAlert, ...prev]);
-    setShowCreateModal(false);
+  const resetForm = () => {
     setAlertForm({
       name: '',
       location: '',
@@ -116,7 +46,54 @@ const PropertyAlerts = () => {
       frequency: 'daily',
       isActive: true
     });
-    toast.success('Alert created successfully!');
+  };
+
+  const loadAlerts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await buyerPreferenceAPI.getPropertyAlerts();
+      setAlerts(response.propertyAlerts || []);
+    } catch (error) {
+      console.error('Failed to load property alerts:', error);
+      toast.error(error?.response?.data?.message || 'Failed to load property alerts');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAlerts();
+  }, [loadAlerts]);
+
+  const handleCreateAlert = async () => {
+    if (!alertForm.name.trim()) {
+      toast.error('Please enter an alert name');
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      const response = await buyerPreferenceAPI.createPropertyAlert({
+        name: alertForm.name,
+        location: alertForm.location,
+        propertyType: alertForm.propertyType,
+        minPrice: alertForm.minPrice ? Number(alertForm.minPrice) : null,
+        maxPrice: alertForm.maxPrice ? Number(alertForm.maxPrice) : null,
+        bedrooms: alertForm.bedrooms ? Number(alertForm.bedrooms) : null,
+        bathrooms: alertForm.bathrooms ? Number(alertForm.bathrooms) : null,
+        frequency: alertForm.frequency,
+        isActive: alertForm.isActive
+      });
+      setAlerts(response.propertyAlerts || []);
+      setShowCreateModal(false);
+      resetForm();
+      toast.success('Alert created successfully!');
+    } catch (error) {
+      console.error('Create property alert error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to create alert');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const handleEditAlert = (alert) => {
@@ -135,64 +112,75 @@ const PropertyAlerts = () => {
     setShowCreateModal(true);
   };
 
-  const handleUpdateAlert = () => {
+  const handleUpdateAlert = async () => {
     if (!alertForm.name.trim()) {
       toast.error('Please enter an alert name');
       return;
     }
 
-    setAlerts(prev => prev.map(alert => 
-      alert.id === editingAlert.id 
-        ? {
-            ...alert,
-            name: alertForm.name,
-            criteria: {
-              location: alertForm.location,
-              propertyType: alertForm.propertyType,
-              minPrice: alertForm.minPrice ? parseInt(alertForm.minPrice) : null,
-              maxPrice: alertForm.maxPrice ? parseInt(alertForm.maxPrice) : null,
-              bedrooms: alertForm.bedrooms ? parseInt(alertForm.bedrooms) : null,
-              bathrooms: alertForm.bathrooms ? parseInt(alertForm.bathrooms) : null
-            },
-            frequency: alertForm.frequency,
-            isActive: alertForm.isActive
-          }
-        : alert
-    ));
-
-    setShowCreateModal(false);
-    setEditingAlert(null);
-    setAlertForm({
-      name: '',
-      location: '',
-      propertyType: '',
-      minPrice: '',
-      maxPrice: '',
-      bedrooms: '',
-      bathrooms: '',
-      frequency: 'daily',
-      isActive: true
-    });
-    toast.success('Alert updated successfully!');
+    setProcessing(true);
+    try {
+      const response = await buyerPreferenceAPI.updatePropertyAlert(editingAlert.id, {
+        name: alertForm.name,
+        location: alertForm.location,
+        propertyType: alertForm.propertyType,
+        minPrice: alertForm.minPrice ? Number(alertForm.minPrice) : null,
+        maxPrice: alertForm.maxPrice ? Number(alertForm.maxPrice) : null,
+        bedrooms: alertForm.bedrooms ? Number(alertForm.bedrooms) : null,
+        bathrooms: alertForm.bathrooms ? Number(alertForm.bathrooms) : null,
+        frequency: alertForm.frequency,
+        isActive: alertForm.isActive
+      });
+      setAlerts(response.propertyAlerts || []);
+      setShowCreateModal(false);
+      setEditingAlert(null);
+      resetForm();
+      toast.success('Alert updated successfully!');
+    } catch (error) {
+      console.error('Update property alert error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to update alert');
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const handleToggleAlert = (alertId) => {
-    setAlerts(prev => prev.map(alert => 
-      alert.id === alertId 
-        ? { ...alert, isActive: !alert.isActive }
-        : alert
-    ));
-    toast.success('Alert status updated!');
+  const handleToggleAlert = async (alert) => {
+    try {
+      const response = await buyerPreferenceAPI.updatePropertyAlert(alert.id, {
+        isActive: !alert.isActive
+      });
+      setAlerts(response.propertyAlerts || []);
+      toast.success('Alert status updated!');
+    } catch (error) {
+      console.error('Toggle alert error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to update alert');
+    }
   };
 
-  const handleDeleteAlert = (alertId) => {
-    setAlerts(prev => prev.filter(alert => alert.id !== alertId));
-    toast.success('Alert deleted successfully!');
+  const handleDeleteAlert = async (alertId) => {
+    setProcessing(true);
+    try {
+      const response = await buyerPreferenceAPI.deletePropertyAlert(alertId);
+      setAlerts(response.propertyAlerts || []);
+      toast.success('Alert deleted successfully!');
+    } catch (error) {
+      console.error('Delete alert error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to delete alert');
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const handleTestAlert = (alert) => {
-    // This would trigger a test search with the alert criteria
+  const handleTestAlert = async (alert) => {
     toast.success(`Testing alert: ${alert.name}`);
+    try {
+      const response = await buyerPreferenceAPI.updatePropertyAlert(alert.id, {
+        lastSent: new Date().toISOString()
+      });
+      setAlerts(response.propertyAlerts || []);
+    } catch (error) {
+      console.error('Test alert update error:', error);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -205,6 +193,7 @@ const PropertyAlerts = () => {
   };
 
   const formatPrice = (price) => {
+    if (price == null) return '';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -385,6 +374,7 @@ const PropertyAlerts = () => {
 
             <form onSubmit={(e) => {
               e.preventDefault();
+              if (processing) return;
               editingAlert ? handleUpdateAlert() : handleCreateAlert();
             }}>
               <div className="space-y-4">
@@ -538,9 +528,10 @@ const PropertyAlerts = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+                  disabled={processing}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {editingAlert ? 'Update Alert' : 'Create Alert'}
+                  {processing ? 'Saving...' : (editingAlert ? 'Update Alert' : 'Create Alert')}
                 </button>
               </div>
             </form>

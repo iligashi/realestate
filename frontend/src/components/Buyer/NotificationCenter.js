@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   BellIcon,
   CheckCircleIcon,
@@ -15,113 +15,85 @@ import {
   HomeIcon
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-toastify';
+import notificationAPI from '../../services/notificationAPI';
 
 const NotificationCenter = () => {
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'property_alert',
-      title: 'New Property Match',
-      message: '3 new properties match your "Downtown Condos" alert',
-      timestamp: '2024-01-15T10:30:00Z',
-      isRead: false,
-      priority: 'high',
-      actionUrl: '/buyer?tab=browse&alert=1',
-      metadata: {
-        alertName: 'Downtown Condos',
-        propertyCount: 3
-      }
-    },
-    {
-      id: 2,
-      type: 'message_reply',
-      title: 'New Message from Seller',
-      message: 'John Smith replied to your message about Modern Downtown Condo',
-      timestamp: '2024-01-15T09:15:00Z',
-      isRead: false,
-      priority: 'medium',
-      actionUrl: '/buyer?tab=messages',
-      metadata: {
-        sellerName: 'John Smith',
-        propertyTitle: 'Modern Downtown Condo'
-      }
-    },
-    {
-      id: 3,
-      type: 'viewing_reminder',
-      title: 'Viewing Reminder',
-      message: 'You have a property viewing scheduled for tomorrow at 2:00 PM',
-      timestamp: '2024-01-14T16:45:00Z',
-      isRead: true,
-      priority: 'medium',
-      actionUrl: '/buyer?tab=viewings',
-      metadata: {
-        propertyTitle: 'Family Home in Suburbs',
-        scheduledTime: '2024-01-16T14:00:00Z'
-      }
-    },
-    {
-      id: 4,
-      type: 'price_drop',
-      title: 'Price Drop Alert',
-      message: 'Luxury Penthouse price dropped by $50,000',
-      timestamp: '2024-01-14T14:20:00Z',
-      isRead: true,
-      priority: 'high',
-      actionUrl: '/properties/prop3',
-      metadata: {
-        propertyTitle: 'Luxury Penthouse',
-        priceDrop: 50000,
-        newPrice: 950000
-      }
-    },
-    {
-      id: 5,
-      type: 'system',
-      title: 'Welcome to Real Estate Platform',
-      message: 'Complete your profile to get personalized property recommendations',
-      timestamp: '2024-01-10T08:00:00Z',
-      isRead: true,
-      priority: 'low',
-      actionUrl: '/profile',
-      metadata: {}
-    }
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [filterType, setFilterType] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterRead, setFilterRead] = useState('all');
 
+  const loadNotifications = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await notificationAPI.getNotifications({
+        type: filterType,
+        priority: filterPriority,
+        read: filterRead
+      });
+      setNotifications(response.notifications || []);
+      setUnreadCount(response.unreadCount || 0);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+      toast.error(error?.response?.data?.message || 'Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
+  }, [filterPriority, filterRead, filterType]);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
   const filteredNotifications = notifications.filter(notification => {
-    if (filterType !== 'all' && notification.type !== filterType) return false;
-    if (filterPriority !== 'all' && notification.priority !== filterPriority) return false;
-    if (filterRead === 'read' && !notification.isRead) return false;
-    if (filterRead === 'unread' && notification.isRead) return false;
     return true;
   });
 
-  const handleMarkAsRead = (notificationId) => {
-    setNotifications(prev => prev.map(notification => 
-      notification.id === notificationId 
-        ? { ...notification, isRead: true }
-        : notification
-    ));
-    toast.success('Notification marked as read');
+  const handleMarkAsRead = async (notificationId) => {
+    try {
+      await notificationAPI.markAsRead(notificationId);
+      await loadNotifications();
+      toast.success('Notification marked as read');
+    } catch (error) {
+      console.error('Mark notification read error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to mark notification');
+    }
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => prev.map(notification => ({ ...notification, isRead: true })));
-    toast.success('All notifications marked as read');
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationAPI.markAllAsRead();
+      await loadNotifications();
+      toast.success('All notifications marked as read');
+    } catch (error) {
+      console.error('Mark all notifications error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to mark all notifications');
+    }
   };
 
-  const handleDeleteNotification = (notificationId) => {
-    setNotifications(prev => prev.filter(notification => notification.id !== notificationId));
-    toast.success('Notification deleted');
+  const handleDeleteNotification = async (notificationId) => {
+    try {
+      await notificationAPI.deleteNotification(notificationId);
+      await loadNotifications();
+      toast.success('Notification deleted');
+    } catch (error) {
+      console.error('Delete notification error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to delete notification');
+    }
   };
 
-  const handleDeleteAllRead = () => {
-    setNotifications(prev => prev.filter(notification => !notification.isRead));
-    toast.success('All read notifications deleted');
+  const handleDeleteAllRead = async () => {
+    try {
+      await notificationAPI.deleteReadNotifications();
+      await loadNotifications();
+      toast.success('All read notifications deleted');
+    } catch (error) {
+      console.error('Delete read notifications error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to delete read notifications');
+    }
   };
 
   const getNotificationIcon = (type) => {
@@ -181,8 +153,6 @@ const NotificationCenter = () => {
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
   const NotificationCard = ({ notification }) => (
     <div className={`bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow duration-300 ${
       !notification.isRead ? 'border-l-4 border-blue-500' : ''
@@ -225,7 +195,13 @@ const NotificationCenter = () => {
                 </button>
               )}
               <button
-                onClick={() => window.open(notification.actionUrl, '_blank')}
+                onClick={() => {
+                  if (notification.actions?.[0]?.url) {
+                    window.open(notification.actions[0].url, '_blank');
+                  } else if (notification.actionUrl) {
+                    window.open(notification.actionUrl, '_blank');
+                  }
+                }}
                 className="p-1 text-gray-400 hover:text-green-600 rounded-full hover:bg-green-50"
                 title="View details"
               >
@@ -321,7 +297,11 @@ const NotificationCenter = () => {
       </div>
 
       {/* Notifications List */}
-      {filteredNotifications.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+        </div>
+      ) : filteredNotifications.length === 0 ? (
         <div className="text-center py-12">
           <BellIcon className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No notifications found</h3>

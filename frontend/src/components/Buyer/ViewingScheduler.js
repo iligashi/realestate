@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   CalendarIcon,
   ClockIcon,
@@ -14,71 +14,18 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-toastify';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchProperties } from '../../store/slices/propertySlice';
+import appointmentAPI from '../../services/appointmentAPI';
 
 const ViewingScheduler = () => {
-  const [viewings, setViewings] = useState([
-    {
-      id: 1,
-      property: {
-        id: 'prop1',
-        title: 'Modern Downtown Condo',
-        address: '123 Main St, Downtown',
-        image: '/api/placeholder/200/150'
-      },
-      seller: {
-        name: 'John Smith',
-        email: 'john@example.com',
-        phone: '(555) 123-4567'
-      },
-      scheduledDate: '2024-01-20',
-      scheduledTime: '14:00',
-      duration: 60,
-      status: 'scheduled',
-      notes: 'Interested in the balcony view',
-      createdAt: '2024-01-15'
-    },
-    {
-      id: 2,
-      property: {
-        id: 'prop2',
-        title: 'Family Home in Suburbs',
-        address: '456 Oak Ave, Suburbs',
-        image: '/api/placeholder/200/150'
-      },
-      seller: {
-        name: 'Sarah Johnson',
-        email: 'sarah@example.com',
-        phone: '(555) 987-6543'
-      },
-      scheduledDate: '2024-01-18',
-      scheduledTime: '10:00',
-      duration: 90,
-      status: 'completed',
-      notes: 'Great neighborhood, need to check schools',
-      createdAt: '2024-01-10'
-    },
-    {
-      id: 3,
-      property: {
-        id: 'prop3',
-        title: 'Luxury Penthouse',
-        address: '789 High St, Uptown',
-        image: '/api/placeholder/200/150'
-      },
-      seller: {
-        name: 'Mike Davis',
-        email: 'mike@example.com',
-        phone: '(555) 456-7890'
-      },
-      scheduledDate: '2024-01-22',
-      scheduledTime: '16:00',
-      duration: 45,
-      status: 'cancelled',
-      notes: 'Cancelled due to scheduling conflict',
-      createdAt: '2024-01-12'
-    }
-  ]);
+  const dispatch = useDispatch();
+  const { properties = [] } = useSelector(state => state.property || {});
+  const { user } = useSelector(state => state.auth || {});
 
+  const [viewings, setViewings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingViewing, setEditingViewing] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
@@ -87,57 +34,125 @@ const ViewingScheduler = () => {
     scheduledDate: '',
     scheduledTime: '',
     duration: 60,
-    notes: ''
+    notes: '',
+    contactMethod: 'email',
+    message: ''
   });
 
-  const [properties] = useState([
-    { id: 'prop1', title: 'Modern Downtown Condo', address: '123 Main St, Downtown' },
-    { id: 'prop2', title: 'Family Home in Suburbs', address: '456 Oak Ave, Suburbs' },
-    { id: 'prop3', title: 'Luxury Penthouse', address: '789 High St, Uptown' },
-    { id: 'prop4', title: 'Cozy Townhouse', address: '321 Pine St, Midtown' }
-  ]);
+  const resetForm = () => {
+    setViewingForm({
+      propertyId: '',
+      scheduledDate: '',
+      scheduledTime: '',
+      duration: 60,
+      notes: '',
+      contactMethod: 'email',
+      message: ''
+    });
+  };
 
   const filteredViewings = viewings.filter(viewing => {
     if (filterStatus === 'all') return true;
     return viewing.status === filterStatus;
   });
 
-  const handleCreateViewing = () => {
+  useEffect(() => {
+    dispatch(fetchProperties());
+  }, [dispatch]);
+
+  const formatAddress = useCallback((address) => {
+    if (!address) return 'Unknown';
+    if (typeof address === 'string') return address;
+    const { street, city, state, zipCode, country } = address;
+    return [
+      street,
+      city,
+      state,
+      zipCode,
+      country
+    ].filter(Boolean).join(', ') || 'Unknown';
+  }, []);
+
+  const normalizeAppointment = useCallback((appointment) => {
+    const property = appointment.property || {};
+    const host = appointment.host || {};
+    const startTime = new Date(appointment.start_time || appointment.startTime);
+    const endTime = new Date(appointment.end_time || appointment.endTime);
+
+    return {
+      id: appointment.id,
+      appointment,
+      property: {
+        id: property.id || property._id,
+        title: property.title,
+        address: formatAddress(property.address),
+        rawAddress: property.address,
+        image: property.photos?.[0]?.url || property.photos?.[0] || '/api/placeholder/200/150'
+      },
+      seller: {
+        name: `${host.firstName || ''} ${host.lastName || ''}`.trim() || 'Property Owner',
+        email: host.email || 'N/A',
+        phone: host.phone || 'N/A'
+      },
+      scheduledDate: startTime.toISOString().split('T')[0],
+      scheduledTime: startTime.toISOString().split('T')[1]?.substring(0,5),
+      duration: appointment.duration || Math.round((endTime - startTime) / (1000 * 60)),
+      status: appointment.status,
+      notes: appointment.description,
+      createdAt: appointment.createdAt
+    };
+  }, [formatAddress]);
+
+  const loadViewings = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const response = await appointmentAPI.getUserAppointments({ type: 'viewing' });
+      const appointments = response.appointments || [];
+      const normalized = appointments
+        .filter(appt => {
+          const requesterId = appt.requester?.id || appt.requesterId || appt.requester_id;
+          return requesterId?.toString() === user.id.toString();
+        })
+        .map(normalizeAppointment);
+
+      setViewings(normalized);
+    } catch (error) {
+      console.error('Failed to load viewings:', error);
+      toast.error(error?.message || 'Failed to load viewings');
+    } finally {
+      setLoading(false);
+    }
+  }, [normalizeAppointment, user?.id]);
+
+  useEffect(() => {
+    loadViewings();
+  }, [loadViewings]);
+
+  const handleCreateViewing = async () => {
     if (!viewingForm.propertyId || !viewingForm.scheduledDate || !viewingForm.scheduledTime) {
       toast.error('Please fill in all required fields');
       return;
     }
 
-    const property = properties.find(p => p.id === viewingForm.propertyId);
-    const newViewing = {
-      id: Date.now(),
-      property: {
-        ...property,
-        image: '/api/placeholder/200/150'
-      },
-      seller: {
-        name: 'Property Seller',
-        email: 'seller@example.com',
-        phone: '(555) 000-0000'
-      },
-      scheduledDate: viewingForm.scheduledDate,
-      scheduledTime: viewingForm.scheduledTime,
-      duration: viewingForm.duration,
-      status: 'scheduled',
-      notes: viewingForm.notes,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-
-    setViewings(prev => [newViewing, ...prev]);
-    setShowCreateModal(false);
-    setViewingForm({
-      propertyId: '',
-      scheduledDate: '',
-      scheduledTime: '',
-      duration: 60,
-      notes: ''
-    });
-    toast.success('Viewing scheduled successfully!');
+    setProcessing(true);
+    try {
+      await appointmentAPI.createViewingRequest(viewingForm.propertyId, {
+        preferredDate: viewingForm.scheduledDate,
+        preferredTime: viewingForm.scheduledTime,
+        message: viewingForm.message,
+        contactMethod: viewingForm.contactMethod
+      });
+      toast.success('Viewing scheduled successfully!');
+      setShowCreateModal(false);
+      resetForm();
+      await loadViewings();
+    } catch (error) {
+      console.error('Create viewing error:', error);
+      toast.error(error?.message || 'Failed to schedule viewing');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const handleEditViewing = (viewing) => {
@@ -147,67 +162,65 @@ const ViewingScheduler = () => {
       scheduledDate: viewing.scheduledDate,
       scheduledTime: viewing.scheduledTime,
       duration: viewing.duration,
-      notes: viewing.notes
+      notes: viewing.notes || '',
+      contactMethod: 'email',
+      message: viewing.notes || ''
     });
     setShowCreateModal(true);
   };
 
-  const handleUpdateViewing = () => {
+  const handleUpdateViewing = async () => {
     if (!viewingForm.propertyId || !viewingForm.scheduledDate || !viewingForm.scheduledTime) {
       toast.error('Please fill in all required fields');
       return;
     }
 
-    const property = properties.find(p => p.id === viewingForm.propertyId);
-    setViewings(prev => prev.map(viewing => 
-      viewing.id === editingViewing.id 
-        ? {
-            ...viewing,
-            property: {
-              ...property,
-              image: viewing.property.image
-            },
-            scheduledDate: viewingForm.scheduledDate,
-            scheduledTime: viewingForm.scheduledTime,
-            duration: viewingForm.duration,
-            notes: viewingForm.notes
-          }
-        : viewing
-    ));
+    setProcessing(true);
+    try {
+      await appointmentAPI.rescheduleAppointment(
+        editingViewing.id,
+        viewingForm.scheduledDate,
+        viewingForm.scheduledTime,
+        viewingForm.notes || viewingForm.message || ''
+      );
 
-    setShowCreateModal(false);
-    setEditingViewing(null);
-    setViewingForm({
-      propertyId: '',
-      scheduledDate: '',
-      scheduledTime: '',
-      duration: 60,
-      notes: ''
-    });
-    toast.success('Viewing updated successfully!');
+      toast.success('Viewing updated successfully!');
+      setShowCreateModal(false);
+      setEditingViewing(null);
+      resetForm();
+      await loadViewings();
+    } catch (error) {
+      console.error('Update viewing error:', error);
+      toast.error(error?.message || 'Failed to update viewing');
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const handleCancelViewing = (viewingId) => {
-    setViewings(prev => prev.map(viewing => 
-      viewing.id === viewingId 
-        ? { ...viewing, status: 'cancelled' }
-        : viewing
-    ));
-    toast.success('Viewing cancelled successfully!');
+  const handleCancelViewing = async (viewingId) => {
+    try {
+      await appointmentAPI.cancelAppointment(viewingId, 'Cancelled by applicant');
+      toast.success('Viewing cancelled successfully!');
+      await loadViewings();
+    } catch (error) {
+      console.error('Cancel viewing error:', error);
+      toast.error(error?.message || 'Failed to cancel viewing');
+    }
   };
 
-  const handleCompleteViewing = (viewingId) => {
-    setViewings(prev => prev.map(viewing => 
-      viewing.id === viewingId 
-        ? { ...viewing, status: 'completed' }
-        : viewing
-    ));
-    toast.success('Viewing marked as completed!');
+  const handleCompleteViewing = async (viewingId) => {
+    try {
+      await appointmentAPI.completeAppointment(viewingId);
+      toast.success('Viewing marked as completed!');
+      await loadViewings();
+    } catch (error) {
+      console.error('Complete viewing error:', error);
+      toast.error(error?.message || 'Failed to mark as completed');
+    }
   };
 
-  const handleDeleteViewing = (viewingId) => {
-    setViewings(prev => prev.filter(viewing => viewing.id !== viewingId));
-    toast.success('Viewing deleted successfully!');
+  const handleDeleteViewing = async (viewingId) => {
+    await handleCancelViewing(viewingId);
   };
 
   const formatDate = (dateString) => {
@@ -436,7 +449,7 @@ const ViewingScheduler = () => {
                     <option value="">Select Property</option>
                     {properties.map((property) => (
                       <option key={property.id} value={property.id}>
-                        {property.title} - {property.address}
+                        {property.title} - {formatAddress(property.address)}
                       </option>
                     ))}
                   </select>
@@ -489,11 +502,25 @@ const ViewingScheduler = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
+                    Preferred Contact Method
+                  </label>
+                  <select
+                    value={viewingForm.contactMethod}
+                    onChange={(e) => setViewingForm(prev => ({ ...prev, contactMethod: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="email">Email</option>
+                    <option value="phone">Phone</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Notes / Message
                   </label>
                   <textarea
-                    value={viewingForm.notes}
-                    onChange={(e) => setViewingForm(prev => ({ ...prev, notes: e.target.value }))}
+                    value={viewingForm.message}
+                    onChange={(e) => setViewingForm(prev => ({ ...prev, message: e.target.value, notes: e.target.value }))}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                     placeholder="Any specific questions or areas of interest..."
@@ -511,9 +538,10 @@ const ViewingScheduler = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+                  disabled={processing}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {editingViewing ? 'Update Viewing' : 'Schedule Viewing'}
+                  {processing ? 'Saving...' : (editingViewing ? 'Update Viewing' : 'Schedule Viewing')}
                 </button>
               </div>
             </form>

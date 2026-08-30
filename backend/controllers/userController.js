@@ -1,9 +1,11 @@
-const User = require('../models/User');
+const { User } = require('../models');
 
 // Get all users (admin only)
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}).select('-password');
+    const users = await User.findAll({
+      attributes: { exclude: ['password'] }
+    });
     res.json({ users });
   } catch (error) {
     console.error('Get all users error:', error);
@@ -14,7 +16,9 @@ const getAllUsers = async (req, res) => {
 // Get user by ID
 const getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
+    const user = await User.findByPk(req.params.id, {
+      attributes: { exclude: ['password'] }
+    });
     
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
@@ -39,23 +43,24 @@ const updateUser = async (req, res) => {
     delete updates.userType;
     
     // Check if user is updating themselves or if admin is updating
-    if (id !== req.user._id.toString() && req.user.userType !== 'admin') {
+    if (id !== req.user.id.toString() && req.user.userType !== 'admin') {
       return res.status(403).json({ error: 'Not authorized to update this user.' });
     }
 
-    const user = await User.findByIdAndUpdate(
-      id,
-      { $set: updates },
-      { new: true, runValidators: true }
-    ).select('-password');
-
+    const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
 
+    await user.update(updates);
+
+    const updatedUser = await User.findByPk(id, {
+      attributes: { exclude: ['password'] }
+    });
+
     res.json({
       message: 'User updated successfully',
-      user
+      user: updatedUser
     });
   } catch (error) {
     console.error('Update user error:', error);
@@ -66,7 +71,7 @@ const updateUser = async (req, res) => {
 // Delete user (admin only)
 const deleteUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findByPk(req.params.id);
     
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
@@ -77,7 +82,7 @@ const deleteUser = async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to delete users.' });
     }
 
-    await User.findByIdAndDelete(req.params.id);
+    await user.destroy();
 
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
@@ -89,7 +94,7 @@ const deleteUser = async (req, res) => {
 // Block/Unblock user (admin only)
 const toggleUserBlock = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findByPk(req.params.id);
     
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
@@ -100,17 +105,16 @@ const toggleUserBlock = async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to modify user status.' });
     }
 
-    user.isBlocked = !user.isBlocked;
-    await user.save();
+    await user.update({ is_blocked: !user.is_blocked });
 
     res.json({
-      message: `User ${user.isBlocked ? 'blocked' : 'unblocked'} successfully`,
+      message: `User ${user.is_blocked ? 'blocked' : 'unblocked'} successfully`,
       user: {
-        _id: user._id,
+        id: user.id,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        isBlocked: user.isBlocked
+        first_name: user.first_name,
+        last_name: user.last_name,
+        is_blocked: user.is_blocked
       }
     });
   } catch (error) {
@@ -122,21 +126,25 @@ const toggleUserBlock = async (req, res) => {
 // Get user statistics
 const getUserStats = async (req, res) => {
   try {
-    const stats = await User.aggregate([
-      {
-        $group: {
-          _id: null,
-          totalUsers: { $sum: 1 },
-          activeUsers: { $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] } },
-          verifiedUsers: { $sum: { $cond: [{ $eq: ['$isVerified', true] }, 1, 0] } },
-          agents: { $sum: { $cond: [{ $eq: ['$userType', 'agent'] }, 1, 0] } },
-          buyers: { $sum: { $cond: [{ $eq: ['$userType', 'buyer'] }, 1, 0] } },
-          sellers: { $sum: { $cond: [{ $eq: ['$userType', 'seller'] }, 1, 0] } }
-        }
-      }
-    ]);
+    const { Op } = require('sequelize');
+    
+    const totalUsers = await User.count();
+    const activeUsers = await User.count({ where: { is_active: true } });
+    const verifiedUsers = await User.count({ where: { is_verified: true } });
+    const agents = await User.count({ where: { user_type: 'agent' } });
+    const buyers = await User.count({ where: { user_type: 'buyer' } });
+    const sellers = await User.count({ where: { user_type: 'seller' } });
 
-    res.json({ stats: stats[0] || {} });
+    const stats = {
+      totalUsers,
+      activeUsers,
+      verifiedUsers,
+      agents,
+      buyers,
+      sellers
+    };
+
+    res.json({ stats });
   } catch (error) {
     console.error('Get user stats error:', error);
     res.status(500).json({ error: 'Failed to fetch user statistics.' });

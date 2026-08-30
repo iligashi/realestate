@@ -1,29 +1,25 @@
-const mongoose = require('mongoose');
-const User = require('../models/User');
-const Property = require('../models/Property');
-const Inquiry = require('../models/Inquiry');
-const ListingAnalytics = require('../models/ListingAnalytics');
-const OpenHouse = require('../models/OpenHouse');
+const { sequelize } = require('../models');
+const { User, Property, Inquiry, ListingAnalytics, OpenHouse } = require('../models');
 require('dotenv').config();
 
 const seedSellerData = async () => {
   try {
-    // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/real-estate-marketplace');
-    console.log('Connected to MongoDB');
+    // Connect to database
+    await sequelize.authenticate();
+    console.log('Connected to database');
 
     // Find or create a seller user
-    let seller = await User.findOne({ userType: 'seller' });
+    let seller = await User.findOne({ where: { user_type: 'seller' } });
     if (!seller) {
-      seller = new User({
-        firstName: 'John',
-        lastName: 'Seller',
+      seller = await User.create({
+        first_name: 'John',
+        last_name: 'Seller',
         email: 'seller@example.com',
         password: 'password123', // Will be hashed by pre-save hook
-        userType: 'seller',
+        user_type: 'seller',
         phone: '+1234567890',
-        isActive: true,
-        isVerified: true
+        is_active: true,
+        is_verified: true
       });
       await seller.save();
       console.log('Created seller user');
@@ -288,8 +284,8 @@ const seedSellerData = async () => {
   } catch (error) {
     console.error('❌ Error seeding data:', error);
   } finally {
-    await mongoose.disconnect();
-    console.log('Disconnected from MongoDB');
+    await sequelize.close();
+    console.log('Disconnected from database');
   }
 };
 

@@ -41,7 +41,7 @@ const ViewingModal = ({ isOpen, onClose, property }) => {
     setLoading(true);
     
     try {
-      await appointmentAPI.createViewingRequest(property._id, {
+      await appointmentAPI.createViewingRequest(property.id, {
         preferredDate: formData.preferredDate,
         preferredTime: formData.preferredTime,
         message: formData.message,

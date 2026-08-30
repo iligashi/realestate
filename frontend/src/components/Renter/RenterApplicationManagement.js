@@ -56,7 +56,7 @@ const RenterApplicationManagement = () => {
       };
       
       const response = await rentalApplicationAPI.getApplicantApplications(params);
-      setApplications(response.applications);
+      setApplications(response.applications || []);
       setPagination(response.pagination);
     } catch (error) {
       console.error('Error fetching applications:', error);
@@ -127,6 +127,47 @@ const RenterApplicationManagement = () => {
     }
   };
 
+  const handleRespondApplication = async (applicationId, decision) => {
+    const actionVerb = decision === 'approved' ? 'approve' : 'decline';
+    if (!window.confirm(`Are you sure you want to ${actionVerb} this application?`)) {
+      return;
+    }
+
+    try {
+      setActionStatus('processing');
+      setActionMessage(`${decision === 'approved' ? 'Approving' : 'Declining'} application...`);
+
+      await rentalApplicationAPI.respondToApplicationStatus(applicationId, decision);
+
+      setActionStatus('success');
+      setActionMessage(`Application ${decision === 'approved' ? 'approved' : 'declined'} successfully!`);
+
+      await fetchApplications(pagination.current);
+
+      if (selectedApplication) {
+        const selectedId = selectedApplication.id ?? selectedApplication._id;
+        if (selectedId === applicationId) {
+          const refreshed = await rentalApplicationAPI.getApplication(applicationId);
+          setSelectedApplication(refreshed.application);
+        }
+      }
+
+      setTimeout(() => {
+        setActionStatus(null);
+        setActionMessage('');
+      }, 3000);
+    } catch (error) {
+      console.error('Error updating application status:', error);
+      setActionStatus('error');
+      setActionMessage(error.response?.data?.message || 'Failed to update application. Please try again.');
+
+      setTimeout(() => {
+        setActionStatus(null);
+        setActionMessage('');
+      }, 5000);
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending':
@@ -173,7 +214,10 @@ const RenterApplicationManagement = () => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -182,8 +226,12 @@ const RenterApplicationManagement = () => {
 
   const handleViewApplication = async (application) => {
     try {
-      // Fetch full application details including messages
-      const response = await rentalApplicationAPI.getApplication(application._id);
+      const applicationId = application.id ?? application._id;
+      if (!applicationId) {
+        toast.error('Unable to load this application. Missing identifier.');
+        return;
+      }
+      const response = await rentalApplicationAPI.getApplication(applicationId);
       setSelectedApplication(response.application);
       setShowApplicationModal(true);
     } catch (error) {
@@ -261,8 +309,33 @@ const RenterApplicationManagement = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {applications.map((application) => (
-            <div key={application._id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+          {applications.map((application, index) => {
+            const applicationId = application.id ?? application._id ?? index;
+            const status = (application.status || 'unknown').toLowerCase();
+            const landlordFirst = application.landlord?.firstName ?? application.landlord?.first_name ?? '';
+            const landlordLast = application.landlord?.lastName ?? application.landlord?.last_name ?? '';
+            const landlordName = [landlordFirst, landlordLast].join(' ').trim() || 'Unknown';
+            const landlordIds = [
+              application.landlord?.id,
+              application.landlord?.userId,
+              application.landlord?.user_id,
+              application.landlord_id
+            ]
+              .filter((value) => value !== undefined && value !== null)
+              .map((value) => value.toString());
+            const applicantIds = [
+              application.applicant?.id,
+              application.applicant?.userId,
+              application.applicant?.user_id,
+              application.applicant_id
+            ]
+              .filter((value) => value !== undefined && value !== null)
+              .map((value) => value.toString());
+            const isLandlordUser = user?.id && landlordIds.includes(user.id.toString());
+            const isApplicantUser = user?.id && applicantIds.includes(user.id.toString());
+
+            return (
+            <div key={applicationId} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
@@ -274,7 +347,7 @@ const RenterApplicationManagement = () => {
                         {application.property?.title || 'Unknown Property'}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        Landlord: {application.landlord?.name || 'Unknown'}
+                        Landlord: {landlordName}
                       </p>
                     </div>
                   </div>
@@ -295,17 +368,17 @@ const RenterApplicationManagement = () => {
                   </div>
 
                   <div className="flex items-center gap-4 mt-4">
-                    <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(application.status)}`}>
-                      {getStatusIcon(application.status)}
-                      {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
+                    <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(status)}`}>
+                      {getStatusIcon(status)}
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
                     </div>
                     <span className="text-sm text-gray-600">
-                      {getStatusDescription(application.status)}
+                      {getStatusDescription(status)}
                     </span>
                   </div>
 
                   {/* Decision Information */}
-                  {application.decision && application.decision.status !== 'pending' && (
+                  {application.decision && application.decision.status && application.decision.status !== 'pending' && (
                     <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <DocumentTextIcon className="h-4 w-4 text-gray-600" />
@@ -334,28 +407,72 @@ const RenterApplicationManagement = () => {
                     View Details
                   </button>
                   
-                  {application.status === 'pending' && (
-                    <button
-                      onClick={() => handleWithdrawApplication(application._id)}
-                      disabled={actionStatus === 'processing'}
-                      className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                        actionStatus === 'processing'
-                          ? 'bg-gray-400 text-white cursor-not-allowed'
-                          : 'text-white bg-orange-600 hover:bg-orange-700'
-                      }`}
-                    >
-                      {actionStatus === 'processing' ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      ) : (
-                        <XMarkIcon className="h-4 w-4" />
-                      )}
-                      Withdraw
-                    </button>
-                  )}
+                  <div className="flex flex-col gap-2 text-xs text-gray-500">
+                    {status === 'pending' && isApplicantUser && (
+                      <button
+                        onClick={() => handleWithdrawApplication(application.id ?? application._id)}
+                        disabled={actionStatus === 'processing'}
+                        className={`flex items-center justify-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition ${
+                          actionStatus === 'processing'
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                        }`}
+                      >
+                        {actionStatus === 'processing' ? (
+                          <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-orange-700" />
+                        ) : (
+                          <XMarkIcon className="h-4 w-4" />
+                        )}
+                        Withdraw application
+                      </button>
+                    )}
+                    {status === 'pending' && isLandlordUser && (
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={() => handleRespondApplication(application.id ?? application._id, 'approved')}
+                          disabled={actionStatus === 'processing'}
+                          className={`flex items-center justify-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition ${
+                            actionStatus === 'processing'
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                          }`}
+                        >
+                          {actionStatus === 'processing' ? (
+                            <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-emerald-700" />
+                          ) : (
+                            <CheckCircleIcon className="h-4 w-4" />
+                          )}
+                          Approve application
+                        </button>
+                        <button
+                          onClick={() => handleRespondApplication(application.id ?? application._id, 'rejected')}
+                          disabled={actionStatus === 'processing'}
+                          className={`flex items-center justify-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition ${
+                            actionStatus === 'processing'
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : 'bg-rose-100 text-rose-700 hover:bg-rose-200'
+                          }`}
+                        >
+                          {actionStatus === 'processing' ? (
+                            <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-rose-700" />
+                          ) : (
+                            <XCircleIcon className="h-4 w-4" />
+                          )}
+                          Decline application
+                        </button>
+                      </div>
+                    )}
+                    {!isLandlordUser && (
+                      <div className="inline-flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
+                        <span>Only the landlord can approve or decline.</span>
+                        <CheckCircleIcon className="h-4 w-4 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       )}
 
@@ -396,6 +513,8 @@ const RenterApplicationManagement = () => {
           setNewMessage={setNewMessage}
           sendingMessage={sendingMessage}
           isConnected={isConnected}
+                        onRespond={handleRespondApplication}
+          canRespond={(selectedApplication?.status || '').toLowerCase() === 'pending'}
         />
       )}
     </div>
@@ -407,13 +526,19 @@ const ApplicationDetailModal = ({
   application, 
   onClose, 
   onSendMessage, 
+  onRespond,
   newMessage, 
   setNewMessage, 
   sendingMessage,
-  isConnected 
+  isConnected,
+  canRespond = false
 }) => {
+  const applicationId = application.id ?? application._id;
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -421,6 +546,40 @@ const ApplicationDetailModal = ({
       minute: '2-digit'
     });
   };
+
+  const personalInfo = application.personalInfo || {};
+  const rentalInfo = application.rentalInfo || {};
+  const employment = application.employment || {};
+  const decision = application.decision || {};
+  const decisionStatus = (decision.status ?? decision.decision_status ?? 'pending').toLowerCase();
+  const decisionDate = decision.decisionDate ?? decision.decision_date;
+  const decisionReason = decision.decisionReason ?? decision.decision_reason;
+  const decisionNotes = decision.decisionNotes ?? decision.decision_notes;
+  const decidedByRaw = decision.decidedBy || decision.decided_by || {};
+  const decidedByName =
+    decidedByRaw.name ||
+    [decidedByRaw.firstName ?? decidedByRaw.first_name ?? '', decidedByRaw.lastName ?? decidedByRaw.last_name ?? '']
+      .join(' ')
+      .trim() ||
+    'N/A';
+
+  const landlordInfo = application.landlord || {};
+  const landlordName =
+    landlordInfo.name ||
+    [landlordInfo.firstName ?? landlordInfo.first_name ?? '', landlordInfo.lastName ?? landlordInfo.last_name ?? '']
+      .join(' ')
+      .trim() ||
+    'N/A';
+
+  const applicantInfo = application.applicant || {};
+  const applicantName =
+    applicantInfo.name ||
+    [applicantInfo.firstName ?? applicantInfo.first_name ?? '', applicantInfo.lastName ?? applicantInfo.last_name ?? '']
+      .join(' ')
+      .trim() ||
+    'N/A';
+
+  const normalizedStatus = (application.status || 'unknown').toLowerCase();
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -449,7 +608,7 @@ const ApplicationDetailModal = ({
                 application.status === 'rejected' ? 'bg-red-100 text-red-800' :
                 'bg-gray-100 text-gray-800'
               }`}>
-                {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
+                {application.status ? application.status.charAt(0).toUpperCase() + application.status.slice(1) : 'Unknown'}
               </div>
             </div>
           </div>
@@ -461,22 +620,22 @@ const ApplicationDetailModal = ({
               <div>
                 <label className="block text-sm font-medium text-gray-700">Name</label>
                 <p className="text-gray-900">
-                  {application.personalInfo?.firstName} {application.personalInfo?.lastName}
+                  {[personalInfo.firstName ?? personalInfo.first_name ?? '', personalInfo.lastName ?? personalInfo.last_name ?? ''].join(' ').trim() || 'N/A'}
                 </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Email</label>
-                <p className="text-gray-900">{application.personalInfo?.email}</p>
+                <p className="text-gray-900">{personalInfo.email ?? 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Phone</label>
-                <p className="text-gray-900">{application.personalInfo?.phone}</p>
+                <p className="text-gray-900">{personalInfo.phone ?? 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
                 <p className="text-gray-900">
-                  {application.personalInfo?.dateOfBirth 
-                    ? new Date(application.personalInfo.dateOfBirth).toLocaleDateString()
+                  {personalInfo.dateOfBirth ?? personalInfo.date_of_birth 
+                    ? new Date(personalInfo.dateOfBirth ?? personalInfo.date_of_birth).toLocaleDateString()
                     : 'N/A'
                   }
                 </p>
@@ -491,65 +650,71 @@ const ApplicationDetailModal = ({
               <div>
                 <label className="block text-sm font-medium text-gray-700">Desired Move-in Date</label>
                 <p className="text-gray-900">
-                  {application.rentalInfo?.desiredMoveInDate 
-                    ? new Date(application.rentalInfo.desiredMoveInDate).toLocaleDateString()
+                  {rentalInfo.desiredMoveInDate ?? rentalInfo.desired_move_in_date
+                    ? new Date(rentalInfo.desiredMoveInDate ?? rentalInfo.desired_move_in_date).toLocaleDateString()
                     : 'N/A'
                   }
                 </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Lease Duration</label>
-                <p className="text-gray-900">{application.rentalInfo?.leaseDuration} months</p>
+                <p className="text-gray-900">
+                  {rentalInfo.leaseDuration ?? rentalInfo.lease_duration ?? 'N/A'} {rentalInfo.leaseDuration || rentalInfo.lease_duration ? 'months' : ''}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Number of Occupants</label>
-                <p className="text-gray-900">{application.rentalInfo?.numberOfOccupants || 'N/A'}</p>
+                <p className="text-gray-900">{rentalInfo.numberOfOccupants ?? rentalInfo.number_of_occupants ?? 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Has Pets</label>
-                <p className="text-gray-900">{application.rentalInfo?.hasPets ? 'Yes' : 'No'}</p>
+                <p className="text-gray-900">
+                  {typeof (rentalInfo.hasPets ?? rentalInfo.has_pets) === 'boolean'
+                    ? (rentalInfo.hasPets ?? rentalInfo.has_pets ? 'Yes' : 'No')
+                    : 'N/A'}
+                </p>
               </div>
             </div>
-            {application.rentalInfo?.petDetails && (
+            {rentalInfo.petDetails ?? rentalInfo.pet_details ? (
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700">Pet Details</label>
-                <p className="text-gray-900">{application.rentalInfo.petDetails}</p>
+                <p className="text-gray-900">{rentalInfo.petDetails ?? rentalInfo.pet_details}</p>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Employment Information */}
-          {application.employment && (
+          {employment && Object.keys(employment).length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Employment Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Employer</label>
-                  <p className="text-gray-900">{application.employment.employer || 'N/A'}</p>
+                  <p className="text-gray-900">{employment.employer ?? 'N/A'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Job Title</label>
-                  <p className="text-gray-900">{application.employment.jobTitle || 'N/A'}</p>
+                  <p className="text-gray-900">{employment.jobTitle ?? employment.job_title ?? 'N/A'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Monthly Income</label>
                   <p className="text-gray-900">
-                    {application.employment.monthlyIncome 
-                      ? `$${application.employment.monthlyIncome.toLocaleString()}`
+                    {employment.monthlyIncome ?? employment.monthly_income
+                      ? `$${Number(employment.monthlyIncome ?? employment.monthly_income).toLocaleString()}`
                       : 'N/A'
                     }
                   </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Employment Duration</label>
-                  <p className="text-gray-900">{application.employment.employmentDuration || 'N/A'}</p>
+                  <p className="text-gray-900">{employment.employmentDuration ?? employment.employment_duration ?? 'N/A'}</p>
                 </div>
               </div>
             </div>
           )}
 
           {/* Decision Information */}
-          {application.decision && application.decision.status !== 'pending' && (
+          {decision && decisionStatus !== 'pending' && decisionStatus !== 'unknown' && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Decision Information</h3>
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -557,27 +722,27 @@ const ApplicationDetailModal = ({
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Decision Date</label>
                     <p className="text-gray-900">
-                      {application.decision.decisionDate 
-                        ? new Date(application.decision.decisionDate).toLocaleDateString()
+                      {decisionDate 
+                        ? new Date(decisionDate).toLocaleDateString()
                         : 'N/A'
                       }
                     </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Decided By</label>
-                    <p className="text-gray-900">{application.decision.decidedBy?.name || 'N/A'}</p>
+                    <p className="text-gray-900">{decidedByName}</p>
                   </div>
                 </div>
-                {application.decision.decisionReason && (
+                {decisionReason && (
                   <div className="mt-4">
                     <label className="block text-sm font-medium text-gray-700">Reason</label>
-                    <p className="text-gray-900">{application.decision.decisionReason}</p>
+                    <p className="text-gray-900">{decisionReason}</p>
                   </div>
                 )}
-                {application.decision.decisionNotes && (
+                {decisionNotes && (
                   <div className="mt-4">
                     <label className="block text-sm font-medium text-gray-700">Notes</label>
-                    <p className="text-gray-900">{application.decision.decisionNotes}</p>
+                    <p className="text-gray-900">{decisionNotes}</p>
                   </div>
                 )}
               </div>
@@ -589,28 +754,34 @@ const ApplicationDetailModal = ({
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Messages</h3>
               <div className="space-y-3 max-h-60 overflow-y-auto">
-                {application.messages.map((message, index) => (
+                {application.messages.map((message, index) => {
+                  const messageText = message.message ?? message.content ?? '';
+                  const messageTimestamp = message.timestamp ?? message.created_at;
+                  const fromLandlord = message.isFromLandlord ?? message.is_from_landlord ?? false;
+
+                  return (
                   <div key={index} className={`p-3 rounded-lg ${
-                    message.isFromLandlord 
+                    fromLandlord 
                       ? 'bg-blue-50 border-l-4 border-blue-400' 
                       : 'bg-green-50 border-l-4 border-green-400'
                   }`}>
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <p className="text-sm text-gray-900">{message.message}</p>
+                        <p className="text-sm text-gray-900">{messageText || 'No content provided.'}</p>
                         <p className="text-xs text-gray-500 mt-1">
-                          {message.isFromLandlord ? 'From landlord' : 'From you'} • {formatDate(message.timestamp)}
+                          {fromLandlord ? 'From landlord' : 'From you'} • {formatDate(messageTimestamp)}
                         </p>
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
 
           {/* Send Message */}
-          {application.status === 'pending' && (
+          {normalizedStatus === 'pending' && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Send Message to Landlord</h3>
               <div className="space-y-3">
@@ -636,8 +807,8 @@ const ApplicationDetailModal = ({
                     )}
                   </div>
                   <button
-                    onClick={() => onSendMessage(application._id)}
-                    disabled={!newMessage.trim() || sendingMessage || !isConnected}
+                    onClick={() => applicationId && onSendMessage(applicationId)}
+                    disabled={!newMessage.trim() || sendingMessage || !isConnected || !applicationId}
                     className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {sendingMessage ? (
@@ -654,6 +825,22 @@ const ApplicationDetailModal = ({
         </div>
 
         <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-end">
+          {canRespond && (
+            <div className="mr-auto flex items-center gap-3">
+              <button
+                onClick={() => onRespond && onRespond(applicationId, 'rejected')}
+                className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+              >
+                Decline
+              </button>
+              <button
+                onClick={() => onRespond && onRespond(applicationId, 'approved')}
+                className="px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors"
+              >
+                Approve
+              </button>
+            </div>
+          )}
           <button
             onClick={onClose}
             className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"

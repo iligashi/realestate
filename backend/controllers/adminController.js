@@ -1,14 +1,5 @@
-<<<<<<< Updated upstream
-const mongoose = require('mongoose');
-const User = require('../models/User');
-const Property = require('../models/Property');
-const Report = require('../models/Report');
-const Announcement = require('../models/Announcement');
-const PlatformSettings = require('../models/PlatformSettings');
-=======
-const { User, Property, Report, Announcement, PlatformSettings } = require('../models');
+const { User, Property, Report, Announcement, PlatformSettings, Payment } = require('../models');
 const { Op, sequelize } = require('sequelize');
->>>>>>> Stashed changes
 
 // ==================== USER MANAGEMENT ====================
 
@@ -23,21 +14,14 @@ const getAllUsers = async (req, res) => {
       status = ''
     } = req.query;
 
-    // Build filter object
+    // Build filter object for Sequelize
     const filter = {};
     
     if (search) {
-<<<<<<< Updated upstream
-      filter.$or = [
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
-=======
       filter[Op.or] = [
-        { first_name: { [Op.like]: `%${search}%` } },
-        { last_name: { [Op.like]: `%${search}%` } },
+        { firstName: { [Op.like]: `%${search}%` } },
+        { lastName: { [Op.like]: `%${search}%` } },
         { email: { [Op.like]: `%${search}%` } }
->>>>>>> Stashed changes
       ];
     }
     
@@ -51,13 +35,15 @@ const getAllUsers = async (req, res) => {
       sort: { createdAt: -1 }
     };
 
-    const users = await User.find(filter)
-      .select('-password')
-      .limit(options.limit)
-      .skip((options.page - 1) * options.limit)
-      .sort(options.sort);
+    const users = await User.findAll({
+      where: filter,
+      attributes: { exclude: ['password'] },
+      limit: options.limit,
+      offset: (options.page - 1) * options.limit,
+      order: [['created_at', 'DESC']]
+    });
 
-    const total = await User.countDocuments(filter);
+    const total = await User.count({ where: filter });
 
     res.json({
       users,
@@ -81,15 +67,12 @@ const updateUser = async (req, res) => {
     delete updateData.password;
     delete updateData.email; // Email should be updated through separate process
 
-    const user = await User.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).select('-password');
-
+    const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
+
+    await user.update(updateData);
 
     res.json({
       message: 'User updated successfully',
@@ -106,14 +89,16 @@ const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const user = await User.findByIdAndDelete(id);
+    const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
 
+    await user.destroy();
+
     // Also delete associated properties and reports
-    await Property.deleteMany({ owner: id });
-    await Report.deleteMany({ reportedBy: id });
+    await Property.destroy({ where: { ownerId: id } });
+    await Report.destroy({ where: { reporterId: id } });
 
     res.json({ message: 'User deleted successfully.' });
   } catch (error) {
@@ -135,14 +120,14 @@ const getAllListings = async (req, res) => {
       propertyType = ''
     } = req.query;
 
-    // Build filter object
+    // Build filter object for Sequelize
     const filter = {};
     
     if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { 'address.city': { $regex: search, $options: 'i' } }
+      filter[Op.or] = [
+        { title: { [Op.like]: `%${search}%` } },
+        { description: { [Op.like]: `%${search}%` } },
+        { '$address.city$': { [Op.like]: `%${search}%` } }
       ];
     }
     
@@ -155,13 +140,15 @@ const getAllListings = async (req, res) => {
       sort: { createdAt: -1 }
     };
 
-    const listings = await Property.find(filter)
-      .populate('owner', 'firstName lastName email')
-      .limit(options.limit)
-      .skip((options.page - 1) * options.limit)
-      .sort(options.sort);
+    const listings = await Property.findAll({
+      where: filter,
+      include: [{ model: User, as: 'owner', attributes: ['id', 'firstName', 'lastName', 'email'] }],
+      limit: options.limit,
+      offset: (options.page - 1) * options.limit,
+      order: [['created_at', 'DESC']]
+    });
 
-    const total = await Property.countDocuments(filter);
+    const total = await Property.count({ where: filter });
 
     // Parse JSON fields for each listing
     const parsedListings = listings.map(listing => listing.toJSON());
@@ -187,7 +174,7 @@ const updateListingStatus = async (req, res) => {
     console.log('Update listing status request:', { id, status, adminNotes });
 
     // Validate ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!id || isNaN(parseInt(id))) {
       return res.status(400).json({ 
         error: 'Invalid property ID format. ID must be a valid MongoDB ObjectId.'
       });
@@ -201,24 +188,25 @@ const updateListingStatus = async (req, res) => {
       });
     }
 
-    const listing = await Property.findByIdAndUpdate(
-      id,
-      { 
-        status,
-        adminNotes,
-        reviewedBy: req.user._id,
-        reviewedAt: new Date()
-      },
-      { new: true, runValidators: true }
-    ).populate('owner', 'firstName lastName email');
-
+    const listing = await Property.findByPk(id);
     if (!listing) {
       return res.status(404).json({ error: 'Listing not found.' });
     }
 
+    await listing.update({
+      status,
+      admin_notes: adminNotes,
+      reviewed_by: req.user.id,
+      reviewed_at: new Date()
+    });
+
+    const listingWithOwner = await Property.findByPk(id, {
+      include: [{ model: User, as: 'owner', attributes: ['id', 'firstName', 'lastName', 'email'] }]
+    });
+
     res.json({
       message: 'Listing status updated successfully',
-      listing
+      listing: listingWithOwner
     });
   } catch (error) {
     console.error('Update listing status error:', error);
@@ -239,21 +227,13 @@ const deleteListing = async (req, res) => {
   try {
     const { id } = req.params;
 
-<<<<<<< Updated upstream
-    const listing = await Property.findByIdAndDelete(id);
-=======
     console.log('Delete listing request for ID:', id);
 
     const listing = await Property.findByPk(id);
->>>>>>> Stashed changes
     if (!listing) {
       return res.status(404).json({ error: 'Listing not found.' });
     }
 
-<<<<<<< Updated upstream
-    // Also delete associated reports
-    await Report.deleteMany({ reportedItem: id, reportedItemModel: 'Property' });
-=======
     console.log('Found listing:', listing.title);
 
     // Delete associated records first to avoid foreign key constraints
@@ -307,7 +287,6 @@ const deleteListing = async (req, res) => {
     // Finally delete the listing
     await listing.destroy();
     console.log('Listing deleted successfully');
->>>>>>> Stashed changes
 
     res.json({ message: 'Listing deleted successfully.' });
   } catch (error) {
@@ -341,7 +320,7 @@ const getAllReports = async (req, res) => {
     const filter = {};
     
     if (search) {
-      filter.reason = { $regex: search, $options: 'i' };
+      filter.reason = { [Op.like]: `%${search}%` };
     }
     
     if (status) filter.status = status;
@@ -352,26 +331,17 @@ const getAllReports = async (req, res) => {
       limit: parseInt(limit)
     };
 
-<<<<<<< Updated upstream
-    const reports = await Report.find(filter)
-      .populate('reportedBy', 'firstName lastName email')
-      .populate('resolvedBy', 'firstName lastName')
-      .limit(options.limit)
-      .skip((options.page - 1) * options.limit)
-      .sort(options.sort);
-=======
     const reports = await Report.findAll({
       where: filter,
       include: [
-        { model: User, as: 'reporter', attributes: ['first_name', 'last_name', 'email'] }
+        { model: User, as: 'reporter', attributes: ['id', 'firstName', 'lastName', 'email'] }
       ],
       limit: options.limit,
       offset: (options.page - 1) * options.limit,
       order: [['createdAt', 'DESC']]
     });
->>>>>>> Stashed changes
 
-    const total = await Report.countDocuments(filter);
+    const total = await Report.count({ where: filter });
 
     res.json({
       success: true,
@@ -381,7 +351,8 @@ const getAllReports = async (req, res) => {
       currentPage: options.page
     });
   } catch (error) {
-    console.error('Get all reports error:', error);
+    console.error('Get all reports error:', error.message);
+    console.error(error.stack);
     res.status(500).json({ error: 'Failed to fetch reports.' });
   }
 };
@@ -392,25 +363,11 @@ const resolveReport = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const report = await Report.findByIdAndUpdate(
-      id,
-      {
-        status,
-        action,
-        adminNotes,
-        resolvedBy: req.user._id,
-        resolvedAt: new Date()
-      },
-      { new: true, runValidators: true }
-    ).populate('reportedBy', 'firstName lastName email')
-     .populate('resolvedBy', 'firstName lastName');
-
+    const report = await Report.findByPk(id);
     if (!report) {
       return res.status(404).json({ error: 'Report not found.' });
     }
 
-<<<<<<< Updated upstream
-=======
     // Only update the status field since that's what exists in the database
     await report.update({
       status
@@ -419,15 +376,13 @@ const resolveReport = async (req, res) => {
     // Fetch the updated report with reporter information
     const reportWithUsers = await Report.findByPk(id, {
       include: [
-        { model: User, as: 'reporter', attributes: ['first_name', 'last_name', 'email'] }
+        { model: User, as: 'reporter', attributes: ['id', 'firstName', 'lastName', 'email'] }
       ]
     });
-
->>>>>>> Stashed changes
     res.json({
       success: true,
       message: 'Report resolved successfully',
-      report
+      report: reportWithUsers
     });
   } catch (error) {
     console.error('Resolve report error:', error);
@@ -440,62 +395,64 @@ const resolveReport = async (req, res) => {
 // Get dashboard analytics
 const getDashboardAnalytics = async (req, res) => {
   try {
+    const generatedAt = new Date();
+
     // User statistics
-    const totalUsers = await User.countDocuments();
-    const activeUsers = await User.countDocuments({ isBlocked: false });
-    const blockedUsers = await User.countDocuments({ isBlocked: true });
+    const totalUsers = await User.count();
+    const activeUsers = await User.count({ where: { isBlocked: false } });
+    const blockedUsers = await User.count({ where: { isBlocked: true } });
 
     // Listing statistics
-    const totalListings = await Property.countDocuments();
-    const pendingListings = await Property.countDocuments({ status: 'pending' });
-    const approvedListings = await Property.countDocuments({ status: 'approved' });
-    const rejectedListings = await Property.countDocuments({ status: 'rejected' });
+    const totalListings = await Property.count();
+    const pendingListings = await Property.count({ where: { status: 'pending' } });
+    const approvedListings = await Property.count({ where: { status: 'approved' } });
+    const rejectedListings = await Property.count({ where: { status: 'rejected' } });
 
     // Report statistics
-    const totalReports = await Report.countDocuments();
-    const pendingReports = await Report.countDocuments({ status: 'pending' });
-    const resolvedReports = await Report.countDocuments({ status: 'resolved' });
+    const totalReports = await Report.count();
+    const pendingReports = await Report.count({ where: { status: 'pending' } });
+    const resolvedReports = await Report.count({ where: { status: 'resolved' } });
 
-    // Role distribution
-    const roleDistribution = await User.aggregate([
-      { $group: { _id: '$userType', count: { $sum: 1 } } },
-      { $sort: { count: -1 } }
-    ]);
+    // Role distribution - using raw query for aggregation
+    const roleDistribution = await User.findAll({
+      attributes: [
+        'userType',
+        [User.sequelize.fn('COUNT', User.sequelize.col('id')), 'count']
+      ],
+      group: ['userType'],
+      order: [[User.sequelize.fn('COUNT', User.sequelize.col('id')), 'DESC']],
+      raw: true
+    });
 
     // Recent activity
-<<<<<<< Updated upstream
-    const recentUsers = await User.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .select('firstName lastName userType createdAt');
-
-    const recentListings = await Property.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .select('title status propertyType createdAt')
-      .populate('owner', 'firstName lastName');
-=======
     const recentUsers = await User.findAll({
-      attributes: ['first_name', 'last_name', 'userType', 'createdAt'],
+      attributes: ['id', 'firstName', 'lastName', 'userType', 'createdAt'],
       order: [['createdAt', 'DESC']],
       limit: 5
     });
 
     const recentListings = await Property.findAll({
-      attributes: ['title', 'status', 'propertyType', 'createdAt'],
-      include: [{ model: User, as: 'owner', attributes: ['first_name', 'last_name'] }],
+      attributes: ['id', 'title', 'status', 'propertyType', 'createdAt'],
+      include: [{ model: User, as: 'owner', attributes: ['firstName', 'lastName'] }],
       order: [['createdAt', 'DESC']],
       limit: 5
     });
->>>>>>> Stashed changes
+
+    const recentReports = await Report.findAll({
+      attributes: ['id', 'status', 'type', 'createdAt'],
+      order: [['createdAt', 'DESC']],
+      limit: 5
+    });
 
     res.json({
+      generatedAt: generatedAt.toISOString(),
       users: { total: totalUsers, active: activeUsers, blocked: blockedUsers },
       listings: { total: totalListings, pending: pendingListings, approved: approvedListings, rejected: rejectedListings },
       reports: { total: totalReports, pending: pendingReports, resolved: resolvedReports },
       roleDistribution,
       recentUsers,
-      recentListings
+      recentListings,
+      recentReports
     });
   } catch (error) {
     console.error('Get dashboard analytics error:', error);
@@ -546,9 +503,11 @@ const updatePlatformSettings = async (req, res) => {
 // Get featured listings
 const getFeaturedListings = async (req, res) => {
   try {
-    const featuredListings = await Property.find({ isFeatured: true })
-      .populate('owner', 'firstName lastName email')
-      .sort({ featuredAt: -1 });
+    const featuredListings = await Property.findAll({
+      where: { is_featured: true },
+      include: [{ model: User, as: 'owner', attributes: ['id', 'firstName', 'lastName', 'email'] }],
+      order: [['featured_at', 'DESC']]
+    });
 
     res.json({
       listings: featuredListings,
@@ -566,24 +525,25 @@ const updateFeaturedListing = async (req, res) => {
     const { id } = req.params;
     const { isFeatured, featuredUntil, featuredPrice } = req.body;
 
-    const listing = await Property.findByIdAndUpdate(
-      id,
-      {
-        isFeatured,
-        featuredAt: isFeatured ? new Date() : null,
-        featuredUntil,
-        featuredPrice
-      },
-      { new: true, runValidators: true }
-    ).populate('owner', 'firstName lastName email');
-
+    const listing = await Property.findByPk(id);
     if (!listing) {
       return res.status(404).json({ error: 'Listing not found.' });
     }
 
+    await listing.update({
+      is_featured: isFeatured,
+      featured_at: isFeatured ? new Date() : null,
+      featured_until: featuredUntil,
+      featured_price: featuredPrice
+    });
+
+    const listingWithOwner = await Property.findByPk(id, {
+      include: [{ model: User, as: 'owner', attributes: ['id', 'firstName', 'lastName', 'email'] }]
+    });
+
     res.json({
       message: 'Featured listing updated successfully',
-      listing
+      listing: listingWithOwner
     });
   } catch (error) {
     console.error('Update featured listing error:', error);
@@ -604,18 +564,18 @@ const getAllAnnouncements = async (req, res) => {
       isActive = ''
     } = req.query;
 
-    // Build filter object
+    // Build filter object for Sequelize
     const filter = {};
     
     if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { content: { $regex: search, $options: 'i' } }
+      filter[Op.or] = [
+        { title: { [Op.like]: `%${search}%` } },
+        { content: { [Op.like]: `%${search}%` } }
       ];
     }
     
     if (type) filter.type = type;
-    if (isActive !== '') filter.isActive = isActive === 'true';
+    if (isActive !== '') filter.is_active = isActive === 'true';
 
     const options = {
       page: parseInt(page),
@@ -623,23 +583,15 @@ const getAllAnnouncements = async (req, res) => {
       sort: { priority: -1, createdAt: -1 }
     };
 
-<<<<<<< Updated upstream
-    const announcements = await Announcement.find(filter)
-      .populate('createdBy', 'firstName lastName')
-      .limit(options.limit)
-      .skip((options.page - 1) * options.limit)
-      .sort(options.sort);
-=======
     const announcements = await Announcement.findAll({
       where: filter,
-      include: [{ model: User, as: 'creator', attributes: ['first_name', 'last_name'] }],
+      include: [{ model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] }],
       limit: options.limit,
       offset: (options.page - 1) * options.limit,
       order: [['priority', 'DESC'], ['createdAt', 'DESC']]
     });
->>>>>>> Stashed changes
 
-    const total = await Announcement.countDocuments(filter);
+    const total = await Announcement.count({ where: filter });
 
     res.json({
       announcements,
@@ -658,21 +610,17 @@ const createAnnouncement = async (req, res) => {
   try {
     const announcementData = {
       ...req.body,
-      createdBy: req.user._id
+      createdBy: req.user.id
     };
 
     const announcement = await Announcement.create(announcementData);
-<<<<<<< Updated upstream
-    await announcement.populate('createdBy', 'firstName lastName');
-=======
     const announcementWithUser = await Announcement.findByPk(announcement.id, {
-      include: [{ model: User, as: 'creator', attributes: ['first_name', 'last_name'] }]
+      include: [{ model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] }]
     });
->>>>>>> Stashed changes
 
     res.status(201).json({
       message: 'Announcement created successfully',
-      announcement
+      announcement: announcementWithUser
     });
   } catch (error) {
     console.error('Create announcement error:', error);
@@ -686,28 +634,19 @@ const updateAnnouncement = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    const announcement = await Announcement.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('createdBy', 'firstName lastName');
-
+    const announcement = await Announcement.findByPk(id);
     if (!announcement) {
       return res.status(404).json({ error: 'Announcement not found.' });
     }
 
-<<<<<<< Updated upstream
-=======
     await announcement.update(updateData);
 
     const announcementWithUser = await Announcement.findByPk(id, {
-      include: [{ model: User, as: 'creator', attributes: ['first_name', 'last_name'] }]
+      include: [{ model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] }]
     });
-
->>>>>>> Stashed changes
     res.json({
       message: 'Announcement updated successfully',
-      announcement
+      announcement: announcementWithUser
     });
   } catch (error) {
     console.error('Update announcement error:', error);
@@ -720,10 +659,12 @@ const deleteAnnouncement = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const announcement = await Announcement.findByIdAndDelete(id);
+    const announcement = await Announcement.findByPk(id);
     if (!announcement) {
       return res.status(404).json({ error: 'Announcement not found.' });
     }
+
+    await announcement.destroy();
 
     res.json({ message: 'Announcement deleted successfully.' });
   } catch (error) {
@@ -748,72 +689,84 @@ const getEnhancedAnalytics = async (req, res) => {
     else if (period === '1y') startDate.setFullYear(startDate.getFullYear() - 1);
 
     // User growth data
-    const userGrowth = await User.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: startDate, $lte: endDate }
+    const userGrowth = await User.findAll({
+      where: {
+        createdAt: {
+          [Op.between]: [startDate, endDate]
         }
       },
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
-          },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
+      attributes: [
+        [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
+      order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']],
+      raw: true
+    });
 
     // Listing performance data
-    const listingPerformance = await Property.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: startDate, $lte: endDate }
+    const listingPerformance = await Property.findAll({
+      where: {
+        createdAt: {
+          [Op.between]: [startDate, endDate]
         }
       },
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
-          },
-          count: { $sum: 1 },
-          totalViews: { $sum: '$views' || 0 }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
+      attributes: [
+        [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+        [sequelize.fn('SUM', sequelize.col('views')), 'totalViews']
+      ],
+      group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
+      order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']],
+      raw: true
+    });
 
     // Geographic data
-    const geographicData = await Property.aggregate([
-      {
-        $match: {
-          'address.city': { $exists: true, $ne: '' }
+    const geographicData = await Property.findAll({
+      where: {
+        '$address.city$': {
+          [Op.ne]: null,
+          [Op.ne]: ''
         }
       },
-      {
-        $group: {
-          _id: '$address.city',
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { count: -1 } },
-      { $limit: 10 }
-    ]);
+      attributes: [
+        [sequelize.literal("JSON_UNQUOTE(JSON_EXTRACT(address, '$.city'))"), 'city'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      group: [sequelize.literal("JSON_UNQUOTE(JSON_EXTRACT(address, '$.city'))")],
+      order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
+      limit: 10,
+      raw: true
+    });
 
     // Trends
     const trends = {
-      topPropertyTypes: await Property.aggregate([
-        { $group: { _id: '$propertyType', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 5 }
-      ]),
-      topLocations: await Property.aggregate([
-        { $match: { 'address.city': { $exists: true, $ne: '' } } },
-        { $group: { _id: '$address.city', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 5 }
-      ])
+      topPropertyTypes: await Property.findAll({
+        attributes: [
+          'propertyType',
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+        ],
+        group: ['propertyType'],
+        order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
+        limit: 5,
+        raw: true
+      }),
+      topLocations: await Property.findAll({
+        where: {
+          '$address.city$': {
+            [Op.ne]: null,
+            [Op.ne]: ''
+          }
+        },
+        attributes: [
+          [sequelize.literal("JSON_UNQUOTE(JSON_EXTRACT(address, '$.city'))"), 'city'],
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+        ],
+        group: [sequelize.literal("JSON_UNQUOTE(JSON_EXTRACT(address, '$.city'))")],
+        order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
+        limit: 5,
+        raw: true
+      })
     };
 
     res.json({
@@ -834,35 +787,129 @@ const getEnhancedAnalytics = async (req, res) => {
 const getRevenueAnalytics = async (req, res) => {
   try {
     const { period = '30d' } = req.query;
-    
-    // Calculate date range
+    const periodMap = {
+      '7d': 7,
+      '30d': 30,
+      '90d': 90,
+      '1y': 365
+    };
+
+    const daysInPeriod = periodMap[period] || periodMap['30d'];
+
     const endDate = new Date();
-    const startDate = new Date();
-    if (period === '7d') startDate.setDate(startDate.getDate() - 7);
-    else if (period === '30d') startDate.setDate(startDate.getDate() - 30);
-    else if (period === '90d') startDate.setDate(startDate.getDate() - 90);
-    else if (period === '1y') startDate.setFullYear(startDate.getFullYear() - 1);
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - daysInPeriod);
 
-    // Mock revenue data (replace with actual payment processing data)
-    const totalRevenue = 15420.50;
-    const commissionEarnings = 771.03;
-    const featuredListingRevenue = 1249.99;
+    const previousPeriodEnd = new Date(startDate);
+    previousPeriodEnd.setMilliseconds(previousPeriodEnd.getMilliseconds() - 1);
+    const previousPeriodStart = new Date(startDate);
+    previousPeriodStart.setDate(previousPeriodStart.getDate() - daysInPeriod);
 
-    // Monthly revenue breakdown
-    const monthlyRevenue = [
-      { month: 'Jan', revenue: 1250.00 },
-      { month: 'Feb', revenue: 1380.50 },
-      { month: 'Mar', revenue: 1420.75 },
-      { month: 'Apr', revenue: 1580.25 },
-      { month: 'May', revenue: 1620.00 },
-      { month: 'Jun', revenue: 1750.30 }
-    ];
+    const payments = await Payment.findAll({
+      where: {
+        status: 'completed',
+        createdAt: {
+          [Op.between]: [startDate, endDate]
+        }
+      },
+      attributes: ['amount', 'paymentType', 'paymentMethod', 'currency', 'fees', 'createdAt'],
+      order: [['createdAt', 'ASC']]
+    });
+
+    const previousPayments = await Payment.findAll({
+      where: {
+        status: 'completed',
+        createdAt: {
+          [Op.between]: [previousPeriodStart, previousPeriodEnd]
+        }
+      },
+      attributes: ['amount']
+    });
+
+    const paymentsPlain = payments.map(payment => payment.get({ plain: true }));
+
+    let totalRevenue = 0;
+    let commissionEarnings = 0;
+    let featuredListingRevenue = 0;
+    const paymentMethodBreakdown = {};
+    const currencyBreakdown = {};
+    const monthlyRevenueMap = new Map();
+
+    paymentsPlain.forEach((payment) => {
+      const amount = Number(payment.amount || 0);
+      totalRevenue += amount;
+
+      const platformFee = payment.fees?.platformFee ? Number(payment.fees.platformFee) : 0;
+      commissionEarnings += platformFee;
+
+      if (['service_fee', 'subscription', 'booking_fee'].includes(payment.paymentType)) {
+        featuredListingRevenue += amount;
+      }
+
+      const paymentMethod = payment.paymentMethod || 'unknown';
+      paymentMethodBreakdown[paymentMethod] = (paymentMethodBreakdown[paymentMethod] || 0) + 1;
+
+      const currency = payment.currency || 'USD';
+      currencyBreakdown[currency] = (currencyBreakdown[currency] || 0) + amount;
+
+      const createdAt = new Date(payment.createdAt);
+      const monthKey = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthlyRevenueMap.has(monthKey)) {
+        monthlyRevenueMap.set(monthKey, {
+          key: monthKey,
+          month: createdAt.toLocaleString('default', { month: 'short', year: 'numeric' }),
+          revenue: 0
+        });
+      }
+      const entry = monthlyRevenueMap.get(monthKey);
+      entry.revenue += amount;
+    });
+
+    const monthlyRevenue = Array.from(monthlyRevenueMap.values())
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .map(({ month, revenue }) => ({
+        month,
+        revenue: Number(revenue.toFixed(2))
+      }));
+
+    const transactionsCount = paymentsPlain.length;
+    const averageTransactionValue = transactionsCount ? totalRevenue / transactionsCount : 0;
+
+    const currencyBreakdownFormatted = Object.fromEntries(
+      Object.entries(currencyBreakdown).map(([currency, sum]) => [currency, Number(sum.toFixed(2))])
+    );
+
+    const topPaymentMethodEntry = Object.entries(paymentMethodBreakdown)
+      .sort((a, b) => b[1] - a[1])[0];
+    const topPaymentMethod = topPaymentMethodEntry ? topPaymentMethodEntry[0] : null;
+
+    const previousTotalRevenue = previousPayments.reduce(
+      (sum, payment) => sum + Number(payment.amount || 0),
+      0
+    );
+
+    const revenueChange = previousTotalRevenue
+      ? Number((((totalRevenue - previousTotalRevenue) / previousTotalRevenue) * 100).toFixed(2))
+      : null;
 
     res.json({
-      totalRevenue,
-      commissionEarnings,
-      featuredListingRevenue,
-      monthlyRevenue
+      period,
+      periodRange: {
+        start: startDate.toISOString(),
+        end: endDate.toISOString()
+      },
+      totalRevenue: Number(totalRevenue.toFixed(2)),
+      commissionEarnings: Number(commissionEarnings.toFixed(2)),
+      featuredListingRevenue: Number(featuredListingRevenue.toFixed(2)),
+      monthlyRevenue,
+      transactionsCount,
+      averageTransactionValue: Number(averageTransactionValue.toFixed(2)),
+      paymentMethodBreakdown,
+      currencyBreakdown: currencyBreakdownFormatted,
+      topPaymentMethod,
+      primaryCurrency: paymentsPlain[0]?.currency || 'USD',
+      revenueChange,
+      previousTotalRevenue: Number(previousTotalRevenue.toFixed(2))
     });
   } catch (error) {
     console.error('Get revenue analytics error:', error);

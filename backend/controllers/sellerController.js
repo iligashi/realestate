@@ -1,25 +1,10 @@
-<<<<<<< Updated upstream
-const Property = require('../models/Property');
-const Inquiry = require('../models/Inquiry');
-const OpenHouse = require('../models/OpenHouse');
-const ListingAnalytics = require('../models/ListingAnalytics');
-const User = require('../models/User');
-=======
+
 const { Property, Inquiry, OpenHouse, ListingAnalytics, User, sequelize } = require('../models');
 const { Op } = require('sequelize');
->>>>>>> Stashed changes
 
 // ===== DASHBOARD OVERVIEW =====
 const getSellerDashboard = async (req, res) => {
   try {
-<<<<<<< Updated upstream
-    const sellerId = req.user._id;
-    
-    // Get seller's properties with basic stats
-    const properties = await Property.find({ owner: sellerId })
-      .select('title address price status photos analytics createdAt')
-      .sort({ createdAt: -1 });
-=======
     const sellerId = req.user.id;
     console.log('Seller dashboard request for user ID:', sellerId);
     
@@ -31,48 +16,19 @@ const getSellerDashboard = async (req, res) => {
       order: [['createdAt', 'DESC']]
     });
     console.log('Found properties:', properties.length);
->>>>>>> Stashed changes
     
     // Get inquiry stats
-    const inquiryStats = await Inquiry.aggregate([
-      { $match: { seller: sellerId } },
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 }
-        }
-      }
-    ]);
-    
-    // Get open house stats
-<<<<<<< Updated upstream
-    const upcomingOpenHouses = await OpenHouse.countDocuments({
-      seller: sellerId,
-      startDate: { $gte: new Date() },
-      status: { $in: ['scheduled', 'active'] }
+    const inquiryStats = await Inquiry.findAll({
+      where: { sellerId: sellerId },
+      attributes: [
+        'status',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      group: ['status'],
+      raw: true
     });
     
-    // Get analytics summary
-    const analyticsSummary = await ListingAnalytics.aggregate([
-      { $match: { seller: sellerId } },
-      {
-        $group: {
-          _id: null,
-          totalViews: { $sum: '$views.total' },
-          totalInquiries: { $sum: '$inquiries.total' },
-          totalSaves: { $sum: '$saves.total' },
-          avgResponseTime: { $avg: '$responseTime.average' }
-        }
-      }
-    ]);
-    
-    // Get recent activity
-    const recentInquiries = await Inquiry.find({ seller: sellerId })
-      .populate('property', 'title address price')
-      .populate('buyer', 'firstName lastName email')
-      .sort({ createdAt: -1 })
-      .limit(5);
-=======
+    // Get open house stats
     const upcomingOpenHouses = await OpenHouse.count({
       where: {
         sellerId: sellerId,
@@ -128,7 +84,6 @@ const getSellerDashboard = async (req, res) => {
         responseTimeCount++;
       }
     });
->>>>>>> Stashed changes
     
     const avgResponseTime = responseTimeCount > 0 ? totalResponseTime / responseTimeCount : 0;
     
@@ -154,7 +109,7 @@ const getSellerDashboard = async (req, res) => {
       }
       
       return {
-        ...property.toObject(),
+        ...property.toJSON(),
         workflowStage,
         daysOnMarket: Math.floor((new Date() - property.createdAt) / (1000 * 60 * 60 * 24))
       };
@@ -172,13 +127,8 @@ const getSellerDashboard = async (req, res) => {
           avgResponseTime: analyticsSummary[0]?.avgResponseTime || 0,
           upcomingOpenHouses
         },
-<<<<<<< Updated upstream
-        inquiryStats: inquiryStats.reduce((acc, stat) => {
-          acc[stat._id] = stat.count;
-=======
         inquiryStats: inquiryStats.length > 0 ? inquiryStats.reduce((acc, stat) => {
           acc[stat.status] = parseInt(stat.count);
->>>>>>> Stashed changes
           return acc;
         }, {}) : {},
         recentActivity: recentInquiries
@@ -197,7 +147,7 @@ const createPropertyListing = async (req, res) => {
   try {
     const propertyData = {
       ...req.body,
-      owner: req.user._id,
+      ownerId: req.user.id,
       status: 'pending' // Start in pending status for review
     };
     
@@ -212,15 +162,13 @@ const createPropertyListing = async (req, res) => {
       propertyData.photos = photos;
     }
     
-    const property = new Property(propertyData);
-    await property.save();
+    const property = await Property.create(propertyData);
     
     // Create analytics record
-    const analytics = new ListingAnalytics({
-      property: property._id,
-      seller: req.user._id
+    const analytics = await ListingAnalytics.create({
+      propertyId: property.id,
+      sellerId: req.user.id
     });
-    await analytics.save();
     
     res.status(201).json({
       message: 'Property listing created successfully',
@@ -236,8 +184,10 @@ const createPropertyListing = async (req, res) => {
 const updatePropertyListing = async (req, res) => {
   try {
     const property = await Property.findOne({
-      _id: req.params.id,
-      owner: req.user._id
+      where: {
+        id: req.params.id,
+        ownerId: req.user.id
+      }
     });
     
     if (!property) {
@@ -257,11 +207,8 @@ const updatePropertyListing = async (req, res) => {
       updateData.photos = photos;
     }
     
-    const updatedProperty = await Property.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    await property.update(updateData);
+    const updatedProperty = await Property.findByPk(req.params.id);
     
     res.json({
       message: 'Property listing updated successfully',
@@ -277,15 +224,10 @@ const updatePropertyListing = async (req, res) => {
 const updatePropertyPhotos = async (req, res) => {
   try {
     const property = await Property.findOne({
-<<<<<<< Updated upstream
-      _id: req.params.id,
-      owner: req.user._id
-=======
       where: {
         id: req.params.id,
         ownerId: req.user.id
       }
->>>>>>> Stashed changes
     });
     
     if (!property) {
@@ -323,19 +265,23 @@ const getInquiries = async (req, res) => {
   try {
     const { status, priority, type, page = 1, limit = 10 } = req.query;
     
-    const filter = { seller: req.user._id };
+    const filter = { sellerId: req.user.id };
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
     if (type) filter.type = type;
     
-    const inquiries = await Inquiry.find(filter)
-      .populate('property', 'title address price photos')
-      .populate('buyer', 'firstName lastName email phone avatar')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+    const inquiries = await Inquiry.findAll({
+      where: filter,
+      include: [
+        { model: Property, as: 'property', attributes: ['title', 'address', 'price', 'photos'] },
+        { model: User, as: 'buyer', attributes: ['firstName', 'lastName', 'email', 'phone', 'avatar'] }
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: (parseInt(page) - 1) * parseInt(limit)
+    });
     
-    const total = await Inquiry.countDocuments(filter);
+    const total = await Inquiry.count({ where: filter });
     
     res.json({
       inquiries,
@@ -364,13 +310,6 @@ const getInquiries = async (req, res) => {
 const getInquiryDetails = async (req, res) => {
   try {
     const inquiry = await Inquiry.findOne({
-<<<<<<< Updated upstream
-      _id: req.params.id,
-      seller: req.user._id
-    })
-    .populate('property', 'title address price photos description')
-    .populate('buyer', 'firstName lastName email phone avatar');
-=======
       where: {
         id: req.params.id,
         sellerId: req.user.id
@@ -380,7 +319,6 @@ const getInquiryDetails = async (req, res) => {
         { model: User, as: 'buyer', attributes: ['firstName', 'lastName', 'email', 'phone', 'avatar'] }
       ]
     });
->>>>>>> Stashed changes
     
     if (!inquiry) {
       return res.status(404).json({ error: 'Inquiry not found or not authorized.' });
@@ -398,15 +336,10 @@ const respondToInquiry = async (req, res) => {
     const { message, scheduleViewing, offerResponse } = req.body;
     
     const inquiry = await Inquiry.findOne({
-<<<<<<< Updated upstream
-      _id: req.params.id,
-      seller: req.user._id
-=======
       where: {
         id: req.params.id,
         sellerId: req.user.id
       }
->>>>>>> Stashed changes
     });
     
     if (!inquiry) {
@@ -443,19 +376,16 @@ const respondToInquiry = async (req, res) => {
     
     // Update analytics
     const analytics = await ListingAnalytics.findOne({
-<<<<<<< Updated upstream
-      property: inquiry.property,
-      seller: req.user._id
-=======
       where: {
         propertyId: inquiry.propertyId,
         sellerId: req.user.id
       }
->>>>>>> Stashed changes
     });
     
     if (analytics) {
-      await analytics.recordInquiry(inquiry.type);
+      await analytics.update({
+        inquiries: analytics.inquiries + 1
+      });
     }
     
     res.json({
@@ -473,21 +403,20 @@ const getListingAnalytics = async (req, res) => {
   try {
     const { propertyId, period = '30d' } = req.query;
     
-<<<<<<< Updated upstream
-    let filter = { seller: req.user._id };
-    if (propertyId) filter.property = propertyId;
-=======
     let filter = { sellerId: req.user.id };
     if (propertyId) filter.propertyId = propertyId;
->>>>>>> Stashed changes
     
-    const analytics = await ListingAnalytics.find(filter)
-      .populate('property', 'title address price status')
-      .sort({ 'views.lastUpdated': -1 });
+    const analytics = await ListingAnalytics.findAll({
+      where: filter,
+      include: [
+        { model: Property, as: 'property', attributes: ['title', 'address', 'price', 'status'] }
+      ],
+      order: [['views_last_updated', 'DESC']]
+    });
     
     // Calculate period-based data
     const periodData = analytics.map(analytic => {
-      const data = analytic.toObject();
+      const data = analytic.toJSON();
       
       // Filter data based on period
       if (period === '7d') {
@@ -518,12 +447,6 @@ const getListingAnalytics = async (req, res) => {
 const getAnalyticsDetails = async (req, res) => {
   try {
     const analytics = await ListingAnalytics.findOne({
-<<<<<<< Updated upstream
-      _id: req.params.id,
-      seller: req.user._id
-    })
-    .populate('property', 'title address price photos');
-=======
       where: {
         id: req.params.id,
         sellerId: req.user.id
@@ -532,7 +455,6 @@ const getAnalyticsDetails = async (req, res) => {
         { model: Property, as: 'property', attributes: ['title', 'address', 'price', 'photos'] }
       ]
     });
->>>>>>> Stashed changes
     
     if (!analytics) {
       return res.status(404).json({ error: 'Analytics not found or not authorized.' });
@@ -569,15 +491,10 @@ const updatePropertyPrice = async (req, res) => {
     const { newPrice, reason } = req.body;
     
     const property = await Property.findOne({
-<<<<<<< Updated upstream
-      _id: req.params.id,
-      owner: req.user._id
-=======
       where: {
         id: req.params.id,
         ownerId: req.user.id
       }
->>>>>>> Stashed changes
     });
     
     if (!property) {
@@ -599,24 +516,17 @@ const updatePropertyPrice = async (req, res) => {
     
     // Update analytics
     const analytics = await ListingAnalytics.findOne({
-<<<<<<< Updated upstream
-      property: property._id,
-      seller: req.user._id
-=======
       where: {
         propertyId: property.id,
         sellerId: req.user.id
       }
->>>>>>> Stashed changes
     });
     
     if (analytics) {
-      await analytics.recordPriceChange(
-        oldPrice,
-        newPrice,
-        analytics.views.total,
-        analytics.inquiries.total
-      );
+      await analytics.update({
+        price_changes: analytics.price_changes + 1,
+        last_price_change: new Date()
+      });
     }
     
     res.json({
@@ -638,9 +548,12 @@ const updatePropertyPrice = async (req, res) => {
 const getPriceHistory = async (req, res) => {
   try {
     const property = await Property.findOne({
-      _id: req.params.id,
-      owner: req.user._id
-    }).select('priceHistory price');
+      where: {
+        id: req.params.id,
+        ownerId: req.user.id
+      },
+      attributes: ['priceHistory', 'price']
+    });
     
     if (!property) {
       return res.status(404).json({ error: 'Property not found or not authorized.' });
@@ -682,10 +595,24 @@ const getOpenHouses = async (req, res) => {
     const { status = 'upcoming' } = req.query;
     
     let openHouses;
+    const { Op } = require('sequelize');
     if (status === 'upcoming') {
-      openHouses = await OpenHouse.getUpcomingBySeller(req.user._id);
+      openHouses = await OpenHouse.findAll({
+        where: {
+          sellerId: req.user.id,
+          startDate: { [Op.gte]: new Date() },
+          status: { [Op.in]: ['scheduled', 'active'] }
+        },
+        order: [['startDate', 'ASC']]
+      });
     } else {
-      openHouses = await OpenHouse.getPastBySeller(req.user._id);
+      openHouses = await OpenHouse.findAll({
+        where: {
+          sellerId: req.user.id,
+          startDate: { [Op.lt]: new Date() }
+        },
+        order: [['startDate', 'DESC']]
+      });
     }
     
     res.json({ openHouses });
@@ -699,26 +626,18 @@ const getOpenHouses = async (req, res) => {
 const updateOpenHouse = async (req, res) => {
   try {
     const openHouse = await OpenHouse.findOne({
-<<<<<<< Updated upstream
-      _id: req.params.id,
-      seller: req.user._id
-=======
       where: {
         id: req.params.id,
         sellerId: req.user.id
       }
->>>>>>> Stashed changes
     });
     
     if (!openHouse) {
       return res.status(404).json({ error: 'Open house not found or not authorized.' });
     }
     
-    const updatedOpenHouse = await OpenHouse.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    await openHouse.update(req.body);
+    const updatedOpenHouse = await OpenHouse.findByPk(req.params.id);
     
     res.json({
       message: 'Open house updated successfully',
@@ -735,22 +654,21 @@ const cancelOpenHouse = async (req, res) => {
     const { reason } = req.body;
     
     const openHouse = await OpenHouse.findOne({
-<<<<<<< Updated upstream
-      _id: req.params.id,
-      seller: req.user._id
-=======
       where: {
         id: req.params.id,
         sellerId: req.user.id
       }
->>>>>>> Stashed changes
     });
     
     if (!openHouse) {
       return res.status(404).json({ error: 'Open house not found or not authorized.' });
     }
     
-    await openHouse.cancel(reason);
+    await openHouse.update({ 
+      status: 'cancelled', 
+      cancellation_reason: reason,
+      cancelled_at: new Date()
+    });
     
     res.json({
       message: 'Open house cancelled successfully',
@@ -768,15 +686,10 @@ const updatePropertyWorkflow = async (req, res) => {
     const { stage, notes } = req.body;
     
     const property = await Property.findOne({
-<<<<<<< Updated upstream
-      _id: req.params.id,
-      owner: req.user._id
-=======
       where: {
         id: req.params.id,
         ownerId: req.user.id
       }
->>>>>>> Stashed changes
     });
     
     if (!property) {

@@ -1,337 +1,402 @@
-const mongoose = require('mongoose');
-
-const paymentSchema = new mongoose.Schema({
-  // Payment identification
-  paymentId: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  stripePaymentIntentId: String,
-  paypalOrderId: String,
-  
-  // Payment details
-  amount: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  currency: {
-    type: String,
-    default: 'USD',
-    enum: ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'SEK', 'NOK', 'DKK']
-  },
-  paymentMethod: {
-    type: String,
-    enum: ['stripe', 'paypal', 'bank_transfer', 'cash', 'check', 'crypto'],
-    required: true
-  },
-  
-  // Payment type and purpose
-  paymentType: {
-    type: String,
-    enum: ['rent', 'deposit', 'booking_fee', 'service_fee', 'subscription', 'refund'],
-    required: true
-  },
-  
-  // Related entities
-  payer: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  payee: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  property: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Property'
-  },
-  
-  // Payment status
-  status: {
-    type: String,
-    enum: ['pending', 'processing', 'completed', 'failed', 'cancelled', 'refunded', 'partially_refunded'],
-    default: 'pending'
-  },
-  
-  // Payment flow
-  paymentFlow: {
-    initiatedAt: Date,
-    processedAt: Date,
-    completedAt: Date,
-    failedAt: Date,
-    cancelledAt: Date
-  },
-  
-  // Fee breakdown
-  fees: {
-    platformFee: Number,
-    processingFee: Number,
-    taxAmount: Number,
-    totalFees: Number
-  },
-  
-  // Refund information
-  refund: {
-    amount: Number,
-    reason: String,
-    processedAt: Date,
-    processedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }
-  },
-  
-  // Payment metadata
-  metadata: {
-    description: String,
-    invoiceNumber: String,
-    reference: String,
-    notes: String,
-    tags: [String]
-  },
-  
-  // Recurring payment settings
-  recurring: {
-    isRecurring: { type: Boolean, default: false },
-    frequency: { type: String, enum: ['weekly', 'monthly', 'quarterly', 'yearly'] },
-    nextPaymentDate: Date,
-    totalPayments: Number,
-    completedPayments: { type: Number, default: 0 }
-  },
-  
-  // Escrow settings (for deposits)
-  escrow: {
-    isEscrow: { type: Boolean, default: false },
-    releaseDate: Date,
-    releaseConditions: [String],
-    releasedAt: Date,
-    releasedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }
-  },
-  
-  // Dispute handling
-  dispute: {
-    isDisputed: { type: Boolean, default: false },
-    disputeReason: String,
-    disputeDate: Date,
-    resolvedAt: Date,
-    resolution: String,
-    resolvedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }
-  },
-  
-  // Payment verification
-  verification: {
-    isVerified: { type: Boolean, default: false },
-    verifiedAt: Date,
-    verifiedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+module.exports = (sequelize, DataTypes) => {
+  const Payment = sequelize.define('Payment', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
     },
-    verificationMethod: String
-  },
-  
-  // Compliance and legal
-  compliance: {
-    kycVerified: { type: Boolean, default: false },
-    amlChecked: { type: Boolean, default: false },
-    taxForm: String,
-    regulatoryNotes: String
-  },
-  
-  // Analytics and tracking
-  analytics: {
-    processingTime: Number, // in milliseconds
-    userAgent: String,
-    ipAddress: String,
-    deviceType: String,
-    conversionSource: String
-  },
-  
-  // Timestamps
-  dueDate: Date,
-  gracePeriod: Number, // in days
-  lateFees: Number
-}, {
-  timestamps: true
-});
-
-// Indexes
-paymentSchema.index({ paymentId: 1 }, { unique: true });
-paymentSchema.index({ payer: 1, createdAt: -1 });
-paymentSchema.index({ payee: 1, createdAt: -1 });
-paymentSchema.index({ property: 1 });
-paymentSchema.index({ status: 1, createdAt: -1 });
-paymentSchema.index({ paymentType: 1, status: 1 });
-paymentSchema.index({ 'paymentFlow.completedAt': 1 });
-paymentSchema.index({ 'recurring.nextPaymentDate': 1 });
-paymentSchema.index({ 'escrow.releaseDate': 1 });
-
-// Virtual fields
-paymentSchema.virtual('totalAmount').get(function() {
-  return this.amount + (this.fees.totalFees || 0);
-});
-
-paymentSchema.virtual('isLate').get(function() {
-  if (!this.dueDate) return false;
-  const now = new Date();
-  const gracePeriod = this.gracePeriod || 0;
-  const graceDate = new Date(this.dueDate);
-  graceDate.setDate(graceDate.getDate() + gracePeriod);
-  return now > graceDate;
-});
-
-paymentSchema.virtual('isOverdue').get(function() {
-  if (!this.dueDate) return false;
-  return new Date() > this.dueDate;
-});
-
-paymentSchema.virtual('processingDuration').get(function() {
-  if (this.paymentFlow.initiatedAt && this.paymentFlow.completedAt) {
-    return this.paymentFlow.completedAt - this.paymentFlow.initiatedAt;
-  }
-  return null;
-});
-
-// Instance methods
-paymentSchema.methods.processPayment = function() {
-  this.status = 'processing';
-  this.paymentFlow.processedAt = new Date();
-  return this.save();
-};
-
-paymentSchema.methods.completePayment = function() {
-  this.status = 'completed';
-  this.paymentFlow.completedAt = new Date();
-  this.verification.isVerified = true;
-  this.verification.verifiedAt = new Date();
-  return this.save();
-};
-
-paymentSchema.methods.failPayment = function(reason = 'Payment failed') {
-  this.status = 'failed';
-  this.paymentFlow.failedAt = new Date();
-  this.metadata.notes = reason;
-  return this.save();
-};
-
-paymentSchema.methods.cancelPayment = function(reason = 'Payment cancelled') {
-  this.status = 'cancelled';
-  this.paymentFlow.cancelledAt = new Date();
-  this.metadata.notes = reason;
-  return this.save();
-};
-
-paymentSchema.methods.processRefund = function(amount, reason, processedBy) {
-  this.status = amount === this.amount ? 'refunded' : 'partially_refunded';
-  this.refund = {
-    amount: amount,
-    reason: reason,
-    processedAt: new Date(),
-    processedBy: processedBy
-  };
-  return this.save();
-};
-
-paymentSchema.methods.releaseEscrow = function(releasedBy) {
-  if (this.escrow.isEscrow) {
-    this.escrow.releasedAt = new Date();
-    this.escrow.releasedBy = releasedBy;
-  }
-  return this.save();
-};
-
-paymentSchema.methods.initiateDispute = function(reason) {
-  this.dispute.isDisputed = true;
-  this.dispute.disputeReason = reason;
-  this.dispute.disputeDate = new Date();
-  return this.save();
-};
-
-paymentSchema.methods.resolveDispute = function(resolution, resolvedBy) {
-  this.dispute.resolvedAt = new Date();
-  this.dispute.resolution = resolution;
-  this.dispute.resolvedBy = resolvedBy;
-  return this.save();
-};
-
-// Static methods
-paymentSchema.statics.findByStatus = function(status) {
-  return this.find({ status: status }).sort({ createdAt: -1 });
-};
-
-paymentSchema.statics.findOverduePayments = function() {
-  const now = new Date();
-  return this.find({
-    status: 'pending',
-    dueDate: { $lt: now }
-  }).populate('payer', 'firstName lastName email');
-};
-
-paymentSchema.statics.findRecurringPayments = function() {
-  const now = new Date();
-  return this.find({
-    'recurring.isRecurring': true,
-    'recurring.nextPaymentDate': { $lte: now },
-    status: { $in: ['completed', 'pending'] }
-  });
-};
-
-paymentSchema.statics.findEscrowPayments = function() {
-  const now = new Date();
-  return this.find({
-    'escrow.isEscrow': true,
-    'escrow.releaseDate': { $lte: now },
-    'escrow.releasedAt': { $exists: false }
-  });
-};
-
-paymentSchema.statics.generatePaymentId = function() {
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substr(2, 5);
-  return `pay_${timestamp}_${random}`.toUpperCase();
-};
-
-// Pre-save middleware
-paymentSchema.pre('save', function(next) {
-  if (this.isNew && !this.paymentId) {
-    this.paymentId = this.constructor.generatePaymentId();
-  }
-  
-  if (this.isModified('status')) {
-    const now = new Date();
-    switch (this.status) {
-      case 'processing':
-        this.paymentFlow.processedAt = now;
-        break;
-      case 'completed':
-        this.paymentFlow.completedAt = now;
-        break;
-      case 'failed':
-        this.paymentFlow.failedAt = now;
-        break;
-      case 'cancelled':
-        this.paymentFlow.cancelledAt = now;
-        break;
+    paymentId: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      field: 'payment_id'
+    },
+    stripePaymentIntentId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'stripe_payment_intent_id'
+    },
+    paypalOrderId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'paypal_order_id'
+    },
+    amount: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: false,
+      validate: {
+        min: 0
+      }
+    },
+    currency: {
+      type: DataTypes.ENUM('USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'SEK', 'NOK', 'DKK'),
+      defaultValue: 'USD'
+    },
+    paymentMethod: {
+      type: DataTypes.ENUM('stripe', 'paypal', 'bank_transfer', 'cash', 'check', 'crypto'),
+      allowNull: false,
+      field: 'payment_method'
+    },
+    paymentType: {
+      type: DataTypes.ENUM('rent', 'deposit', 'booking_fee', 'service_fee', 'subscription', 'refund'),
+      allowNull: false,
+      field: 'payment_type'
+    },
+    payerId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'payer_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    payeeId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'payee_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    propertyId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'property_id',
+      references: {
+        model: 'properties',
+        key: 'id'
+      }
+    },
+    status: {
+      type: DataTypes.ENUM('pending', 'processing', 'completed', 'failed', 'cancelled', 'refunded', 'partially_refunded'),
+      defaultValue: 'pending'
+    },
+    // Payment flow (stored as JSON)
+    paymentFlow: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: 'payment_flow'
+    },
+    // Fee breakdown (stored as JSON)
+    fees: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Refund information (stored as JSON)
+    refund: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Payment metadata (stored as JSON)
+    metadata: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Recurring payment settings (stored as JSON)
+    recurring: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Escrow settings (stored as JSON)
+    escrow: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Dispute handling (stored as JSON)
+    dispute: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Payment verification (stored as JSON)
+    verification: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Compliance and legal (stored as JSON)
+    compliance: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Analytics and tracking (stored as JSON)
+    analytics: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    dueDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'due_date'
+    },
+    gracePeriod: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'grace_period',
+      comment: 'Grace period in days'
+    },
+    lateFees: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      field: 'late_fees'
     }
-  }
-  
-  // Calculate total fees
-  if (this.fees.platformFee || this.fees.processingFee || this.fees.taxAmount) {
-    this.fees.totalFees = (this.fees.platformFee || 0) + 
-                          (this.fees.processingFee || 0) + 
-                          (this.fees.taxAmount || 0);
-  }
-  
-  next();
-});
+  }, {
+    tableName: 'payments',
+    timestamps: true,
+    underscored: true,
+    indexes: [
+      {
+        fields: ['payment_id'],
+        unique: true
+      },
+      {
+        fields: ['payer_id', 'created_at']
+      },
+      {
+        fields: ['payee_id', 'created_at']
+      },
+      {
+        fields: ['property_id']
+      },
+      {
+        fields: ['status', 'created_at']
+      },
+      {
+        fields: ['payment_type', 'status']
+      }
+    ],
+    hooks: {
+      beforeCreate: (payment) => {
+        if (!payment.paymentId) {
+          const timestamp = Date.now().toString(36);
+          const random = Math.random().toString(36).substr(2, 5);
+          payment.paymentId = `pay_${timestamp}_${random}`.toUpperCase();
+        }
+      },
+      beforeSave: (payment) => {
+        if (payment.changed('status')) {
+          const now = new Date();
+          const paymentFlow = payment.paymentFlow || {};
+          
+          switch (payment.status) {
+            case 'processing':
+              paymentFlow.processedAt = now;
+              break;
+            case 'completed':
+              paymentFlow.completedAt = now;
+              break;
+            case 'failed':
+              paymentFlow.failedAt = now;
+              break;
+            case 'cancelled':
+              paymentFlow.cancelledAt = now;
+              break;
+          }
+          
+          payment.paymentFlow = paymentFlow;
+        }
+        
+        // Calculate total fees
+        const fees = payment.fees || {};
+        if (fees.platformFee || fees.processingFee || fees.taxAmount) {
+          fees.totalFees = (fees.platformFee || 0) + 
+                          (fees.processingFee || 0) + 
+                          (fees.taxAmount || 0);
+          payment.fees = fees;
+        }
+      }
+    }
+  });
 
-module.exports = mongoose.model('Payment', paymentSchema);
+  // Instance methods
+  Payment.prototype.getTotalAmount = function() {
+    const fees = this.fees || {};
+    return parseFloat(this.amount) + (parseFloat(fees.totalFees) || 0);
+  };
+
+  Payment.prototype.isLate = function() {
+    if (!this.dueDate) return false;
+    const now = new Date();
+    const gracePeriod = this.gracePeriod || 0;
+    const graceDate = new Date(this.dueDate);
+    graceDate.setDate(graceDate.getDate() + gracePeriod);
+    return now > graceDate;
+  };
+
+  Payment.prototype.isOverdue = function() {
+    if (!this.dueDate) return false;
+    return new Date() > this.dueDate;
+  };
+
+  Payment.prototype.getProcessingDuration = function() {
+    const flow = this.paymentFlow || {};
+    if (flow.initiatedAt && flow.completedAt) {
+      return flow.completedAt - flow.initiatedAt;
+    }
+    return null;
+  };
+
+  Payment.prototype.processPayment = async function() {
+    this.status = 'processing';
+    const paymentFlow = this.paymentFlow || {};
+    paymentFlow.processedAt = new Date();
+    this.paymentFlow = paymentFlow;
+    return this.save();
+  };
+
+  Payment.prototype.completePayment = async function() {
+    this.status = 'completed';
+    const paymentFlow = this.paymentFlow || {};
+    const verification = this.verification || {};
+    
+    paymentFlow.completedAt = new Date();
+    verification.isVerified = true;
+    verification.verifiedAt = new Date();
+    
+    this.paymentFlow = paymentFlow;
+    this.verification = verification;
+    return this.save();
+  };
+
+  Payment.prototype.failPayment = async function(reason = 'Payment failed') {
+    this.status = 'failed';
+    const paymentFlow = this.paymentFlow || {};
+    const metadata = this.metadata || {};
+    
+    paymentFlow.failedAt = new Date();
+    metadata.notes = reason;
+    
+    this.paymentFlow = paymentFlow;
+    this.metadata = metadata;
+    return this.save();
+  };
+
+  Payment.prototype.cancelPayment = async function(reason = 'Payment cancelled') {
+    this.status = 'cancelled';
+    const paymentFlow = this.paymentFlow || {};
+    const metadata = this.metadata || {};
+    
+    paymentFlow.cancelledAt = new Date();
+    metadata.notes = reason;
+    
+    this.paymentFlow = paymentFlow;
+    this.metadata = metadata;
+    return this.save();
+  };
+
+  Payment.prototype.processRefund = async function(amount, reason, processedBy) {
+    this.status = amount === this.amount ? 'refunded' : 'partially_refunded';
+    this.refund = {
+      amount: amount,
+      reason: reason,
+      processedAt: new Date(),
+      processedBy: processedBy
+    };
+    return this.save();
+  };
+
+  Payment.prototype.releaseEscrow = async function(releasedBy) {
+    const escrow = this.escrow || {};
+    if (escrow.isEscrow) {
+      escrow.releasedAt = new Date();
+      escrow.releasedBy = releasedBy;
+      this.escrow = escrow;
+    }
+    return this.save();
+  };
+
+  Payment.prototype.initiateDispute = async function(reason) {
+    this.dispute = {
+      isDisputed: true,
+      disputeReason: reason,
+      disputeDate: new Date()
+    };
+    return this.save();
+  };
+
+  Payment.prototype.resolveDispute = async function(resolution, resolvedBy) {
+    const dispute = this.dispute || {};
+    dispute.resolvedAt = new Date();
+    dispute.resolution = resolution;
+    dispute.resolvedBy = resolvedBy;
+    this.dispute = dispute;
+    return this.save();
+  };
+
+  // Static methods
+  Payment.findByStatus = function(status) {
+    return this.findAll({
+      where: { status: status },
+      order: [['created_at', 'DESC']]
+    });
+  };
+
+  Payment.findOverduePayments = function() {
+    const now = new Date();
+    return this.findAll({
+      where: {
+        status: 'pending',
+        dueDate: { [sequelize.Op.lt]: now }
+      }
+    });
+  };
+
+  Payment.findRecurringPayments = function() {
+    const now = new Date();
+    return this.findAll({
+      where: {
+        [sequelize.Op.and]: [
+          sequelize.where(
+            sequelize.fn('JSON_EXTRACT', sequelize.col('recurring'), '$.isRecurring'),
+            true
+          ),
+          sequelize.where(
+            sequelize.fn('JSON_EXTRACT', sequelize.col('recurring'), '$.nextPaymentDate'),
+            { [sequelize.Op.lte]: now }
+          ),
+          { status: { [sequelize.Op.in]: ['completed', 'pending'] } }
+        ]
+      }
+    });
+  };
+
+  Payment.findEscrowPayments = function() {
+    const now = new Date();
+    return this.findAll({
+      where: {
+        [sequelize.Op.and]: [
+          sequelize.where(
+            sequelize.fn('JSON_EXTRACT', sequelize.col('escrow'), '$.isEscrow'),
+            true
+          ),
+          sequelize.where(
+            sequelize.fn('JSON_EXTRACT', sequelize.col('escrow'), '$.releaseDate'),
+            { [sequelize.Op.lte]: now }
+          ),
+          sequelize.where(
+            sequelize.fn('JSON_EXTRACT', sequelize.col('escrow'), '$.releasedAt'),
+            null
+          )
+        ]
+      }
+    });
+  };
+
+  Payment.generatePaymentId = function() {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substr(2, 5);
+    return `pay_${timestamp}_${random}`.toUpperCase();
+  };
+
+  // Virtual fields (computed properties)
+  Payment.prototype.toJSON = function() {
+    const values = Object.assign({}, this.get());
+    values.totalAmount = this.getTotalAmount();
+    values.isLate = this.isLate();
+    values.isOverdue = this.isOverdue();
+    values.processingDuration = this.getProcessingDuration();
+    return values;
+  };
+
+  return Payment;
+};

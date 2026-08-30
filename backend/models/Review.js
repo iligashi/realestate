@@ -1,324 +1,321 @@
-const mongoose = require('mongoose');
-
-const reviewSchema = new mongoose.Schema({
-  // Review author
-  author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  
-  // Review target (what's being reviewed)
-  targetType: {
-    type: String,
-    enum: ['property', 'agent', 'neighborhood', 'agency'],
-    required: true
-  },
-  target: {
-    type: mongoose.Schema.Types.ObjectId,
-    refPath: 'targetType',
-    required: true
-  },
-  
-  // Review content
-  title: {
-    type: String,
-    required: true,
-    maxlength: 100
-  },
-  content: {
-    type: String,
-    required: true,
-    maxlength: 2000
-  },
-  
-  // Ratings (1-5 scale)
-  ratings: {
-    overall: {
-      type: Number,
-      required: true,
-      min: 1,
-      max: 5
+module.exports = (sequelize, DataTypes) => {
+  const Review = sequelize.define('Review', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
     },
-    // Property-specific ratings
-    property: {
-      cleanliness: { type: Number, min: 1, max: 5 },
-      maintenance: { type: Number, min: 1, max: 5 },
-      value: { type: Number, min: 1, max: 5 },
-      location: { type: Number, min: 1, max: 5 },
-      amenities: { type: Number, min: 1, max: 5 }
+    authorId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'author_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
     },
-    // Agent-specific ratings
-    agent: {
-      communication: { type: Number, min: 1, max: 5 },
-      professionalism: { type: Number, min: 1, max: 5 },
-      knowledge: { type: Number, min: 1, max: 5 },
-      responsiveness: { type: Number, min: 1, max: 5 },
-      negotiation: { type: Number, min: 1, max: 5 }
+    targetType: {
+      type: DataTypes.ENUM('property', 'agent', 'neighborhood', 'agency'),
+      allowNull: false,
+      field: 'target_type'
     },
-    // Neighborhood-specific ratings
-    neighborhood: {
-      safety: { type: Number, min: 1, max: 5 },
-      walkability: { type: Number, min: 1, max: 5 },
-      schools: { type: Number, min: 1, max: 5 },
-      shopping: { type: Number, min: 1, max: 5 },
-      transportation: { type: Number, min: 1, max: 5 }
-    }
-  },
-  
-  // Review metadata
-  verified: {
-    type: Boolean,
-    default: false
-  },
-  verifiedAt: Date,
-  verifiedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  
-  // Review status
-  status: {
-    type: String,
-    enum: ['pending', 'approved', 'rejected', 'flagged'],
-    default: 'pending'
-  },
-  
-  // Moderation
-  moderatedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  moderatedAt: Date,
-  moderationNotes: String,
-  
-  // Flags and reports
-  flags: [{
-    reason: String,
-    reportedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+    targetId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'target_id'
     },
-    reportedAt: { type: Date, default: Date.now },
-    status: { type: String, enum: ['pending', 'resolved', 'dismissed'], default: 'pending' }
-  }],
-  
-  // Helpfulness voting
-  helpful: {
-    yes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    no: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
-  },
-  
-  // Media attachments
-  photos: [{
-    url: String,
-    caption: String,
-    verified: { type: Boolean, default: false }
-  }],
-  
-  // Review context
-  context: {
-    purchasePrice: Number,
-    purchaseDate: Date,
-    propertyType: String,
-    transactionType: String, // 'buy', 'rent', 'sell'
-    duration: Number // months lived/owned
-  },
-  
-  // Tags and categories
-  tags: [String],
-  category: String,
-  
-  // Analytics
-  analytics: {
-    views: { type: Number, default: 0 },
-    shares: { type: Number, default: 0 },
-    helpfulScore: { type: Number, default: 0 },
-    responseRate: Number // for agent reviews
-  },
-  
-  // Response from target (for agent/agency reviews)
-  response: {
-    content: String,
-    respondedAt: Date,
-    respondedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+    title: {
+      type: DataTypes.STRING(100),
+      allowNull: false
+    },
+    content: {
+      type: DataTypes.TEXT,
+      allowNull: false
+    },
+    // Ratings (stored as JSON)
+    ratings: {
+      type: DataTypes.JSON,
+      allowNull: false
+    },
+    verified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    verifiedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'verified_at'
+    },
+    verifiedById: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'verified_by_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    status: {
+      type: DataTypes.ENUM('pending', 'approved', 'rejected', 'flagged'),
+      defaultValue: 'pending'
+    },
+    moderatedById: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'moderated_by_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    moderatedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'moderated_at'
+    },
+    moderationNotes: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'moderation_notes'
+    },
+    // Flags and reports (stored as JSON)
+    flags: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Helpfulness voting (stored as JSON)
+    helpful: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Media attachments (stored as JSON)
+    photos: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Review context (stored as JSON)
+    context: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    tags: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    category: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    // Analytics (stored as JSON)
+    analytics: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Response from target (stored as JSON)
+    response: {
+      type: DataTypes.JSON,
+      allowNull: true
     }
-  },
-  
-  // Timestamps
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-}, {
-  timestamps: true
-});
-
-// Indexes
-reviewSchema.index({ targetType: 1, target: 1 });
-reviewSchema.index({ author: 1, createdAt: -1 });
-reviewSchema.index({ status: 1, createdAt: -1 });
-reviewSchema.index({ 'ratings.overall': -1 });
-reviewSchema.index({ verified: 1 });
-reviewSchema.index({ tags: 1 });
-
-// Text search index
-reviewSchema.index({
-  title: 'text',
-  content: 'text',
-  tags: 'text'
-});
-
-// Virtual fields
-reviewSchema.virtual('helpfulScore').get(function() {
-  const yesCount = this.helpful.yes.length;
-  const noCount = this.helpful.no.length;
-  const total = yesCount + noCount;
-  return total > 0 ? Math.round((yesCount / total) * 100) : 0;
-});
-
-reviewSchema.virtual('averageRating').get(function() {
-  if (this.targetType === 'property' && this.ratings.property) {
-    const ratings = Object.values(this.ratings.property).filter(r => r);
-    return ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : this.ratings.overall;
-  }
-  return this.ratings.overall;
-});
-
-reviewSchema.virtual('isVerified').get(function() {
-  return this.verified && this.status === 'approved';
-});
-
-reviewSchema.virtual('hasResponse').get(function() {
-  return this.response && this.response.content;
-});
-
-// Instance methods
-reviewSchema.methods.markHelpful = function(userId, isHelpful) {
-  if (isHelpful) {
-    if (!this.helpful.yes.includes(userId)) {
-      this.helpful.yes.push(userId);
-      this.helpful.no = this.helpful.no.filter(id => !id.equals(userId));
+  }, {
+    tableName: 'reviews',
+    timestamps: true,
+    underscored: true,
+    indexes: [
+      {
+        fields: ['target_type', 'target_id']
+      },
+      {
+        fields: ['author_id', 'created_at']
+      },
+      {
+        fields: ['status', 'created_at']
+      },
+      {
+        fields: ['ratings']
+      },
+      {
+        fields: ['verified']
+      },
+      {
+        fields: ['tags']
+      }
+    ],
+    hooks: {
+      beforeSave: (review) => {
+        // Calculate helpful score
+        const helpful = review.helpful || { yes: [], no: [] };
+        if (helpful.yes || helpful.no) {
+          const yesCount = helpful.yes.length || 0;
+          const noCount = helpful.no.length || 0;
+          const total = yesCount + noCount;
+          const helpfulScore = total > 0 ? Math.round((yesCount / total) * 100) : 0;
+          
+          const analytics = review.analytics || {};
+          analytics.helpfulScore = helpfulScore;
+          review.analytics = analytics;
+        }
+      }
     }
-  } else {
-    if (!this.helpful.no.includes(userId)) {
-      this.helpful.no.push(userId);
-      this.helpful.yes = this.helpful.yes.filter(id => !id.equals(userId));
-    }
-  }
-  return this.save();
-};
-
-reviewSchema.methods.addFlag = function(reason, reportedBy) {
-  this.flags.push({
-    reason: reason,
-    reportedBy: reportedBy,
-    reportedAt: new Date()
   });
-  return this.save();
-};
 
-reviewSchema.methods.approve = function(moderatedBy, notes = '') {
-  this.status = 'approved';
-  this.moderatedBy = moderatedBy;
-  this.moderatedAt = new Date();
-  this.moderationNotes = notes;
-  return this.save();
-};
-
-reviewSchema.methods.reject = function(moderatedBy, notes = '') {
-  this.status = 'rejected';
-  this.moderatedBy = moderatedBy;
-  this.moderatedAt = new Date();
-  this.moderationNotes = notes;
-  return this.save();
-};
-
-reviewSchema.methods.addResponse = function(content, respondedBy) {
-  this.response = {
-    content: content,
-    respondedAt: new Date(),
-    respondedBy: respondedBy
+  // Instance methods
+  Review.prototype.getHelpfulScore = function() {
+    const helpful = this.helpful || { yes: [], no: [] };
+    const yesCount = helpful.yes.length || 0;
+    const noCount = helpful.no.length || 0;
+    const total = yesCount + noCount;
+    return total > 0 ? Math.round((yesCount / total) * 100) : 0;
   };
-  return this.save();
-};
 
-// Static methods
-reviewSchema.statics.findByTarget = function(targetType, targetId, options = {}) {
-  const query = {
-    targetType: targetType,
-    target: targetId,
-    status: 'approved'
+  Review.prototype.getAverageRating = function() {
+    const ratings = this.ratings || {};
+    if (this.targetType === 'property' && ratings.property) {
+      const propertyRatings = Object.values(ratings.property).filter(r => r);
+      return propertyRatings.length > 0 ? 
+        propertyRatings.reduce((a, b) => a + b, 0) / propertyRatings.length : 
+        ratings.overall;
+    }
+    return ratings.overall;
   };
-  
-  if (options.verified) {
-    query.verified = true;
-  }
-  
-  return this.find(query)
-    .populate('author', 'firstName lastName avatar verified')
-    .sort({ createdAt: -1 });
-};
 
-reviewSchema.statics.findByAuthor = function(authorId, options = {}) {
-  const query = { author: authorId };
-  
-  if (options.status) {
-    query.status = options.status;
-  }
-  
-  return this.find(query)
-    .populate('target', 'title name')
-    .sort({ createdAt: -1 });
-};
+  Review.prototype.isVerified = function() {
+    return this.verified && this.status === 'approved';
+  };
 
-reviewSchema.statics.findPendingModeration = function() {
-  return this.find({
-    status: 'pending'
-  }).populate('author', 'firstName lastName email');
-};
+  Review.prototype.hasResponse = function() {
+    return this.response && this.response.content;
+  };
 
-reviewSchema.statics.findFlagged = function() {
-  return this.find({
-    'flags.status': 'pending'
-  }).populate('author', 'firstName lastName email');
-};
-
-reviewSchema.statics.getAverageRating = function(targetType, targetId) {
-  return this.aggregate([
-    {
-      $match: {
-        targetType: targetType,
-        target: mongoose.Types.ObjectId(targetId),
-        status: 'approved'
+  Review.prototype.markHelpful = async function(userId, isHelpful) {
+    const helpful = this.helpful || { yes: [], no: [] };
+    
+    if (isHelpful) {
+      if (!helpful.yes.includes(userId)) {
+        helpful.yes.push(userId);
+        helpful.no = helpful.no.filter(id => id !== userId);
       }
-    },
-    {
-      $group: {
-        _id: null,
-        averageRating: { $avg: '$ratings.overall' },
-        totalReviews: { $sum: 1 }
+    } else {
+      if (!helpful.no.includes(userId)) {
+        helpful.no.push(userId);
+        helpful.yes = helpful.yes.filter(id => id !== userId);
       }
     }
-  ]);
+    
+    this.helpful = helpful;
+    return this.save();
+  };
+
+  Review.prototype.addFlag = async function(reason, reportedBy) {
+    const flags = this.flags || [];
+    flags.push({
+      reason: reason,
+      reportedBy: reportedBy,
+      reportedAt: new Date()
+    });
+    this.flags = flags;
+    return this.save();
+  };
+
+  Review.prototype.approve = async function(moderatedBy, notes = '') {
+    this.status = 'approved';
+    this.moderatedById = moderatedBy;
+    this.moderatedAt = new Date();
+    this.moderationNotes = notes;
+    return this.save();
+  };
+
+  Review.prototype.reject = async function(moderatedBy, notes = '') {
+    this.status = 'rejected';
+    this.moderatedById = moderatedBy;
+    this.moderatedAt = new Date();
+    this.moderationNotes = notes;
+    return this.save();
+  };
+
+  Review.prototype.addResponse = async function(content, respondedBy) {
+    this.response = {
+      content: content,
+      respondedAt: new Date(),
+      respondedBy: respondedBy
+    };
+    return this.save();
+  };
+
+  // Static methods
+  Review.findByTarget = function(targetType, targetId, options = {}) {
+    const query = {
+      where: {
+        targetType: targetType,
+        targetId: targetId,
+        status: 'approved'
+      },
+      order: [['created_at', 'DESC']]
+    };
+    
+    if (options.verified) {
+      query.where.verified = true;
+    }
+    
+    return this.findAll(query);
+  };
+
+  Review.findByAuthor = function(authorId, options = {}) {
+    const query = {
+      where: { authorId: authorId },
+      order: [['created_at', 'DESC']]
+    };
+    
+    if (options.status) {
+      query.where.status = options.status;
+    }
+    
+    return this.findAll(query);
+  };
+
+  Review.findPendingModeration = function() {
+    return this.findAll({
+      where: {
+        status: 'pending'
+      }
+    });
+  };
+
+  Review.findFlagged = function() {
+    return this.findAll({
+      where: {
+        [sequelize.Op.and]: [
+          sequelize.where(
+            sequelize.fn('JSON_EXTRACT', sequelize.col('flags'), '$[*].status'),
+            'pending'
+          )
+        ]
+      }
+    });
+  };
+
+  Review.getAverageRating = function(targetType, targetId) {
+    return this.findAll({
+      where: {
+        targetType: targetType,
+        targetId: targetId,
+        status: 'approved'
+      },
+      attributes: [
+        [sequelize.fn('AVG', sequelize.col('ratings')), 'averageRating'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'totalReviews']
+      ]
+    });
+  };
+
+  // Virtual fields (computed properties)
+  Review.prototype.toJSON = function() {
+    const values = Object.assign({}, this.get());
+    values.helpfulScore = this.getHelpfulScore();
+    values.averageRating = this.getAverageRating();
+    values.isVerified = this.isVerified();
+    values.hasResponse = this.hasResponse();
+    return values;
+  };
+
+  return Review;
 };
-
-// Pre-save middleware
-reviewSchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  
-  // Calculate helpful score
-  if (this.helpful.yes || this.helpful.no) {
-    this.analytics.helpfulScore = this.helpfulScore;
-  }
-  
-  next();
-});
-
-module.exports = mongoose.model('Review', reviewSchema);

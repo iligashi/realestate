@@ -1,252 +1,295 @@
-const mongoose = require('mongoose');
-
-const favoriteSchema = new mongoose.Schema({
-  // User who saved the property
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  
-  // Saved property
-  property: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Property',
-    required: true
-  },
-  
-  // Favorite metadata
-  savedAt: {
-    type: Date,
-    default: Date.now
-  },
-  
-  // User notes about this property
-  notes: {
-    type: String,
-    maxlength: 500
-  },
-  
-  // Tags for organization
-  tags: [String],
-  
-  // Priority level
-  priority: {
-    type: String,
-    enum: ['low', 'medium', 'high', 'urgent'],
-    default: 'medium'
-  },
-  
-  // Alert settings
-  alerts: {
-    priceChanges: { type: Boolean, default: true },
-    statusChanges: { type: Boolean, default: true },
-    newPhotos: { type: Boolean, default: false },
-    similarProperties: { type: Boolean, default: true }
-  },
-  
-  // Price tracking
-  priceTracking: {
-    originalPrice: Number,
-    currentPrice: Number,
-    priceHistory: [{
-      price: Number,
-      date: { type: Date, default: Date.now },
-      change: Number,
-      percentageChange: Number
-    }],
-    lastChecked: Date
-  },
-  
-  // Viewing history
-  viewHistory: [{
-    date: { type: Date, default: Date.now },
-    duration: Number // in seconds
-  }],
-  
-  // Comparison data
-  comparisonData: {
-    isInComparison: { type: Boolean, default: false },
-    comparisonRank: Number,
-    comparisonNotes: String
-  },
-  
-  // Sharing settings
-  sharing: {
-    isShared: { type: Boolean, default: false },
-    sharedWith: [{
-      userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-      },
-      sharedAt: { type: Date, default: Date.now },
-      canEdit: { type: Boolean, default: false }
-    }]
-  },
-  
-  // Reminder settings
-  reminders: [{
-    type: String, // 'view', 'contact', 'visit', 'custom'
-    date: Date,
-    message: String,
-    isCompleted: { type: Boolean, default: false },
-    completedAt: Date
-  }],
-  
-  // Analytics
-  analytics: {
-    timesViewed: { type: Number, default: 0 },
-    lastViewed: Date,
-    totalViewTime: { type: Number, default: 0 }, // in seconds
-    inquirySent: { type: Boolean, default: false },
-    inquiryDate: Date
-  }
-}, {
-  timestamps: true
-});
-
-// Indexes
-favoriteSchema.index({ user: 1, property: 1 }, { unique: true });
-favoriteSchema.index({ user: 1, savedAt: -1 });
-favoriteSchema.index({ property: 1 });
-favoriteSchema.index({ 'priceTracking.lastChecked': 1 });
-favoriteSchema.index({ tags: 1 });
-
-// Virtual fields
-favoriteSchema.virtual('isPriceIncreased').get(function() {
-  if (this.priceTracking.originalPrice && this.priceTracking.currentPrice) {
-    return this.priceTracking.currentPrice > this.priceTracking.originalPrice;
-  }
-  return false;
-});
-
-favoriteSchema.virtual('priceChangePercentage').get(function() {
-  if (this.priceTracking.originalPrice && this.priceTracking.currentPrice) {
-    return ((this.priceTracking.currentPrice - this.priceTracking.originalPrice) / this.priceTracking.originalPrice) * 100;
-  }
-  return 0;
-});
-
-favoriteSchema.virtual('daysSinceSaved').get(function() {
-  const now = new Date();
-  const diffTime = Math.abs(now - this.savedAt);
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-});
-
-// Instance methods
-favoriteSchema.methods.updatePrice = function(newPrice) {
-  const oldPrice = this.priceTracking.currentPrice || this.priceTracking.originalPrice;
-  
-  if (oldPrice && newPrice !== oldPrice) {
-    const change = newPrice - oldPrice;
-    const percentageChange = (change / oldPrice) * 100;
-    
-    this.priceTracking.priceHistory.push({
-      price: newPrice,
-      date: new Date(),
-      change: change,
-      percentageChange: percentageChange
-    });
-    
-    this.priceTracking.currentPrice = newPrice;
-    this.priceTracking.lastChecked = new Date();
-    
-    // Keep only last 10 price changes
-    if (this.priceTracking.priceHistory.length > 10) {
-      this.priceTracking.priceHistory = this.priceTracking.priceHistory.slice(-10);
+module.exports = (sequelize, DataTypes) => {
+  const Favorite = sequelize.define('Favorite', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'user_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    propertyId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'property_id',
+      references: {
+        model: 'properties',
+        key: 'id'
+      }
+    },
+    savedAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+      field: 'saved_at'
+    },
+    notes: {
+      type: DataTypes.STRING(500),
+      allowNull: true
+    },
+    tags: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    priority: {
+      type: DataTypes.ENUM('low', 'medium', 'high', 'urgent'),
+      defaultValue: 'medium'
+    },
+    // Alert settings (stored as JSON)
+    alerts: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Price tracking (stored as JSON)
+    priceTracking: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: 'price_tracking'
+    },
+    // Viewing history (stored as JSON)
+    viewHistory: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: 'view_history'
+    },
+    // Comparison data (stored as JSON)
+    comparisonData: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: 'comparison_data'
+    },
+    // Sharing settings (stored as JSON)
+    sharing: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Reminder settings (stored as JSON)
+    reminders: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Analytics (stored as JSON)
+    analytics: {
+      type: DataTypes.JSON,
+      allowNull: true
     }
-  }
-  
-  return this.save();
-};
-
-favoriteSchema.methods.addView = function(duration = 0) {
-  this.viewHistory.push({
-    date: new Date(),
-    duration: duration
+  }, {
+    tableName: 'favorites',
+    timestamps: true,
+    underscored: true,
+    indexes: [
+      {
+        fields: ['user_id', 'property_id'],
+        unique: true
+      },
+      {
+        fields: ['user_id', 'saved_at']
+      },
+      {
+        fields: ['property_id']
+      },
+      {
+        fields: ['tags']
+      }
+    ],
+    hooks: {
+      beforeCreate: (favorite) => {
+        if (!favorite.priceTracking) {
+          favorite.priceTracking = {
+            originalPrice: null,
+            currentPrice: null,
+            priceHistory: [],
+            lastChecked: null
+          };
+        }
+      }
+    }
   });
-  
-  this.analytics.timesViewed += 1;
-  this.analytics.lastViewed = new Date();
-  this.analytics.totalViewTime += duration;
-  
-  // Keep only last 50 views
-  if (this.viewHistory.length > 50) {
-    this.viewHistory = this.viewHistory.slice(-50);
-  }
-  
-  return this.save();
-};
 
-favoriteSchema.methods.addReminder = function(type, date, message = '') {
-  this.reminders.push({
-    type: type,
-    date: date,
-    message: message
-  });
-  return this.save();
-};
+  // Instance methods
+  Favorite.prototype.isPriceIncreased = function() {
+    const tracking = this.priceTracking || {};
+    if (tracking.originalPrice && tracking.currentPrice) {
+      return tracking.currentPrice > tracking.originalPrice;
+    }
+    return false;
+  };
 
-favoriteSchema.methods.completeReminder = function(reminderId) {
-  const reminder = this.reminders.id(reminderId);
-  if (reminder) {
-    reminder.isCompleted = true;
-    reminder.completedAt = new Date();
-  }
-  return this.save();
-};
+  Favorite.prototype.getPriceChangePercentage = function() {
+    const tracking = this.priceTracking || {};
+    if (tracking.originalPrice && tracking.currentPrice) {
+      return ((tracking.currentPrice - tracking.originalPrice) / tracking.originalPrice) * 100;
+    }
+    return 0;
+  };
 
-favoriteSchema.methods.shareWithUser = function(userId, canEdit = false) {
-  if (!this.sharing.sharedWith.some(share => share.userId.equals(userId))) {
-    this.sharing.sharedWith.push({
-      userId: userId,
-      sharedAt: new Date(),
-      canEdit: canEdit
+  Favorite.prototype.getDaysSinceSaved = function() {
+    const now = new Date();
+    const diffTime = Math.abs(now - this.savedAt);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  Favorite.prototype.updatePrice = async function(newPrice) {
+    const tracking = this.priceTracking || {};
+    const oldPrice = tracking.currentPrice || tracking.originalPrice;
+    
+    if (oldPrice && newPrice !== oldPrice) {
+      const change = newPrice - oldPrice;
+      const percentageChange = (change / oldPrice) * 100;
+      
+      const priceHistory = tracking.priceHistory || [];
+      priceHistory.push({
+        price: newPrice,
+        date: new Date(),
+        change: change,
+        percentageChange: percentageChange
+      });
+      
+      // Keep only last 10 price changes
+      if (priceHistory.length > 10) {
+        priceHistory.splice(0, priceHistory.length - 10);
+      }
+      
+      this.priceTracking = {
+        ...tracking,
+        currentPrice: newPrice,
+        lastChecked: new Date(),
+        priceHistory: priceHistory
+      };
+    }
+    
+    return this.save();
+  };
+
+  Favorite.prototype.addView = async function(duration = 0) {
+    const viewHistory = this.viewHistory || [];
+    viewHistory.push({
+      date: new Date(),
+      duration: duration
     });
-    this.sharing.isShared = true;
-  }
-  return this.save();
+    
+    // Keep only last 50 views
+    if (viewHistory.length > 50) {
+      viewHistory.splice(0, viewHistory.length - 50);
+    }
+    
+    const analytics = this.analytics || {};
+    analytics.timesViewed = (analytics.timesViewed || 0) + 1;
+    analytics.lastViewed = new Date();
+    analytics.totalViewTime = (analytics.totalViewTime || 0) + duration;
+    
+    this.viewHistory = viewHistory;
+    this.analytics = analytics;
+    
+    return this.save();
+  };
+
+  Favorite.prototype.addReminder = async function(type, date, message = '') {
+    const reminders = this.reminders || [];
+    reminders.push({
+      type: type,
+      date: date,
+      message: message
+    });
+    
+    this.reminders = reminders;
+    return this.save();
+  };
+
+  Favorite.prototype.completeReminder = async function(reminderId) {
+    const reminders = this.reminders || [];
+    const reminder = reminders.find(r => r.id === reminderId);
+    
+    if (reminder) {
+      reminder.isCompleted = true;
+      reminder.completedAt = new Date();
+      this.reminders = reminders;
+    }
+    
+    return this.save();
+  };
+
+  Favorite.prototype.shareWithUser = async function(userId, canEdit = false) {
+    const sharing = this.sharing || { isShared: false, sharedWith: [] };
+    
+    if (!sharing.sharedWith.some(share => share.userId === userId)) {
+      sharing.sharedWith.push({
+        userId: userId,
+        sharedAt: new Date(),
+        canEdit: canEdit
+      });
+      sharing.isShared = true;
+      this.sharing = sharing;
+    }
+    
+    return this.save();
+  };
+
+  Favorite.prototype.removeSharedUser = async function(userId) {
+    const sharing = this.sharing || { isShared: false, sharedWith: [] };
+    sharing.sharedWith = sharing.sharedWith.filter(share => share.userId !== userId);
+    sharing.isShared = sharing.sharedWith.length > 0;
+    this.sharing = sharing;
+    
+    return this.save();
+  };
+
+  // Static methods
+  Favorite.findUserFavorites = function(userId, options = {}) {
+    const query = {
+      where: { userId: userId },
+      order: [['saved_at', 'DESC']]
+    };
+    
+    if (options.tags && options.tags.length > 0) {
+      query.where[sequelize.Op.or] = options.tags.map(tag => 
+        sequelize.where(
+          sequelize.fn('JSON_CONTAINS', sequelize.col('tags'), `"${tag}"`),
+          true
+        )
+      );
+    }
+    
+    if (options.priority) {
+      query.where.priority = options.priority;
+    }
+    
+    return this.findAll(query);
+  };
+
+  Favorite.findPriceAlerts = function() {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    return this.findAll({
+      where: {
+        [sequelize.Op.and]: [
+          sequelize.where(
+            sequelize.fn('JSON_EXTRACT', sequelize.col('alerts'), '$.priceChanges'),
+            true
+          ),
+          sequelize.where(
+            sequelize.fn('JSON_EXTRACT', sequelize.col('price_tracking'), '$.lastChecked'),
+            { [sequelize.Op.lt]: yesterday }
+          )
+        ]
+      }
+    });
+  };
+
+  // Virtual fields (computed properties)
+  Favorite.prototype.toJSON = function() {
+    const values = Object.assign({}, this.get());
+    values.isPriceIncreased = this.isPriceIncreased();
+    values.priceChangePercentage = this.getPriceChangePercentage();
+    values.daysSinceSaved = this.getDaysSinceSaved();
+    return values;
+  };
+
+  return Favorite;
 };
-
-favoriteSchema.methods.removeSharedUser = function(userId) {
-  this.sharing.sharedWith = this.sharing.sharedWith.filter(share => !share.userId.equals(userId));
-  this.sharing.isShared = this.sharing.sharedWith.length > 0;
-  return this.save();
-};
-
-// Static methods
-favoriteSchema.statics.findUserFavorites = function(userId, options = {}) {
-  const query = { user: userId };
-  
-  if (options.tags && options.tags.length > 0) {
-    query.tags = { $in: options.tags };
-  }
-  
-  if (options.priority) {
-    query.priority = options.priority;
-  }
-  
-  return this.find(query)
-    .populate('property', 'title photos address price status propertyType')
-    .sort({ savedAt: -1 });
-};
-
-favoriteSchema.statics.findPriceAlerts = function() {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  
-  return this.find({
-    'alerts.priceChanges': true,
-    'priceTracking.lastChecked': { $lt: yesterday }
-  }).populate('property', 'price title address');
-};
-
-// Pre-save middleware
-favoriteSchema.pre('save', function(next) {
-  if (this.isNew && !this.priceTracking.originalPrice) {
-    this.priceTracking.originalPrice = this.priceTracking.currentPrice;
-  }
-  next();
-});
-
-module.exports = mongoose.model('Favorite', favoriteSchema);

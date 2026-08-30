@@ -5,17 +5,17 @@ const router = express.Router();
 // Get public announcements for home page
 router.get('/announcements', async (req, res) => {
   try {
-    const Announcement = require('../models/Announcement');
-    const announcements = await Announcement.find({ 
-      isActive: true,
-      $or: [
-        { targetAudience: 'all' },
-        { targetAudience: { $exists: false } }
-      ]
-    })
-    .sort({ priority: -1, createdAt: -1 })
-    .limit(5)
-    .select('title content type priority');
+    const { Announcement } = require('../models');
+    const { Op } = require('sequelize');
+    
+    const announcements = await Announcement.findAll({
+      where: {
+        isActive: true
+      },
+      order: [['priority', 'DESC'], ['createdAt', 'DESC']],
+      limit: 5,
+      attributes: ['title', 'content', 'type', 'priority']
+    });
 
     res.json({ announcements });
   } catch (error) {

@@ -1,245 +1,244 @@
-const mongoose = require('mongoose');
-
-const openHouseSchema = new mongoose.Schema({
-  // Basic Information
-  property: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Property',
-    required: true
-  },
-  seller: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  
-  // Event Details
-  title: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  description: {
-    type: String,
-    maxlength: 1000
-  },
-  
-  // Scheduling
-  startDate: {
-    type: Date,
-    required: true
-  },
-  endDate: {
-    type: Date,
-    required: true
-  },
-  duration: {
-    type: Number, // in minutes
-    default: 120
-  },
-  
-  // Location Details
-  address: {
-    street: String,
-    city: String,
-    state: String,
-    zipCode: String,
-    country: String
-  },
-  meetingPoint: String, // Specific meeting location
-  parkingInfo: String,
-  accessInstructions: String,
-  
-  // Event Type
-  type: {
-    type: String,
-    enum: ['open-house', 'private-showing', 'virtual-tour', 'auction'],
-    default: 'open-house'
-  },
-  
-  // Status & Management
-  status: {
-    type: String,
-    enum: ['scheduled', 'active', 'completed', 'cancelled', 'postponed'],
-    default: 'scheduled'
-  },
-  isRecurring: {
-    type: Boolean,
-    default: false
-  },
-  recurringPattern: {
-    type: String,
-    enum: ['weekly', 'bi-weekly', 'monthly'],
-    required: false
-  },
-  
-  // Attendees & RSVPs
-  maxAttendees: {
-    type: Number,
-    default: 20
-  },
-  rsvps: [{
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+module.exports = (sequelize, DataTypes) => {
+  const OpenHouse = sequelize.define('OpenHouse', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
     },
-    name: String,
-    email: String,
-    phone: String,
-    status: {
-      type: String,
-      enum: ['confirmed', 'maybe', 'declined'],
-      default: 'confirmed'
+    propertyId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'property_id',
+      references: {
+        model: 'properties',
+        key: 'id'
+      }
     },
-    rsvpDate: {
-      type: Date,
-      default: Date.now
+    sellerId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'seller_id',
+      references: {
+        model: 'users',
+        key: 'id'
+      }
     },
-    notes: String
-  }],
-  
-  // Virtual Tour (if applicable)
-  virtualTour: {
-    platform: String, // zoom, google-meet, etc.
-    link: String,
-    password: String,
-    instructions: String
-  },
-  
-  // Marketing & Promotion
-  isPublic: {
-    type: Boolean,
-    default: true
-  },
-  marketingMaterials: [{
-    type: String,
-    url: String,
-    description: String
-  }],
-  
-  // Follow-up
-  followUpNotes: String,
-  followUpDate: Date,
-  
-  // Analytics
-  attendance: {
-    confirmed: { type: Number, default: 0 },
-    attended: { type: Number, default: 0 },
-    noShow: { type: Number, default: 0 }
-  },
-  
-  // Reminders
-  reminders: [{
+    title: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    startDate: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'start_date'
+    },
+    endDate: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'end_date'
+    },
+    duration: {
+      type: DataTypes.INTEGER,
+      defaultValue: 120,
+      comment: 'Duration in minutes'
+    },
+    // Address (stored as JSON)
+    address: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    meetingPoint: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'meeting_point'
+    },
+    parkingInfo: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'parking_info'
+    },
+    accessInstructions: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'access_instructions'
+    },
     type: {
-      type: String,
-      enum: ['email', 'sms', 'push'],
-      required: true
+      type: DataTypes.ENUM('open-house', 'private-showing', 'virtual-tour', 'auction'),
+      defaultValue: 'open-house'
     },
-    sentAt: Date,
-    recipient: String,
     status: {
-      type: String,
-      enum: ['sent', 'delivered', 'failed'],
-      default: 'sent'
+      type: DataTypes.ENUM('scheduled', 'active', 'completed', 'cancelled', 'postponed'),
+      defaultValue: 'scheduled'
+    },
+    isRecurring: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: 'is_recurring'
+    },
+    recurringPattern: {
+      type: DataTypes.ENUM('weekly', 'bi-weekly', 'monthly'),
+      allowNull: true,
+      field: 'recurring_pattern'
+    },
+    maxAttendees: {
+      type: DataTypes.INTEGER,
+      defaultValue: 20,
+      field: 'max_attendees'
+    },
+    // RSVPs (stored as JSON)
+    rsvps: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Virtual Tour (stored as JSON)
+    virtualTour: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: 'virtual_tour'
+    },
+    isPublic: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      field: 'is_public'
+    },
+    marketingMaterials: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: 'marketing_materials'
+    },
+    followUpNotes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'follow_up_notes'
+    },
+    followUpDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'follow_up_date'
+    },
+    // Analytics (stored as JSON)
+    attendance: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    // Reminders (stored as JSON)
+    reminders: {
+      type: DataTypes.JSON,
+      allowNull: true
     }
-  }],
-  
-  // Timestamps
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
-}, {
-  timestamps: true
-});
-
-// Indexes
-openHouseSchema.index({ property: 1, seller: 1 });
-openHouseSchema.index({ seller: 1, startDate: 1 });
-openHouseSchema.index({ startDate: 1, endDate: 1 });
-openHouseSchema.index({ status: 1, isPublic: 1 });
-
-// Pre-save middleware
-openHouseSchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  next();
-});
-
-// Virtual fields
-openHouseSchema.virtual('isUpcoming').get(function() {
-  return this.startDate > new Date() && this.status === 'scheduled';
-});
-
-openHouseSchema.virtual('isActive').get(function() {
-  const now = new Date();
-  return now >= this.startDate && now <= this.endDate && this.status === 'active';
-});
-
-openHouseSchema.virtual('isPast').get(function() {
-  return this.endDate < new Date() || this.status === 'completed';
-});
-
-// Instance methods
-openHouseSchema.methods.addRSVP = function(userId, userInfo, status = 'confirmed', notes = '') {
-  const existingRSVP = this.rsvps.find(rsvp => rsvp.user.toString() === userId.toString());
-  
-  if (existingRSVP) {
-    existingRSVP.status = status;
-    existingRSVP.notes = notes;
-    existingRSVP.rsvpDate = new Date();
-  } else {
-    this.rsvps.push({
-      user: userId,
-      name: userInfo.name,
-      email: userInfo.email,
-      phone: userInfo.phone,
-      status,
-      notes,
-      rsvpDate: new Date()
-    });
-  }
-  
-  this.attendance.confirmed = this.rsvps.filter(rsvp => rsvp.status === 'confirmed').length;
-  return this.save();
-};
-
-openHouseSchema.methods.markAttendance = function(userId, attended = true) {
-  const rsvp = this.rsvps.find(rsvp => rsvp.user.toString() === userId.toString());
-  if (rsvp) {
-    if (attended) {
-      this.attendance.attended += 1;
-    } else {
-      this.attendance.noShow += 1;
-    }
-  }
-  return this.save();
-};
-
-openHouseSchema.methods.cancel = function(reason = '') {
-  this.status = 'cancelled';
-  this.followUpNotes = reason;
-  return this.save();
-};
-
-// Static methods
-openHouseSchema.statics.getUpcomingBySeller = function(sellerId) {
-  return this.find({
-    seller: sellerId,
-    startDate: { $gte: new Date() },
-    status: { $in: ['scheduled', 'active'] }
-  })
-  .populate('property', 'title address price photos')
-  .sort({ startDate: 1 });
-};
-
-openHouseSchema.statics.getPastBySeller = function(sellerId) {
-  return this.find({
-    seller: sellerId,
-    $or: [
-      { endDate: { $lt: new Date() } },
-      { status: 'completed' }
+  }, {
+    tableName: 'open_houses',
+    timestamps: true,
+    underscored: true,
+    indexes: [
+      // Temporarily removed complex indexes to avoid key length issues
     ]
-  })
-  .populate('property', 'title address price photos')
-  .sort({ endDate: -1 });
-};
+  });
 
-module.exports = mongoose.model('OpenHouse', openHouseSchema);
+  // Instance methods
+  OpenHouse.prototype.isUpcoming = function() {
+    return this.startDate > new Date() && this.status === 'scheduled';
+  };
+
+  OpenHouse.prototype.isActive = function() {
+    const now = new Date();
+    return now >= this.startDate && now <= this.endDate && this.status === 'active';
+  };
+
+  OpenHouse.prototype.isPast = function() {
+    return this.endDate < new Date() || this.status === 'completed';
+  };
+
+  OpenHouse.prototype.addRSVP = async function(userId, userInfo, status = 'confirmed', notes = '') {
+    const rsvps = this.rsvps || [];
+    const existingRSVP = rsvps.find(rsvp => rsvp.user === userId);
+    
+    if (existingRSVP) {
+      existingRSVP.status = status;
+      existingRSVP.notes = notes;
+      existingRSVP.rsvpDate = new Date();
+    } else {
+      rsvps.push({
+        user: userId,
+        name: userInfo.name,
+        email: userInfo.email,
+        phone: userInfo.phone,
+        status,
+        notes,
+        rsvpDate: new Date()
+      });
+    }
+    
+    this.rsvps = rsvps;
+    
+    // Update attendance count
+    const attendance = this.attendance || { confirmed: 0, attended: 0, noShow: 0 };
+    attendance.confirmed = rsvps.filter(rsvp => rsvp.status === 'confirmed').length;
+    this.attendance = attendance;
+    
+    return this.save();
+  };
+
+  OpenHouse.prototype.markAttendance = async function(userId, attended = true) {
+    const rsvps = this.rsvps || [];
+    const rsvp = rsvps.find(rsvp => rsvp.user === userId);
+    
+    if (rsvp) {
+      const attendance = this.attendance || { confirmed: 0, attended: 0, noShow: 0 };
+      if (attended) {
+        attendance.attended += 1;
+      } else {
+        attendance.noShow += 1;
+      }
+      this.attendance = attendance;
+    }
+    
+    return this.save();
+  };
+
+  OpenHouse.prototype.cancel = async function(reason = '') {
+    this.status = 'cancelled';
+    this.followUpNotes = reason;
+    return this.save();
+  };
+
+  // Static methods
+  OpenHouse.getUpcomingBySeller = function(sellerId) {
+    return this.findAll({
+      where: {
+        sellerId: sellerId,
+        startDate: { [sequelize.Op.gte]: new Date() },
+        status: { [sequelize.Op.in]: ['scheduled', 'active'] }
+      },
+      order: [['start_date', 'ASC']]
+    });
+  };
+
+  OpenHouse.getPastBySeller = function(sellerId) {
+    return this.findAll({
+      where: {
+        sellerId: sellerId,
+        [sequelize.Op.or]: [
+          { endDate: { [sequelize.Op.lt]: new Date() } },
+          { status: 'completed' }
+        ]
+      },
+      order: [['end_date', 'DESC']]
+    });
+  };
+
+  // Virtual fields (computed properties)
+  OpenHouse.prototype.toJSON = function() {
+    const values = Object.assign({}, this.get());
+    values.isUpcoming = this.isUpcoming();
+    values.isActive = this.isActive();
+    values.isPast = this.isPast();
+    return values;
+  };
+
+  return OpenHouse;
+};

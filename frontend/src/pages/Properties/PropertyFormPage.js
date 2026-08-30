@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import PropertyForm from '../../components/PropertyForm';
@@ -17,33 +17,16 @@ const PropertyFormPage = () => {
   const [propertyData, setPropertyData] = useState(null);
   const [loadingProperty, setLoadingProperty] = useState(false);
   const isEditing = Boolean(id);
-  const isRentalProperty = location.pathname.includes('create-rental');
+  const isRentalCreationRoute = location.pathname.includes('create-rental');
 
   // Check if user is authenticated and has permission
   useEffect(() => {
     if (!isAuthenticated) {
-      toast.error('Please log in to create a property');
+      toast.error('Please log in to continue');
       navigate('/login');
-      return;
     }
-    
-    // Check if user has permission to create properties
-    if (isRentalProperty) {
-      // For rental properties, allow renters, sellers, agents, and admins
-      if (user && !['renter', 'seller', 'agent', 'admin'].includes(user.userType)) {
-        toast.error('Only renters, sellers, agents, and admins can create rental properties');
-        navigate('/dashboard');
-        return;
-      }
-    } else {
-      // For sale properties, only allow sellers, agents, and admins
-      if (user && !['seller', 'agent', 'admin'].includes(user.userType)) {
-        toast.error('Only sellers, agents, and admins can create properties for sale');
-        navigate('/dashboard');
-        return;
-      }
-    }
-  }, [isAuthenticated, user, navigate]);
+    // Creation routes still rely on role checks below; editing permissions are handled after property data loads.
+  }, [isAuthenticated, navigate]);
 
   // Fetch property data for editing
   useEffect(() => {
@@ -138,17 +121,57 @@ const PropertyFormPage = () => {
   };
 
   // Show loading or redirect if not authenticated or not authorized
-  const isAuthorized = isRentalProperty 
-    ? ['renter', 'seller', 'agent', 'admin'].includes(user?.userType)
-    : ['seller', 'agent', 'admin'].includes(user?.userType);
-    
-  if (!isAuthenticated || (user && !isAuthorized)) {
+  const listingType = propertyData?.listingType;
+  const isRentalListing = listingType ? listingType === 'rental' : isRentalCreationRoute;
+  const isRentalProperty = isRentalListing;
+  const ownerIds = useMemo(() => {
+    if (!propertyData) return [];
+    const possibleIds = [
+      propertyData.ownerId,
+      propertyData.owner_id,
+      propertyData.owner?.id,
+      propertyData.owner?.ID,
+      propertyData.owner?.userId,
+      propertyData.owner?.user_id
+    ];
+    return possibleIds
+      .filter((value) => value !== undefined && value !== null)
+      .map((value) => value.toString());
+  }, [propertyData]);
+
+  const isOwner = Boolean(
+    user?.id && ownerIds.includes(user.id.toString())
+  );
+
+  const rentalRoles = ['renter', 'seller', 'agent', 'admin'];
+  const saleRoles = ['seller', 'agent', 'admin'];
+
+  let canAccess = true;
+  if (!isAuthenticated) {
+    canAccess = false;
+  } else if (isEditing) {
+    if (loadingProperty && !propertyData) {
+      canAccess = true; // wait for property to load
+    } else if (isRentalListing) {
+      canAccess = isOwner || rentalRoles.includes(user?.userType);
+    } else {
+      canAccess = isOwner || saleRoles.includes(user?.userType);
+    }
+  } else {
+    canAccess = isRentalCreationRoute
+      ? rentalRoles.includes(user?.userType)
+      : saleRoles.includes(user?.userType);
+  }
+
+  if (!canAccess) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">
-            {!isAuthenticated ? 'Redirecting to login...' : 'Redirecting to dashboard...'}
+        <div className="text-center space-y-4">
+          <div className="mx-auto h-12 w-12 rounded-full bg-red-50 flex items-center justify-center">
+            <span className="text-red-500 text-xl">!</span>
+          </div>
+          <p className="text-gray-600">
+            You do not have permission to {isEditing ? 'edit' : 'create'} this property.
           </p>
         </div>
       </div>

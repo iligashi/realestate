@@ -1,11 +1,11 @@
-const User = require('../models/User');
+const { User } = require('../models');
 const jwt = require('jsonwebtoken');
 
 // Generate JWT Token
 const generateToken = (userId) => {
   return jwt.sign(
     { userId },
-    process.env.JWT_SECRET,
+    process.env.JWT_SECRET || 'a8f1fbe9065a9b969f1870efbc6d8d3ab8119d8ec35140d79f4b16d16ef3f398',
     { expiresIn: process.env.JWT_EXPIRE || '7d' }
   );
 };
@@ -16,28 +16,26 @@ const register = async (req, res) => {
     const { email, password, firstName, lastName, userType, phone } = req.body;
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ error: 'User with this email already exists.' });
     }
 
     // Create new user
-    const user = new User({
+    const user = await User.create({
       email,
       password,
-      firstName,
-      lastName,
-      userType,
+      firstName: firstName,
+      lastName: lastName,
+      userType: userType,
       phone
     });
 
-    await user.save();
-
     // Generate token
-    const token = generateToken(user._id);
+    const token = generateToken(user.id);
 
     // Return user data (without password) and token
-    const userResponse = user.toObject();
+    const userResponse = user.toJSON();
     delete userResponse.password;
 
     res.status(201).json({
@@ -57,16 +55,9 @@ const login = async (req, res) => {
     const { email, password } = req.body;
 
     // Find user by email
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password.' });
-    }
-
-    // Check if account is locked
-    if (user.isLocked()) {
-      return res.status(423).json({ 
-        error: 'Account is temporarily locked. Please try again later.' 
-      });
     }
 
     // Check if account is active
@@ -74,30 +65,21 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Account is deactivated.' });
     }
 
-    // Verify password
-    const isPasswordValid = await user.comparePassword(password);
+    // Verify password (using bcrypt directly since we don't have the method)
+    const bcrypt = require('bcryptjs');
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      // Increment login attempts
-      await user.incLoginAttempts();
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    // Reset login attempts on successful login
-    if (user.loginAttempts > 0) {
-      user.loginAttempts = 0;
-      user.lockUntil = undefined;
-      await user.save();
-    }
-
     // Update last login
-    user.lastLogin = new Date();
-    await user.save();
+    await user.update({ lastLogin: new Date() });
 
     // Generate token
-    const token = generateToken(user._id);
+    const token = generateToken(user.id);
 
     // Return user data (without password) and token
-    const userResponse = user.toObject();
+    const userResponse = user.toJSON();
     delete userResponse.password;
 
     res.json({
@@ -114,7 +96,9 @@ const login = async (req, res) => {
 // Get Current User Profile
 const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('-password');
+    const user = await User.findByPk(req.user.id, {
+      attributes: { exclude: ['password'] }
+    });
     res.json({ user });
   } catch (error) {
     console.error('Get profile error:', error);
@@ -223,19 +207,19 @@ const updateProfile = async (req, res) => {
 
     console.log('Sanitized updates:', sanitizedUpdates);
 
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { $set: sanitizedUpdates },
-      { new: true, runValidators: true }
-    ).select('-password');
-
+    const user = await User.findByPk(req.user.id);
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
+    
+    await user.update(sanitizedUpdates);
+    const updatedUser = await User.findByPk(req.user.id, {
+      attributes: { exclude: ['password'] }
+    });
 
     res.json({
       message: 'Profile updated successfully',
-      user
+      user: updatedUser
     });
   } catch (error) {
     console.error('Update profile error:', error);
@@ -248,17 +232,17 @@ const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    const user = await User.findById(req.user._id);
+    const user = await User.findByPk(req.user.id);
     
     // Verify current password
-    const isCurrentPasswordValid = await user.comparePassword(currentPassword);
+    const bcrypt = require('bcryptjs');
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isCurrentPasswordValid) {
       return res.status(400).json({ error: 'Current password is incorrect.' });
     }
 
     // Update password
-    user.password = newPassword;
-    await user.save();
+    await user.update({ password: newPassword });
 
     res.json({ message: 'Password changed successfully' });
   } catch (error) {
@@ -271,9 +255,8 @@ const changePassword = async (req, res) => {
 const extendSession = async (req, res) => {
   try {
     // Update last login time to extend session
-    const user = await User.findById(req.user._id);
-    user.lastLogin = new Date();
-    await user.save();
+    const user = await User.findByPk(req.user.id);
+    await user.update({ lastLogin: new Date() });
 
     res.json({ 
       message: 'Session extended successfully',
