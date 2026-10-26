@@ -61,12 +61,12 @@ A comprehensive, full-stack real estate platform built with modern web technolog
 ## 🛠️ Technology Stack
 
 ### Frontend
-- ** 18.2.0** - Modern UI library with hooks
+- **React 18.2.0** - UI library with hooks
 - **Redux Toolkit** - State management
 - **React Router** - Client-side routing
 - **Tailwind CSS** - Utility-first CSS framework
 - **Socket.IO Client** - Real-time communication
-- ** Hook Form** - Form management and validation
+- **React Hook Form** - Form management and validation
 - **Heroicons** - Beautiful SVG icons
 - **Framer Motion** - Animation library
 
@@ -93,8 +93,8 @@ A comprehensive, full-stack real estate platform built with modern web technolog
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/real-estate-platform.git
-cd real-estate-platform
+git clone https://github.com/iligashi/realestate.git
+cd realestate
 ```
 
 ### 2. Install Backend Dependencies
@@ -169,7 +169,7 @@ Real-time features are powered by Socket.IO with:
 - Set up open houses and manage RSVPs
 - Track property performance and inquiries
 
-## �� API Documentation
+## API Documentation
 
 ### Authentication Endpoints
 - `POST /api/auth/register` - User registration
@@ -209,7 +209,7 @@ Real-time features are powered by Socket.IO with:
 - Property inquiry alerts
 - Appointment reminders
 - System announcements
-=======
-Admin profile:
-admin@realestate.com
-password
+
+## Security
+
+This README no longer publishes the repository's default admin credentials. Treat any credentials in local seed data as public: use unique values for local development and rotate them before deploying. Store production secrets in environment variables, never in source control.
