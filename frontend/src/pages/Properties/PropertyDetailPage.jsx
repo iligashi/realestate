@@ -583,17 +583,9 @@ const PropertyDetailPage = () => {
                 onClick={handleScheduleViewing}
                 className="w-full border border-green-600 text-green-600 py-3 px-4 rounded-lg font-medium hover:bg-green-50 transition-colors"
               >
-                {isRentalProperty ? 'Schedule Viewing' : 'Schedule Viewing'}
+                Schedule Viewing
               </button>
-              
-              <button 
-                type="button"
-                onClick={handleReport}
-                className="w-full border border-red-600 text-red-600 py-3 px-4 rounded-lg font-medium hover:bg-red-50 transition-colors"
-              >
-                Report Property
-              </button>
-              
+
               {isRentalProperty && (
                 <button
                   onClick={handleApplyForRental}
