@@ -128,7 +128,6 @@ const propertySchema = new mongoose.Schema({
     min: 0
   },
   cooling: String,
-  utilities: [String],
   
   // Media
   photos: [{
