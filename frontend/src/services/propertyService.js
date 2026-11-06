@@ -1,6 +1,7 @@
 import api from './api';
+import { API_URL } from '../config';
 
-const API_BASE_URL = '/api/properties';
+const API_BASE_URL = `${API_URL}/properties`;
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {

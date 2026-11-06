@@ -1,0 +1,48 @@
+# Full stack:      docker compose up --build
+# Database only:   docker compose up -d mongo   (then run the apps with `npm run dev`)
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGODB_URI: mongodb://mongo:27017/real-estate-marketplace
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in a root .env file (at least 32 characters)}
+      JWT_EXPIRE: 7d
+      FRONTEND_URL: http://localhost:3000
+    ports:
+      - "5000:5000"
+    volumes:
+      - uploads:/app/uploads
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_SERVER_URL: http://localhost:5000
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+
+volumes:
+  mongo-data:
+  uploads:

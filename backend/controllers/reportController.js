@@ -1,235 +1,165 @@
-const { Report, User, Property } = require('../models');
-const { Op } = require('sequelize');
+const mongoose = require('mongoose');
+const Report = require('../models/Report');
+const User = require('../models/User');
+const Property = require('../models/Property');
+const Message = require('../models/Message');
 
-// Create a new report
+// Map the lowercase item types the client sends to Mongoose model names
+const ITEM_MODELS = {
+  property: { name: 'Property', model: Property },
+  user: { name: 'User', model: User },
+  message: { name: 'Message', model: Message }
+};
+
+const REPORT_TYPES = ['spam', 'inappropriate', 'fake', 'harassment', 'copyright', 'fraud', 'other'];
+const REPORTER_FIELDS = 'firstName lastName email';
+
+const parsePagination = (query) => {
+  const page = Math.max(parseInt(query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(query.limit, 10) || 10, 1), 100);
+  return { page, limit, skip: (page - 1) * limit };
+};
+
+const paginatedReports = async (filter, query) => {
+  const { page, limit, skip } = parsePagination(query);
+  const [reports, total] = await Promise.all([
+    Report.find(filter)
+      .populate('reportedBy', REPORTER_FIELDS)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Report.countDocuments(filter)
+  ]);
+
+  return {
+    success: true,
+    reports,
+    pagination: {
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      limit
+    }
+  };
+};
+
+// POST /api/reports
 const createReport = async (req, res) => {
   try {
     const { reportedItemId, reportedItemModel, type, reason, evidence, metadata } = req.body;
-    const reportedById = req.user.id;
 
-    // Validate required fields
     if (!reportedItemId || !reportedItemModel || !type || !reason) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: reportedItemId, reportedItemModel, type, and reason are required'
+        message: 'reportedItemId, reportedItemModel, type and reason are required'
       });
     }
 
-    // Validate reportedItemModel
-    const validModels = ['property', 'user', 'message', 'review'];
-    if (!validModels.includes(reportedItemModel)) {
+    const target = ITEM_MODELS[String(reportedItemModel).toLowerCase()];
+    if (!target) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid reportedItemModel. Must be one of: property, user, message, review'
+        message: `Invalid reportedItemModel. Must be one of: ${Object.keys(ITEM_MODELS).join(', ')}`
       });
     }
 
-    // Validate report type
-    const validTypes = ['spam', 'inappropriate', 'fraud', 'harassment', 'other'];
-    if (!validTypes.includes(type)) {
+    if (!REPORT_TYPES.includes(type)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid report type. Must be one of: spam, inappropriate, fraud, harassment, other'
+        message: `Invalid report type. Must be one of: ${REPORT_TYPES.join(', ')}`
       });
     }
 
-    // Check if the reported item exists
-    let reportedItem;
-    if (reportedItemModel === 'property') {
-      reportedItem = await Property.findByPk(reportedItemId);
-    } else if (reportedItemModel === 'user') {
-      reportedItem = await User.findByPk(reportedItemId);
-    }
-    // For messages and reviews, we'll assume they exist for now
-
-    if (!reportedItem && !['message', 'review'].includes(reportedItemModel)) {
-      return res.status(404).json({
-        success: false,
-        message: `${reportedItemModel} not found`
-      });
+    if (!mongoose.isValidObjectId(reportedItemId)) {
+      return res.status(400).json({ success: false, message: 'Invalid reportedItemId' });
     }
 
-    // Check if user has already reported this item
-    const existingReport = await Report.findOne({
-      where: {
-        reportedById,
-        reportedItemId,
-        reportedItemModel
-      }
+    const exists = await target.model.exists({ _id: reportedItemId });
+    if (!exists) {
+      return res.status(404).json({ success: false, message: `${target.name} not found` });
+    }
+
+    const duplicate = await Report.exists({
+      reportedBy: req.user._id,
+      reportedItem: reportedItemId,
+      reportedItemModel: target.name
     });
-
-    if (existingReport) {
-      return res.status(400).json({
-        success: false,
-        message: 'You have already reported this item'
-      });
+    if (duplicate) {
+      return res.status(400).json({ success: false, message: 'You have already reported this item' });
     }
 
-    // Create the report
     const report = await Report.create({
-      reportedById,
-      reportedItemId,
-      reportedItemModel,
+      reportedBy: req.user._id,
+      reportedItem: reportedItemId,
+      reportedItemModel: target.name,
       type,
       reason,
-      evidence: evidence || null,
-      metadata: metadata || null,
-      status: 'pending'
+      ...(Array.isArray(evidence) && { evidence }),
+      ...(metadata && typeof metadata === 'object' && { metadata })
     });
 
-    // Fetch the report with reporter information
-    const reportWithReporter = await Report.findByPk(report.id, {
-      include: [
-        { model: User, as: 'reporter', attributes: ['id', 'firstName', 'lastName', 'email'] }
-      ]
-    });
+    await report.populate('reportedBy', REPORTER_FIELDS);
 
-    res.status(201).json({
-      success: true,
-      message: 'Report submitted successfully',
-      report: reportWithReporter
-    });
-
+    res.status(201).json({ success: true, message: 'Report submitted successfully', report });
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     console.error('Create report error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create report',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Failed to create report' });
   }
 };
 
-// Get reports by reporter (user's own reports)
+// GET /api/reports/my-reports
 const getMyReports = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status = '' } = req.query;
-    const reportedById = req.user.id;
-
-    const filter = { reportedById };
-    if (status) filter.status = status;
-
-    const reports = await Report.findAll({
-      where: filter,
-      include: [
-        { model: User, as: 'reporter', attributes: ['id', 'firstName', 'lastName', 'email'] }
-      ],
-      limit: parseInt(limit),
-      offset: (parseInt(page) - 1) * parseInt(limit),
-      order: [['createdAt', 'DESC']]
-    });
-
-    const total = await Report.count({ where: filter });
-
-    res.json({
-      success: true,
-      reports,
-      pagination: {
-        total,
-        totalPages: Math.ceil(total / parseInt(limit)),
-        currentPage: parseInt(page),
-        limit: parseInt(limit)
-      }
-    });
-
+    const filter = { reportedBy: req.user._id };
+    if (req.query.status) filter.status = req.query.status;
+    res.json(await paginatedReports(filter, req.query));
   } catch (error) {
     console.error('Get my reports error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch reports',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Failed to fetch reports' });
   }
 };
 
-// Get reports made against the user (where user is the reported item)
+// GET /api/reports/against-me
 const getReportsAgainstMe = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status = '' } = req.query;
-    const userId = req.user.id;
-
-    const filter = { 
-      reportedItemId: userId,
-      reportedItemModel: 'user'
-    };
-    if (status) filter.status = status;
-
-    const reports = await Report.findAll({
-      where: filter,
-      include: [
-        { model: User, as: 'reporter', attributes: ['id', 'firstName', 'lastName', 'email'] }
-      ],
-      limit: parseInt(limit),
-      offset: (parseInt(page) - 1) * parseInt(limit),
-      order: [['createdAt', 'DESC']]
-    });
-
-    const total = await Report.count({ where: filter });
-
-    res.json({
-      success: true,
-      reports,
-      pagination: {
-        total,
-        totalPages: Math.ceil(total / parseInt(limit)),
-        currentPage: parseInt(page),
-        limit: parseInt(limit)
-      }
-    });
-
+    const filter = { reportedItem: req.user._id, reportedItemModel: 'User' };
+    if (req.query.status) filter.status = req.query.status;
+    res.json(await paginatedReports(filter, req.query));
   } catch (error) {
     console.error('Get reports against me error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch reports against you',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Failed to fetch reports against you' });
   }
 };
 
-// Get report by ID
+// GET /api/reports/:id
 const getReport = async (req, res) => {
   try {
-    const { id } = req.params;
-    const userId = req.user.id;
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: 'Report not found' });
+    }
 
-    const report = await Report.findByPk(id, {
-      include: [
-        { model: User, as: 'reporter', attributes: ['id', 'firstName', 'lastName', 'email'] }
-      ]
-    });
-
+    const report = await Report.findById(req.params.id).populate('reportedBy', REPORTER_FIELDS);
     if (!report) {
-      return res.status(404).json({
-        success: false,
-        message: 'Report not found'
-      });
+      return res.status(404).json({ success: false, message: 'Report not found' });
     }
 
-    // Check if user can view this report (either reporter, reported item, or admin)
-    const canView = report.reportedById === userId || 
-                   report.reportedItemId === userId || 
-                   req.user.userType === 'admin';
-    
+    const userId = String(req.user._id);
+    const canView =
+      String(report.reportedBy?._id || report.reportedBy) === userId ||
+      String(report.reportedItem) === userId ||
+      req.user.userType === 'admin';
+
     if (!canView) {
-      return res.status(403).json({
-        success: false,
-        message: 'You are not authorized to view this report'
-      });
+      return res.status(403).json({ success: false, message: 'You are not authorized to view this report' });
     }
 
-    res.json({
-      success: true,
-      report
-    });
-
+    res.json({ success: true, report });
   } catch (error) {
     console.error('Get report error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch report',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Failed to fetch report' });
   }
 };
 

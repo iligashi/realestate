@@ -94,14 +94,10 @@ announcementSchema.statics.getActiveForUser = function(userType) {
   const now = new Date();
   return this.find({
     isActive: true,
-    $or: [
-      { targetAudience: 'all' },
-      { targetAudience: userType }
-    ],
     startDate: { $lte: now },
-    $or: [
-      { endDate: { $exists: false } },
-      { endDate: { $gt: now } }
+    $and: [
+      { $or: [{ targetAudience: 'all' }, { targetAudience: userType }] },
+      { $or: [{ endDate: { $exists: false } }, { endDate: { $gt: now } }] }
     ]
   }).sort({ priority: -1, isPinned: -1, startDate: -1 });
 };

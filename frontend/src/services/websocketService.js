@@ -1,4 +1,5 @@
 import { io } from 'socket.io-client';
+import { SERVER_URL } from '../config';
 
 class WebSocketService {
   constructor() {
@@ -18,7 +19,7 @@ class WebSocketService {
       return;
     }
 
-    const serverUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    const serverUrl = SERVER_URL;
     
     console.log('Connecting to WebSocket with token:', {
       serverUrl,

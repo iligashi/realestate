@@ -1,0 +1,21 @@
+{
+  "name": "realestate-marketplace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Full-stack real estate marketplace: React + Vite frontend, Express + MongoDB API, real-time messaging with Socket.IO",
+  "scripts": {
+    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install",
+    "dev": "concurrently -k -n api,web -c blue,green \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
+    "seed": "npm --prefix backend run seed",
+    "test": "npm --prefix backend test",
+    "lint": "npm --prefix backend run lint && npm --prefix frontend run lint",
+    "build": "npm --prefix frontend run build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

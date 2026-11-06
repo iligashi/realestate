@@ -1,215 +1,182 @@
-A comprehensive, full-stack real estate platform built with modern web technologies, featuring real-time communication, multi-role user management, and advanced property management capabilities.
-## 📋 Table of Contents
+# RealEstate Marketplace
 
-- [Features](#-features)
-- [Technology Stack](#-technology-stack)
-- [Project Structure](#-project-structure)
-- [Installation](#-installation)
-- [Configuration](#-configuration)
-- [Usage](#-usage)
-- [API Documentation](#-api-documentation)
-- [Real-time Features](#-real-time-features)
-- [Screenshots](#-screenshots)
-- [Contributing](#-contributing)
-- [License](#-license)
+[![CI](https://github.com/iligashi/realestate/actions/workflows/ci.yml/badge.svg)](https://github.com/iligashi/realestate/actions/workflows/ci.yml)
+![Node](https://img.shields.io/badge/node-%3E%3D20-339933?logo=nodedotjs&logoColor=white)
+![React](https://img.shields.io/badge/react-18-61DAFB?logo=react&logoColor=black)
+![MongoDB](https://img.shields.io/badge/mongodb-7-47A248?logo=mongodb&logoColor=white)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## ✨ Features
+A full-stack real estate marketplace where buyers, sellers, renters and agents list, discover and discuss properties in real time. Each role gets its own dashboard, and admins have tools to moderate users, listings and reports.
 
-### 🔐 Authentication & Authorization
-- **Multi-role user system** (Buyer, Seller, Renter, Agent, Admin)
-- **JWT-based authentication** with secure token management
-- **Role-based access control** with protected routes
-- **User verification** and profile management
-- **Password reset** and account recovery
+![Home page](docs/screenshots/home.png)
 
-### 🏘️ Property Management
-- **Advanced property listings** with rich media support
-- **Multiple listing types** (Sale, Rental, Auction, Pre-construction)
-- **Geospatial search** with location-based filtering
-- **Property comparison** and wishlist functionality
-- **Virtual tours** and 360° property views
-- **Price history tracking** and market analytics
+## Features
 
-### 💬 Real-time Communication
-- **WebSocket-based messaging** between users
-- **Typing indicators** and read receipts
-- **Online status tracking** for all users
-- **Real-time notifications** for property updates
-- **Message threading** for organized conversations
+- **Five user roles:** buyer, seller, renter, agent and admin, with role-specific dashboards and role-based route protection
+- **Property listings:** sale and rental listings with photos, filters (type, price, city, bedrooms) and a multi-step listing wizard
+- **Real-time messaging:** Socket.IO conversations with typing indicators, read receipts, online status and live notifications
+- **Rentals:** rental applications that renters submit and owners review
+- **Viewings and open houses:** buyers schedule viewings and sellers manage open houses
+- **Buyer tools:** wishlist, saved searches, property comparison and a mortgage calculator
+- **Moderation:** users report listings, people or messages, and admins review the reports, manage users and approve listings
+- **Seller analytics:** views, inquiries and listing performance
 
-###  Business Features
-- **Appointment scheduling** with calendar integration
-- **Open house management** with RSVP tracking
-- **Rental application system** with document verification
-- **Property viewing scheduler** for buyers
-- **Inquiry management** for sellers
+## Screenshots
 
-### 🎯 Advanced Search & Filtering
-- **Multi-criteria search** (price, location, property type, amenities)
-- **Geospatial queries** using MongoDB 2dsphere indexing
-- **Saved searches** with email alerts
-- **Property recommendations** based on user preferences
-- **Advanced filtering** with multiple parameters
+| Property search | Property details |
+|---|---|
+| ![Properties](docs/screenshots/properties.png) | ![Property detail](docs/screenshots/property-detail.png) |
 
-### 📊 Analytics & Reporting
-- **Admin dashboard** with comprehensive analytics
-- **Property performance metrics** for sellers
-- **User engagement tracking**
-- **Platform usage statistics**
-- **Revenue and commission tracking**
+| Seller dashboard | Admin dashboard |
+|---|---|
+| ![Seller dashboard](docs/screenshots/seller-dashboard.png) | ![Admin dashboard](docs/screenshots/admin-dashboard.png) |
 
-## 🛠️ Technology Stack
+## Tech stack
 
-### Frontend
-- **React 18.2.0** - UI library with hooks
-- **Redux Toolkit** - State management
-- **React Router** - Client-side routing
-- **Tailwind CSS** - Utility-first CSS framework
-- **Socket.IO Client** - Real-time communication
-- **React Hook Form** - Form management and validation
-- **Heroicons** - Beautiful SVG icons
-- **Framer Motion** - Animation library
+| Layer | Technologies |
+|---|---|
+| Frontend | React 18, Vite, Redux Toolkit, React Router, React Query, Tailwind CSS, Socket.IO client |
+| Backend | Node.js, Express, Mongoose, Socket.IO, JWT, express-validator, Multer, Helmet, rate limiting |
+| Database | MongoDB 7 (2dsphere geospatial index for locations) |
+| Testing | Jest, Supertest, mongodb-memory-server |
+| Tooling | ESLint, Prettier, GitHub Actions, Docker, docker compose |
 
-### Backend
-- **Node.js** - JavaScript runtime
-- **Express.js** - Web application framework
-- **MongoDB** - NoSQL database with Mongoose ODM
-- **Socket.IO** - Real-time bidirectional communication
-- **JWT** - JSON Web Token authentication
-- **Multer** - File upload handling
-- **Bcrypt** - Password hashing
-- **Helmet** - Security middleware
+## Architecture
 
-### Development Tools
-- **Nodemon** - Development server
-- **Jest** - Testing framework
-- **ESLint** - Code linting
-- **Prettier** - Code formatting
-- **PostCSS** - CSS processing
-- ### Prerequisites
-- Node.js (v14 or higher)
-- MongoDB (v4.4 or higher)
-- npm or yarn
+```mermaid
+flowchart LR
+  subgraph Client
+    UI[React + Vite SPA<br/>Redux Toolkit, React Query]
+  end
+  subgraph Server[Node.js API]
+    REST[Express REST API<br/>/api/*]
+    WS[Socket.IO server]
+    AUTH[JWT auth +<br/>role middleware]
+  end
+  DB[(MongoDB)]
+  FILES[/uploads/]
 
-### 1. Clone the Repository
+  UI -- HTTPS / JSON --> REST
+  UI <-- WebSocket --> WS
+  REST --> AUTH
+  WS --> AUTH
+  REST --> DB
+  WS --> DB
+  REST --> FILES
+```
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 20 or newer
+- MongoDB 7, either installed locally or started with Docker (`docker compose up -d mongo`)
+
+### 1. Install
+
 ```bash
 git clone https://github.com/iligashi/realestate.git
 cd realestate
+npm run install:all
 ```
 
-### 2. Install Backend Dependencies
+### 2. Configure
+
 ```bash
-cd backend
-npm install
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 ```
 
-### 3. Install Frontend Dependencies
+Set `JWT_SECRET` in `backend/.env` to a long random value:
+
 ```bash
-cd ../frontend
-npm install
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
-**Start Backend Server:**
+| Variable | Where | Description |
+|---|---|---|
+| `MONGODB_URI` | backend | MongoDB connection string |
+| `JWT_SECRET` | backend | Secret used to sign login tokens (required) |
+| `JWT_EXPIRE` | backend | Token lifetime, e.g. `7d` |
+| `FRONTEND_URL` | backend | Allowed CORS origins, comma-separated |
+| `PORT` | backend | API port (default `5000`) |
+| `VITE_SERVER_URL` | frontend | URL of the API server (default `http://localhost:5000`) |
+
+### 3. Seed demo data (optional)
+
 ```bash
-cd backend
+npm run seed
+```
+
+This creates demo users for every role, sample listings and announcements. The script prints the demo login details when it finishes.
+
+### 4. Run
+
+```bash
 npm run dev
 ```
 
-**Start Frontend Development Server:**
+- Frontend: http://localhost:3000
+- API: http://localhost:5000 (health check at `/health`)
+
+### Run everything with Docker
+
 ```bash
-cd frontend
-npm start
+echo "JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")" > .env
+docker compose up --build
 ```
 
-### Database Configuration
-The application uses MongoDB with the following collections:
-- `users` - User accounts and profiles
-- `properties` - Property listings
-- `messages` - Real-time messages
-- `appointments` - Scheduled appointments
-- `rentalapplications` - Rental applications
-- `openhouses` - Open house events
+## Scripts
 
-### WebSocket Configuration
-Real-time features are powered by Socket.IO with:
-- Authentication middleware
-- Room-based messaging
-- Typing indicators
-- Online status tracking
+Run these from the repository root:
 
-### File Upload Configuration
-- Property images stored in `/uploads/property-images/`
-- Profile pictures stored in `/uploads/profiles/`
-- Support for multiple image formats
-- Image optimization and resizing
-- User Roles
-1. **Buyer** - Browse properties, schedule viewings, save favorites
-2. **Seller** - List properties, manage inquiries, track analytics
-3. **Renter** - Search rentals, submit applications, manage applications
-4. **Agent** - Manage client properties, handle inquiries, track commissions
-5. **Admin** - Platform management, user oversight, analytics
+| Command | Description |
+|---|---|
+| `npm run install:all` | Install root, backend and frontend dependencies |
+| `npm run dev` | Start the API and the frontend together |
+| `npm run seed` | Load demo data into MongoDB |
+| `npm test` | Run the backend test suite |
+| `npm run lint` | Lint backend and frontend |
+| `npm run build` | Build the frontend for production |
 
-### Key Features Usage
+## Testing
 
-#### Property Search
-- Use the advanced search filters on the properties page
-- Filter by price range, location, property type, and amenities
-- Save searches for future reference
-- Set up email alerts for new matching properties
+```bash
+npm test
+```
 
-#### Real-time Messaging
-- Click on any property to start a conversation
-- Use typing indicators to see when someone is typing
-- Receive real-time notifications for new messages
-- Track message read status
+The API tests run against an in-memory MongoDB, so they need no database setup. They cover authentication (including blocking self-registration as admin), authorization on property changes, the reports API and error handling. CI runs lint, tests and a production build on every push and pull request.
 
-#### Property Management (Sellers)
-- Use the property listing wizard to create detailed listings
-- Upload multiple high-quality images
-- Set up open houses and manage RSVPs
-- Track property performance and inquiries
+## Project structure
 
-## API Documentation
+```
+.
+├── backend/
+│   ├── app.js              Express app (middleware + routes), imported by tests
+│   ├── server.js           HTTP server, database connection, Socket.IO
+│   ├── config/             Environment and database configuration
+│   ├── controllers/        Request handlers
+│   ├── middleware/         Auth, validation, uploads, error handling
+│   ├── models/             Mongoose schemas
+│   ├── routes/             REST API routes
+│   ├── websocket/          Socket.IO server
+│   ├── scripts/            Seed scripts
+│   └── tests/              Jest + Supertest API tests
+├── frontend/
+│   ├── src/components/     UI components grouped by role and feature
+│   ├── src/pages/          Route-level pages (lazy-loaded)
+│   ├── src/services/       API clients
+│   └── src/store/          Redux Toolkit slices
+├── docs/                   API, WebSocket and upload docs, screenshots
+└── docker-compose.yml
+```
 
-### Authentication Endpoints
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `GET /api/auth/profile` - Get user profile
-- `PUT /api/auth/profile` - Update user profile
+## Documentation
 
-### Property Endpoints
-- `GET /api/properties` - Get all properties with filtering
-- `GET /api/properties/:id` - Get single property
-- `POST /api/properties` - Create new property (authenticated)
-- `PUT /api/properties/:id` - Update property (owner only)
-- `DELETE /api/properties/:id` - Delete property (owner only)
+- [REST API reference](docs/api.md)
+- [Real-time messaging (WebSockets)](docs/websockets.md)
+- [Property image uploads](docs/image-uploads.md)
 
-### Message Endpoints
-- `GET /api/messages` - Get user messages
-- `POST /api/messages` - Send new message
-- `PUT /api/messages/:id/read` - Mark message as read
+## License
 
-### Admin Endpoints
-- `GET /api/admin/users` - Get all users (admin only)
-- `GET /api/admin/analytics` - Get platform analytics (admin only)
-- `PUT /api/admin/users/:id/status` - Update user status (admin only)
-
-## 🔄 Real-time Features
-
-### WebSocket Events
-- `join_message_thread` - Join a message conversation
-- `send_message` - Send a real-time message
-- `typing_start` - Start typing indicator
-- `typing_stop` - Stop typing indicator
-- `mark_message_read` - Mark message as read
-- `user_status_change` - User online/offline status
-
-### Real-time Notifications
-- New message notifications
-- Property inquiry alerts
-- Appointment reminders
-- System announcements
-
-## Security
-
-This README no longer publishes the repository's default admin credentials. Treat any credentials in local seed data as public: use unique values for local development and rotate them before deploying. Store production secrets in environment variables, never in source control.
+[MIT](LICENSE) © Ilaz Gashi

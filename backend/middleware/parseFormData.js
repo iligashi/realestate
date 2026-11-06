@@ -10,7 +10,7 @@ const parseFormData = (req, res, next) => {
     for (const [key, value] of Object.entries(req.body)) {
       if (key.includes('[') && key.includes(']')) {
         // Handle bracket notation like 'address[city]' -> address.city
-        const match = key.match(/^([^\[]+)\[([^\]]+)\](\[([^\]]+)\])?$/);
+        const match = key.match(/^([^[]+)\[([^\]]+)\](\[([^\]]+)\])?$/);
         
         if (match) {
           const [, mainKey, subKey, , subSubKey] = match;
@@ -38,8 +38,9 @@ const parseFormData = (req, res, next) => {
     
     // Handle array fields like amenities[0], amenities[1]
     for (const [key, value] of Object.entries(req.body)) {
-      if (key.match(/^([^\[]+)\[(\d+)\]$/)) {
-        const [, arrayName, index] = key.match(/^([^\[]+)\[(\d+)\]$/);
+      const arrayMatch = key.match(/^([^[]+)\[(\d+)\]$/);
+      if (arrayMatch) {
+        const [, arrayName, index] = arrayMatch;
         if (!parsedBody[arrayName]) {
           parsedBody[arrayName] = [];
         }
