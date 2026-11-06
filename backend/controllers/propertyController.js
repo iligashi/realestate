@@ -1,4 +1,5 @@
 const Property = require('../models/Property');
+const { searchRegex } = require('../utils/searchRegex');
 
 // Get all properties (with optional filtering)
 const getProperties = async (req, res) => {
@@ -22,9 +23,9 @@ const getProperties = async (req, res) => {
     
     if (propertyType) filter.propertyType = propertyType;
     if (listingType) filter.listingType = listingType;
-    if (city) filter['address.city'] = { $regex: city, $options: 'i' };
-    if (state) filter['address.state'] = { $regex: state, $options: 'i' };
-    if (country) filter['address.country'] = { $regex: country, $options: 'i' };
+    if (city) filter['address.city'] = searchRegex(city);
+    if (state) filter['address.state'] = searchRegex(state);
+    if (country) filter['address.country'] = searchRegex(country);
     if (bedrooms) filter['details.bedrooms'] = { $gte: parseInt(bedrooms) };
     if (bathrooms) filter['details.bathrooms'] = { $gte: parseInt(bathrooms) };
     

@@ -4,6 +4,7 @@ const Property = require('../models/Property');
 const Report = require('../models/Report');
 const Announcement = require('../models/Announcement');
 const PlatformSettings = require('../models/PlatformSettings');
+const { searchRegex } = require('../utils/searchRegex');
 
 // ==================== USER MANAGEMENT ====================
 
@@ -23,9 +24,9 @@ const getAllUsers = async (req, res) => {
     
     if (search) {
       filter.$or = [
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
+        { firstName: searchRegex(search) },
+        { lastName: searchRegex(search) },
+        { email: searchRegex(search) }
       ];
     }
     
@@ -128,9 +129,9 @@ const getAllListings = async (req, res) => {
     
     if (search) {
       filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { 'address.city': { $regex: search, $options: 'i' } }
+        { title: searchRegex(search) },
+        { description: searchRegex(search) },
+        { 'address.city': searchRegex(search) }
       ];
     }
     
@@ -257,7 +258,7 @@ const getAllReports = async (req, res) => {
     const filter = {};
     
     if (search) {
-      filter.reason = { $regex: search, $options: 'i' };
+      filter.reason = searchRegex(search);
     }
     
     if (status) filter.status = status;
@@ -483,8 +484,8 @@ const getAllAnnouncements = async (req, res) => {
     
     if (search) {
       filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { content: { $regex: search, $options: 'i' } }
+        { title: searchRegex(search) },
+        { content: searchRegex(search) }
       ];
     }
     
