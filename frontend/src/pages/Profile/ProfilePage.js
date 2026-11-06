@@ -10,6 +10,7 @@ import {
   HomeIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { assetUrl } from '../../config';
 
 const ProfilePage = () => {
   const { user, loading } = useSelector((state) => state.auth);
@@ -48,7 +49,7 @@ const ProfilePage = () => {
     
     // If it's a server path, construct the full URL
     if (profilePicture.startsWith('uploads/')) {
-      return `http://localhost:5000/${profilePicture}`;
+      return assetUrl(profilePicture);
     }
     
     return profilePicture;

@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import { API_URL as API_BASE_URL } from '../config';
 
 // Helper function to get auth token
 const getAuthToken = () => {

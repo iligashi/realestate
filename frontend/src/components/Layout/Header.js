@@ -17,6 +17,7 @@ import {
   CurrencyDollarIcon,
   KeyIcon
 } from '@heroicons/react/24/outline';
+import { assetUrl } from '../../config';
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -95,7 +96,7 @@ const Header = () => {
     
     // If it's a server path, construct the full URL
     if (profilePicture.startsWith('uploads/')) {
-      return `http://localhost:5000/${profilePicture}`;
+      return assetUrl(profilePicture);
     }
     
     return profilePicture;

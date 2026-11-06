@@ -10,6 +10,7 @@ import {
   XMarkIcon,
   PlusIcon
 } from '@heroicons/react/24/outline';
+import api from '../services/api';
 
 // Enhanced Announcements Component
 const Announcements = () => {
@@ -21,11 +22,8 @@ const Announcements = () => {
     // Fetch active announcements
     const fetchAnnouncements = async () => {
       try {
-        const response = await fetch('/api/announcements');
-        if (response.ok) {
-          const data = await response.json();
-          setAnnouncements(data.announcements || []);
-        }
+        const { data } = await api.get('/announcements');
+        setAnnouncements(data.announcements || []);
       } catch (error) {
         console.log('No announcements to display');
       }

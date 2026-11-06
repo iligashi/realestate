@@ -61,6 +61,7 @@ import {
   ArrowTrendingDownIcon
 } from '@heroicons/react/24/outline';
 import ReportForm from '../../components/ReportForm';
+import { assetUrl } from '../../config';
 
 const AdminDashboard = () => {
   const dispatch = useDispatch();
@@ -700,7 +701,7 @@ const AdminDashboard = () => {
               <div className="aspect-w-16 aspect-h-9 bg-gray-200">
                 {listing.photos && listing.photos.length > 0 && listing.photos[0].url ? (
                   <img
-                    src={`http://localhost:5000${listing.photos[0].url}`}
+                    src={assetUrl(listing.photos[0].url)}
                     alt={listing.title}
                     className="w-full h-48 object-cover"
                     onError={(e) => {
