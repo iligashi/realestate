@@ -1,43 +1,34 @@
 const mongoose = require('mongoose');
+const config = require('./env');
 
-const connectDB = async () => {
+const connectDB = async (uri = config.mongoUri) => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/real-estate-marketplace', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      maxPoolSize: 10, // Maintain up to 10 socket connections
-      serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
-      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+    const conn = await mongoose.connect(uri, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000
     });
 
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    
-    // Handle connection events
-    mongoose.connection.on('error', (err) => {
-      console.error('❌ MongoDB connection error:', err);
-    });
+    console.log(`MongoDB connected: ${conn.connection.host}/${conn.connection.name}`);
 
-    mongoose.connection.on('disconnected', () => {
-      console.log('⚠️  MongoDB disconnected');
-    });
+    mongoose.connection.on('error', (err) => console.error('MongoDB connection error:', err));
+    mongoose.connection.on('disconnected', () => console.warn('MongoDB disconnected'));
 
-    // Graceful shutdown
-    process.on('SIGINT', async () => {
-      await mongoose.connection.close();
-      console.log('🔄 MongoDB connection closed through app termination');
-      process.exit(0);
-    });
-
+    return conn;
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error.message);
-    console.log('⚠️  Server will start without database connection');
-    console.log('💡 To fix: Install MongoDB or update MONGODB_URI in .env file');
-    
-    // In production, you might want to exit here
-    if (process.env.NODE_ENV === 'production') {
-      process.exit(1);
-    }
+    console.error('MongoDB connection failed:', error.message);
+    console.error('Check MONGODB_URI in backend/.env, or start MongoDB with `docker compose up -d mongo`.');
+    process.exit(1);
   }
 };
+
+const shutdown = async (signal) => {
+  await mongoose.connection.close();
+  console.log(`MongoDB connection closed (${signal})`);
+  process.exit(0);
+};
+
+process.once('SIGINT', () => shutdown('SIGINT'));
+process.once('SIGTERM', () => shutdown('SIGTERM'));
 
 module.exports = connectDB;

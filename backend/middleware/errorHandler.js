@@ -3,14 +3,10 @@ const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
-  // Log error for debugging
-  console.error('Error:', {
-    message: err.message,
-    stack: err.stack,
-    url: req.url,
-    method: req.method,
-    timestamp: new Date().toISOString()
-  });
+  // Log server errors; 4xx responses are expected and don't need a stack trace
+  if (!err.statusCode || err.statusCode >= 500) {
+    console.error(`[${req.method} ${req.originalUrl}]`, err);
+  }
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
@@ -55,7 +51,7 @@ const errorHandler = (err, req, res, next) => {
 // 404 handler for undefined routes
 const notFound = (req, res, next) => {
   const error = new Error(`Route not found - ${req.originalUrl}`);
-  res.status(404);
+  error.statusCode = 404;
   next(error);
 };
 
