@@ -32,8 +32,9 @@ const validateRegistration = [
     .trim()
     .isLength({ min: 2, max: 50 })
     .withMessage('Last name must be between 2 and 50 characters'),
+  // Admin accounts are created by existing admins or the seed script, never by self-registration
   body('userType')
-    .isIn(['buyer', 'seller', 'renter', 'agent', 'admin'])
+    .isIn(['buyer', 'seller', 'renter', 'agent'])
     .withMessage('Invalid user type'),
   validate
 ];
