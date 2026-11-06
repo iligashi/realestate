@@ -1,14 +1,9 @@
-<<<<<<< Updated upstream
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const Property = require('../models/Property');
 const Report = require('../models/Report');
 const Announcement = require('../models/Announcement');
 const PlatformSettings = require('../models/PlatformSettings');
-=======
-const { User, Property, Report, Announcement, PlatformSettings } = require('../models');
-const { Op, sequelize } = require('sequelize');
->>>>>>> Stashed changes
 
 // ==================== USER MANAGEMENT ====================
 
@@ -27,17 +22,10 @@ const getAllUsers = async (req, res) => {
     const filter = {};
     
     if (search) {
-<<<<<<< Updated upstream
       filter.$or = [
         { firstName: { $regex: search, $options: 'i' } },
         { lastName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } }
-=======
-      filter[Op.or] = [
-        { first_name: { [Op.like]: `%${search}%` } },
-        { last_name: { [Op.like]: `%${search}%` } },
-        { email: { [Op.like]: `%${search}%` } }
->>>>>>> Stashed changes
       ];
     }
     
@@ -163,11 +151,8 @@ const getAllListings = async (req, res) => {
 
     const total = await Property.countDocuments(filter);
 
-    // Parse JSON fields for each listing
-    const parsedListings = listings.map(listing => listing.toJSON());
-
     res.json({
-      listings: parsedListings,
+      listings,
       total,
       totalPages: Math.ceil(total / options.limit),
       currentPage: options.page
@@ -239,88 +224,18 @@ const deleteListing = async (req, res) => {
   try {
     const { id } = req.params;
 
-<<<<<<< Updated upstream
     const listing = await Property.findByIdAndDelete(id);
-=======
-    console.log('Delete listing request for ID:', id);
-
-    const listing = await Property.findByPk(id);
->>>>>>> Stashed changes
     if (!listing) {
       return res.status(404).json({ error: 'Listing not found.' });
     }
 
-<<<<<<< Updated upstream
     // Also delete associated reports
     await Report.deleteMany({ reportedItem: id, reportedItemModel: 'Property' });
-=======
-    console.log('Found listing:', listing.title);
-
-    // Delete associated records first to avoid foreign key constraints
-    const deletedReports = await Report.destroy({ 
-      where: { 
-        reportedItemId: id, 
-        reportedItemModel: 'property' 
-      } 
-    });
-    console.log('Deleted reports:', deletedReports);
-
-    // Delete other associated records (only those that exist in the database)
-    const { Appointment, Favorite, Inquiry, ListingAnalytics, Message, OpenHouse, Payment, RentalApplication, Review } = require('../models');
-    
-    // Delete rental applications FIRST (has foreign key constraint)
-    const deletedRentalApplications = await RentalApplication.destroy({ where: { property_id: id } });
-    console.log('Deleted rental applications:', deletedRentalApplications);
-
-    // Delete appointments
-    const deletedAppointments = await Appointment.destroy({ where: { property_id: id } });
-    console.log('Deleted appointments:', deletedAppointments);
-
-    // Delete favorites
-    const deletedFavorites = await Favorite.destroy({ where: { property_id: id } });
-    console.log('Deleted favorites:', deletedFavorites);
-
-    // Delete inquiries
-    const deletedInquiries = await Inquiry.destroy({ where: { property_id: id } });
-    console.log('Deleted inquiries:', deletedInquiries);
-
-    // Delete listing analytics
-    const deletedAnalytics = await ListingAnalytics.destroy({ where: { property_id: id } });
-    console.log('Deleted analytics:', deletedAnalytics);
-
-    // Delete messages
-    const deletedMessages = await Message.destroy({ where: { property_id: id } });
-    console.log('Deleted messages:', deletedMessages);
-
-    // Delete open houses
-    const deletedOpenHouses = await OpenHouse.destroy({ where: { property_id: id } });
-    console.log('Deleted open houses:', deletedOpenHouses);
-
-    // Delete payments
-    const deletedPayments = await Payment.destroy({ where: { property_id: id } });
-    console.log('Deleted payments:', deletedPayments);
-
-    // Delete reviews
-    const deletedReviews = await Review.destroy({ where: { target_id: id } });
-    console.log('Deleted reviews:', deletedReviews);
-
-    // Finally delete the listing
-    await listing.destroy();
-    console.log('Listing deleted successfully');
->>>>>>> Stashed changes
 
     res.json({ message: 'Listing deleted successfully.' });
   } catch (error) {
     console.error('Delete listing error:', error);
-    console.error('Error details:', {
-      message: error.message,
-      name: error.name,
-      stack: error.stack
-    });
-    res.status(500).json({ 
-      error: 'Failed to delete listing.',
-      details: error.message
-    });
+    res.status(500).json({ error: 'Failed to delete listing.' });
   }
 };
 
@@ -334,7 +249,8 @@ const getAllReports = async (req, res) => {
       limit = 10,
       search = '',
       status = '',
-      type = ''
+      type = '',
+      priority = ''
     } = req.query;
 
     // Build filter object
@@ -346,36 +262,25 @@ const getAllReports = async (req, res) => {
     
     if (status) filter.status = status;
     if (type) filter.type = type;
+    if (priority) filter.priority = priority;
 
     const options = {
       page: parseInt(page),
-      limit: parseInt(limit)
+      limit: parseInt(limit),
+      sort: { priority: -1, createdAt: -1 }
     };
 
-<<<<<<< Updated upstream
     const reports = await Report.find(filter)
       .populate('reportedBy', 'firstName lastName email')
       .populate('resolvedBy', 'firstName lastName')
       .limit(options.limit)
       .skip((options.page - 1) * options.limit)
       .sort(options.sort);
-=======
-    const reports = await Report.findAll({
-      where: filter,
-      include: [
-        { model: User, as: 'reporter', attributes: ['first_name', 'last_name', 'email'] }
-      ],
-      limit: options.limit,
-      offset: (options.page - 1) * options.limit,
-      order: [['createdAt', 'DESC']]
-    });
->>>>>>> Stashed changes
 
     const total = await Report.countDocuments(filter);
 
     res.json({
-      success: true,
-      reports: reports,
+      reports,
       total,
       totalPages: Math.ceil(total / options.limit),
       currentPage: options.page
@@ -390,7 +295,7 @@ const getAllReports = async (req, res) => {
 const resolveReport = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, action, adminNotes } = req.body;
 
     const report = await Report.findByIdAndUpdate(
       id,
@@ -409,23 +314,7 @@ const resolveReport = async (req, res) => {
       return res.status(404).json({ error: 'Report not found.' });
     }
 
-<<<<<<< Updated upstream
-=======
-    // Only update the status field since that's what exists in the database
-    await report.update({
-      status
-    });
-
-    // Fetch the updated report with reporter information
-    const reportWithUsers = await Report.findByPk(id, {
-      include: [
-        { model: User, as: 'reporter', attributes: ['first_name', 'last_name', 'email'] }
-      ]
-    });
-
->>>>>>> Stashed changes
     res.json({
-      success: true,
       message: 'Report resolved successfully',
       report
     });
@@ -463,7 +352,6 @@ const getDashboardAnalytics = async (req, res) => {
     ]);
 
     // Recent activity
-<<<<<<< Updated upstream
     const recentUsers = await User.find()
       .sort({ createdAt: -1 })
       .limit(5)
@@ -474,20 +362,6 @@ const getDashboardAnalytics = async (req, res) => {
       .limit(5)
       .select('title status propertyType createdAt')
       .populate('owner', 'firstName lastName');
-=======
-    const recentUsers = await User.findAll({
-      attributes: ['first_name', 'last_name', 'userType', 'createdAt'],
-      order: [['createdAt', 'DESC']],
-      limit: 5
-    });
-
-    const recentListings = await Property.findAll({
-      attributes: ['title', 'status', 'propertyType', 'createdAt'],
-      include: [{ model: User, as: 'owner', attributes: ['first_name', 'last_name'] }],
-      order: [['createdAt', 'DESC']],
-      limit: 5
-    });
->>>>>>> Stashed changes
 
     res.json({
       users: { total: totalUsers, active: activeUsers, blocked: blockedUsers },
@@ -623,21 +497,11 @@ const getAllAnnouncements = async (req, res) => {
       sort: { priority: -1, createdAt: -1 }
     };
 
-<<<<<<< Updated upstream
     const announcements = await Announcement.find(filter)
       .populate('createdBy', 'firstName lastName')
       .limit(options.limit)
       .skip((options.page - 1) * options.limit)
       .sort(options.sort);
-=======
-    const announcements = await Announcement.findAll({
-      where: filter,
-      include: [{ model: User, as: 'creator', attributes: ['first_name', 'last_name'] }],
-      limit: options.limit,
-      offset: (options.page - 1) * options.limit,
-      order: [['priority', 'DESC'], ['createdAt', 'DESC']]
-    });
->>>>>>> Stashed changes
 
     const total = await Announcement.countDocuments(filter);
 
@@ -662,13 +526,7 @@ const createAnnouncement = async (req, res) => {
     };
 
     const announcement = await Announcement.create(announcementData);
-<<<<<<< Updated upstream
     await announcement.populate('createdBy', 'firstName lastName');
-=======
-    const announcementWithUser = await Announcement.findByPk(announcement.id, {
-      include: [{ model: User, as: 'creator', attributes: ['first_name', 'last_name'] }]
-    });
->>>>>>> Stashed changes
 
     res.status(201).json({
       message: 'Announcement created successfully',
@@ -696,15 +554,6 @@ const updateAnnouncement = async (req, res) => {
       return res.status(404).json({ error: 'Announcement not found.' });
     }
 
-<<<<<<< Updated upstream
-=======
-    await announcement.update(updateData);
-
-    const announcementWithUser = await Announcement.findByPk(id, {
-      include: [{ model: User, as: 'creator', attributes: ['first_name', 'last_name'] }]
-    });
-
->>>>>>> Stashed changes
     res.json({
       message: 'Announcement updated successfully',
       announcement
