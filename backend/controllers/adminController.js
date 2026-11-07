@@ -5,6 +5,7 @@ const Report = require('../models/Report');
 const Announcement = require('../models/Announcement');
 const PlatformSettings = require('../models/PlatformSettings');
 const { searchRegex } = require('../utils/searchRegex');
+const logger = require('../utils/logger');
 
 // ==================== USER MANAGEMENT ====================
 
@@ -55,7 +56,7 @@ const getAllUsers = async (req, res) => {
       currentPage: options.page
     });
   } catch (error) {
-    console.error('Get all users error:', error);
+    logger.error('Get all users error:', error);
     res.status(500).json({ error: 'Failed to fetch users.' });
   }
 };
@@ -85,7 +86,7 @@ const updateUser = async (req, res) => {
       user
     });
   } catch (error) {
-    console.error('Update user error:', error);
+    logger.error('Update user error:', error);
     res.status(500).json({ error: 'Failed to update user.' });
   }
 };
@@ -106,7 +107,7 @@ const deleteUser = async (req, res) => {
 
     res.json({ message: 'User deleted successfully.' });
   } catch (error) {
-    console.error('Delete user error:', error);
+    logger.error('Delete user error:', error);
     res.status(500).json({ error: 'Failed to delete user.' });
   }
 };
@@ -159,7 +160,7 @@ const getAllListings = async (req, res) => {
       currentPage: options.page
     });
   } catch (error) {
-    console.error('Get all listings error:', error);
+    logger.error('Get all listings error:', error);
     res.status(500).json({ error: 'Failed to fetch listings.' });
   }
 };
@@ -170,7 +171,7 @@ const updateListingStatus = async (req, res) => {
     const { id } = req.params;
     const { status, adminNotes } = req.body;
 
-    console.log('Update listing status request:', { id, status, adminNotes });
+    logger.debug('Update listing status request:', { id, status, adminNotes });
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -207,8 +208,8 @@ const updateListingStatus = async (req, res) => {
       listing
     });
   } catch (error) {
-    console.error('Update listing status error:', error);
-    console.error('Error details:', {
+    logger.error('Update listing status error:', error);
+    logger.error('Error details:', {
       message: error.message,
       name: error.name,
       stack: error.stack
@@ -235,7 +236,7 @@ const deleteListing = async (req, res) => {
 
     res.json({ message: 'Listing deleted successfully.' });
   } catch (error) {
-    console.error('Delete listing error:', error);
+    logger.error('Delete listing error:', error);
     res.status(500).json({ error: 'Failed to delete listing.' });
   }
 };
@@ -287,7 +288,7 @@ const getAllReports = async (req, res) => {
       currentPage: options.page
     });
   } catch (error) {
-    console.error('Get all reports error:', error);
+    logger.error('Get all reports error:', error);
     res.status(500).json({ error: 'Failed to fetch reports.' });
   }
 };
@@ -320,7 +321,7 @@ const resolveReport = async (req, res) => {
       report
     });
   } catch (error) {
-    console.error('Resolve report error:', error);
+    logger.error('Resolve report error:', error);
     res.status(500).json({ error: 'Failed to resolve report.' });
   }
 };
@@ -373,7 +374,7 @@ const getDashboardAnalytics = async (req, res) => {
       recentListings
     });
   } catch (error) {
-    console.error('Get dashboard analytics error:', error);
+    logger.error('Get dashboard analytics error:', error);
     res.status(500).json({ error: 'Failed to fetch dashboard analytics.' });
   }
 };
@@ -386,7 +387,7 @@ const getPlatformSettings = async (req, res) => {
     const settings = await PlatformSettings.getSettings();
     res.json(settings);
   } catch (error) {
-    console.error('Get platform settings error:', error);
+    logger.error('Get platform settings error:', error);
     res.status(500).json({ error: 'Failed to fetch platform settings.' });
   }
 };
@@ -411,7 +412,7 @@ const updatePlatformSettings = async (req, res) => {
       settings
     });
   } catch (error) {
-    console.error('Update platform settings error:', error);
+    logger.error('Update platform settings error:', error);
     res.status(500).json({ error: 'Failed to update platform settings.' });
   }
 };
@@ -430,7 +431,7 @@ const getFeaturedListings = async (req, res) => {
       total: featuredListings.length
     });
   } catch (error) {
-    console.error('Get featured listings error:', error);
+    logger.error('Get featured listings error:', error);
     res.status(500).json({ error: 'Failed to fetch featured listings.' });
   }
 };
@@ -461,7 +462,7 @@ const updateFeaturedListing = async (req, res) => {
       listing
     });
   } catch (error) {
-    console.error('Update featured listing error:', error);
+    logger.error('Update featured listing error:', error);
     res.status(500).json({ error: 'Failed to update featured listing.' });
   }
 };
@@ -513,7 +514,7 @@ const getAllAnnouncements = async (req, res) => {
       currentPage: options.page
     });
   } catch (error) {
-    console.error('Get all announcements error:', error);
+    logger.error('Get all announcements error:', error);
     res.status(500).json({ error: 'Failed to fetch announcements.' });
   }
 };
@@ -534,7 +535,7 @@ const createAnnouncement = async (req, res) => {
       announcement
     });
   } catch (error) {
-    console.error('Create announcement error:', error);
+    logger.error('Create announcement error:', error);
     res.status(500).json({ error: 'Failed to create announcement.' });
   }
 };
@@ -560,7 +561,7 @@ const updateAnnouncement = async (req, res) => {
       announcement
     });
   } catch (error) {
-    console.error('Update announcement error:', error);
+    logger.error('Update announcement error:', error);
     res.status(500).json({ error: 'Failed to update announcement.' });
   }
 };
@@ -577,7 +578,7 @@ const deleteAnnouncement = async (req, res) => {
 
     res.json({ message: 'Announcement deleted successfully.' });
   } catch (error) {
-    console.error('Delete announcement error:', error);
+    logger.error('Delete announcement error:', error);
     res.status(500).json({ error: 'Failed to delete announcement.' });
   }
 };
@@ -673,7 +674,7 @@ const getEnhancedAnalytics = async (req, res) => {
       trends
     });
   } catch (error) {
-    console.error('Get enhanced analytics error:', error);
+    logger.error('Get enhanced analytics error:', error);
     res.status(500).json({ error: 'Failed to fetch enhanced analytics.' });
   }
 };
@@ -727,7 +728,7 @@ const getRevenueAnalytics = async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('Get revenue analytics error:', error);
+    logger.error('Get revenue analytics error:', error);
     res.status(500).json({ error: 'Failed to fetch revenue analytics.' });
   }
 };

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 // Global error handling middleware
 const errorHandler = (err, req, res, next) => {
   let error = { ...err };
@@ -5,7 +6,7 @@ const errorHandler = (err, req, res, next) => {
 
   // Log server errors; 4xx responses are expected and don't need a stack trace
   if (!err.statusCode || err.statusCode >= 500) {
-    console.error(`[${req.method} ${req.originalUrl}]`, err);
+    logger.error(`[${req.method} ${req.originalUrl}]`, err);
   }
 
   // Mongoose bad ObjectId

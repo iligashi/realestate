@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../utils/logger');
 const router = express.Router();
 
 // ==================== PUBLIC ANNOUNCEMENTS ====================
@@ -19,7 +20,7 @@ router.get('/announcements', async (req, res) => {
 
     res.json({ announcements });
   } catch (error) {
-    console.error('Get public announcements error:', error);
+    logger.error('Get public announcements error:', error);
     res.status(500).json({ error: 'Failed to fetch announcements.' });
   }
 });

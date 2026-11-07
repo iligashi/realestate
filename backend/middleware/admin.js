@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const adminAuth = (req, res, next) => {
   try {
     // Check if user is authenticated
@@ -12,7 +13,7 @@ const adminAuth = (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Admin auth error:', error);
+    logger.error('Admin auth error:', error);
     res.status(500).json({ error: 'Admin authentication failed' });
   }
 };
