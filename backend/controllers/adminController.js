@@ -685,34 +685,46 @@ const getRevenueAnalytics = async (req, res) => {
   try {
     const { period = '30d' } = req.query;
     
-    // Calculate date range
-    const endDate = new Date();
     const startDate = new Date();
     if (period === '7d') startDate.setDate(startDate.getDate() - 7);
-    else if (period === '30d') startDate.setDate(startDate.getDate() - 30);
     else if (period === '90d') startDate.setDate(startDate.getDate() - 90);
     else if (period === '1y') startDate.setFullYear(startDate.getFullYear() - 1);
+    else startDate.setDate(startDate.getDate() - 30);
 
-    // Mock revenue data (replace with actual payment processing data)
-    const totalRevenue = 15420.50;
-    const commissionEarnings = 771.03;
-    const featuredListingRevenue = 1249.99;
+    // The only paid product today is featuring a listing, so revenue is the
+    // sum of featuredPrice for listings featured within the period.
+    const featuredInPeriod = { isFeatured: true, featuredAt: { $gte: startDate }, featuredPrice: { $gt: 0 } };
 
-    // Monthly revenue breakdown
-    const monthlyRevenue = [
-      { month: 'Jan', revenue: 1250.00 },
-      { month: 'Feb', revenue: 1380.50 },
-      { month: 'Mar', revenue: 1420.75 },
-      { month: 'Apr', revenue: 1580.25 },
-      { month: 'May', revenue: 1620.00 },
-      { month: 'Jun', revenue: 1750.30 }
-    ];
+    const [totals] = await Property.aggregate([
+      { $match: featuredInPeriod },
+      { $group: { _id: null, revenue: { $sum: '$featuredPrice' }, count: { $sum: 1 } } }
+    ]);
+
+    const monthly = await Property.aggregate([
+      { $match: featuredInPeriod },
+      {
+        $group: {
+          _id: { year: { $year: '$featuredAt' }, month: { $month: '$featuredAt' } },
+          revenue: { $sum: '$featuredPrice' }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ]);
+
+    const monthName = (m) => new Date(2000, m - 1, 1).toLocaleString('en-US', { month: 'short' });
+    const round = (n) => Math.round(n * 100) / 100;
+    const featuredListingRevenue = round(totals?.revenue || 0);
 
     res.json({
-      totalRevenue,
-      commissionEarnings,
+      period,
+      totalRevenue: featuredListingRevenue,
       featuredListingRevenue,
-      monthlyRevenue
+      featuredListingsSold: totals?.count || 0,
+      commissionEarnings: 0,
+      monthlyRevenue: monthly.map((m) => ({
+        month: `${monthName(m._id.month)} ${m._id.year}`,
+        revenue: round(m.revenue)
+      }))
     });
   } catch (error) {
     console.error('Get revenue analytics error:', error);

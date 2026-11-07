@@ -38,9 +38,6 @@ import {
   BellIcon,
   MagnifyingGlassIcon,
   XMarkIcon,
-  CheckIcon,
-  ExclamationTriangleIcon,
-  InformationCircleIcon,
   ClockIcon,
   UserGroupIcon,
   ShieldCheckIcon,
@@ -53,9 +50,10 @@ import { assetUrl } from '../../config';
 
 const AdminDashboard = () => {
   const dispatch = useDispatch();
-  const { 
-    analytics, 
-    users, 
+  const {
+    analytics,
+    revenueAnalytics,
+    users,
     listings, 
     reports, 
     loading, 
@@ -227,6 +225,36 @@ const AdminDashboard = () => {
     );
   };
 
+  const formatCurrency = (amount) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
+
+  const timeAgo = (date) => {
+    const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+    const units = [['year', 31536000], ['month', 2592000], ['day', 86400], ['hour', 3600], ['minute', 60]];
+    for (const [unit, size] of units) {
+      const n = Math.floor(seconds / size);
+      if (n >= 1) return `${n} ${unit}${n > 1 ? 's' : ''} ago`;
+    }
+    return 'just now';
+  };
+
+  const recentActivity = [
+    ...(analytics.recentUsers || []).map((u) => ({
+      key: `user-${u._id}`,
+      dot: 'bg-green-500',
+      text: `${u.firstName} ${u.lastName} joined as ${u.userType}`,
+      date: u.createdAt
+    })),
+    ...(analytics.recentListings || []).map((l) => ({
+      key: `listing-${l._id}`,
+      dot: 'bg-blue-500',
+      text: `New listing: ${l.title} (${l.status})`,
+      date: l.createdAt
+    }))
+  ]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 6);
+
   // Dashboard Overview Component
   const DashboardOverview = () => (
     <div className="space-y-4 sm:space-y-6">
@@ -251,20 +279,16 @@ const AdminDashboard = () => {
         <StatsCard
           title="Total Users"
           value={analytics.users?.total || 0}
-          subtitle={`${analytics.users?.active || 0} active`}
+          subtitle={`${analytics.users?.active || 0} active, ${analytics.users?.blocked || 0} blocked`}
           icon={UsersIcon}
           color="blue"
-          trend="up"
-          trendValue="+12%"
         />
         <StatsCard
           title="Total Listings"
           value={analytics.listings?.total || 0}
-          subtitle={`${analytics.listings?.pending || 0} pending`}
+          subtitle={`${analytics.listings?.pending || 0} pending review`}
           icon={HomeIcon}
           color="green"
-          trend="up"
-          trendValue="+8%"
         />
         <StatsCard
           title="Reports"
@@ -272,199 +296,78 @@ const AdminDashboard = () => {
           subtitle={`${analytics.reports?.pending || 0} pending`}
           icon={FlagIcon}
           color="red"
-          trend="down"
-          trendValue="-5%"
         />
         <StatsCard
-          title="Revenue"
-          value="$12,345"
-          subtitle="This month"
+          title="Featured Revenue"
+          value={formatCurrency(revenueAnalytics?.featuredListingRevenue)}
+          subtitle={`${revenueAnalytics?.featuredListingsSold || 0} featured listings, last 30 days`}
           icon={CurrencyDollarIcon}
           color="purple"
-          trend="up"
-          trendValue="+15%"
         />
-          </div>
+      </div>
 
-      {/* Quick Actions */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-        {/* Recent Activity */}
+        {/* Recent Activity (newest users and listings) */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
             <BellIcon className="h-5 w-5 text-gray-400" />
           </div>
-          <div className="space-y-3">
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900 truncate">New user registered</p>
-                <p className="text-xs text-gray-500">2 minutes ago</p>
+          {recentActivity.length === 0 ? (
+            <p className="text-sm text-gray-500">No activity yet.</p>
+          ) : (
+            <ul className="space-y-3">
+              {recentActivity.map((item) => (
+                <li key={item.key} className="flex items-center space-x-3">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${item.dot}`}></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900 truncate">{item.text}</p>
+                    <p className="text-xs text-gray-500">{timeAgo(item.date)}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
+
+        {/* Users by role */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Users by Role</h3>
+            <UserGroupIcon className="h-5 w-5 text-gray-400" />
+          </div>
+          {(analytics.roleDistribution || []).length === 0 ? (
+            <p className="text-sm text-gray-500">No users yet.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              {analytics.roleDistribution.map((role) => (
+                <div key={role._id} className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{role.count}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 capitalize">{role._id}s</p>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900 truncate">Property listing approved</p>
-                <p className="text-xs text-gray-500">15 minutes ago</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full flex-shrink-0"></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900 truncate">Report submitted</p>
-                <p className="text-xs text-gray-500">1 hour ago</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0"></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900 truncate">System maintenance completed</p>
-                <p className="text-xs text-gray-500">3 hours ago</p>
-              </div>
-            </div>
+          )}
         </div>
       </div>
 
-        {/* Quick Stats */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Quick Stats</h3>
-            <ChartBarIcon className="h-5 w-5 text-gray-400" />
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
-              <p className="text-xl sm:text-2xl font-bold text-green-600">98%</p>
-              <p className="text-xs sm:text-sm text-gray-600">Uptime</p>
-          </div>
-            <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
-              <p className="text-xl sm:text-2xl font-bold text-blue-600">1.2s</p>
-              <p className="text-xs sm:text-sm text-gray-600">Avg Response</p>
-        </div>
-            <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
-              <p className="text-xl sm:text-2xl font-bold text-purple-600">24/7</p>
-              <p className="text-xs sm:text-sm text-gray-600">Support</p>
-            </div>
-            <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
-              <p className="text-xl sm:text-2xl font-bold text-yellow-600">99.9%</p>
-              <p className="text-xs sm:text-sm text-gray-600">Reliability</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Additional Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Performance Metrics */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Performance</h3>
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckIcon className="h-5 w-5 text-green-600" />
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Page Load Time</span>
-              <span className="text-sm font-semibold text-gray-900">0.8s</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Database Queries</span>
-              <span className="text-sm font-semibold text-gray-900">45ms</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Memory Usage</span>
-              <span className="text-sm font-semibold text-gray-900">68%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* User Activity */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">User Activity</h3>
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <UserGroupIcon className="h-5 w-5 text-blue-600" />
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Online Now</span>
-              <span className="text-sm font-semibold text-gray-900">127</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">New Today</span>
-              <span className="text-sm font-semibold text-gray-900">23</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Active Sessions</span>
-              <span className="text-sm font-semibold text-gray-900">89</span>
-            </div>
-          </div>
-        </div>
-
-        {/* System Status */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 sm:col-span-2 lg:col-span-1">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">System Status</h3>
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-              <ShieldCheckIcon className="h-5 w-5 text-green-600" />
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">API Server</span>
-              </div>
-              <span className="text-sm font-semibold text-green-600">Healthy</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Database</span>
-              </div>
-              <span className="text-sm font-semibold text-green-600">Healthy</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Cache</span>
-              </div>
-              <span className="text-sm font-semibold text-yellow-600">Warning</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Alerts & Notifications */}
+      {/* Listing moderation summary */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">System Alerts</h3>
-          <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
+          <h3 className="text-lg font-semibold text-gray-900">Listings by Status</h3>
+          <ShieldCheckIcon className="h-5 w-5 text-gray-400" />
         </div>
-        <div className="space-y-3">
-          <div className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg">
-            <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-yellow-800">High server load detected</p>
-              <p className="text-xs text-yellow-600 mt-1">Consider scaling resources - CPU usage at 85%</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          {[
+            { label: 'Pending review', value: analytics.listings?.pending, color: 'text-yellow-600' },
+            { label: 'Approved', value: analytics.listings?.approved, color: 'text-green-600' },
+            { label: 'Rejected', value: analytics.listings?.rejected, color: 'text-red-600' }
+          ].map((s) => (
+            <div key={s.label} className="text-center p-3 bg-gray-50 rounded-lg">
+              <p className={`text-2xl font-bold ${s.color}`}>{s.value || 0}</p>
+              <p className="text-sm text-gray-600">{s.label}</p>
             </div>
-          </div>
-          <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
-            <InformationCircleIcon className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-blue-800">Database backup completed</p>
-              <p className="text-xs text-blue-600 mt-1">Last backup: 2 hours ago - Size: 2.3GB</p>
-            </div>
-          </div>
-          <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
-            <CheckIcon className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-green-800">Security scan completed</p>
-              <p className="text-xs text-green-600 mt-1">No vulnerabilities found - Last scan: 1 hour ago</p>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </div>

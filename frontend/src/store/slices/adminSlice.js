@@ -398,7 +398,10 @@ const adminSlice = createSlice({
         state.analytics = {
           users: action.payload.users || { total: 0, active: 0, blocked: 0 },
           listings: action.payload.listings || { total: 0, pending: 0, approved: 0, rejected: 0 },
-          reports: action.payload.reports || { total: 0, pending: 0, resolved: 0 }
+          reports: action.payload.reports || { total: 0, pending: 0, resolved: 0 },
+          roleDistribution: action.payload.roleDistribution || [],
+          recentUsers: action.payload.recentUsers || [],
+          recentListings: action.payload.recentListings || []
         };
       })
       .addCase(fetchDashboardAnalytics.rejected, (state, action) => {
