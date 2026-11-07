@@ -166,7 +166,7 @@ const PropertyListPage = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
             {hasUnsavedChanges && (
-              <span className="text-sm text-blue-600 font-medium">
+              <span className="text-sm text-brand-600 font-medium">
                 • You have unsaved filter changes
               </span>
             )}
@@ -254,7 +254,7 @@ const PropertyListPage = () => {
               onClick={handleSearch}
               className={`px-6 py-2 rounded-md transition-colors duration-200 font-medium ${
                 hasUnsavedChanges 
-                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  ? 'bg-brand-600 text-white hover:bg-brand-700' 
                   : 'bg-green-600 text-white hover:bg-green-700'
               }`}
             >

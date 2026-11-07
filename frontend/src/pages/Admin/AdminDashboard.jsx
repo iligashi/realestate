@@ -187,11 +187,11 @@ const AdminDashboard = () => {
   // Stats Card Component
   const StatsCard = ({ title, value, subtitle, icon: Icon, color, trend, trendValue }) => {
     const colorClasses = {
-      blue: 'bg-blue-500',
+      blue: 'bg-brand-500',
       green: 'bg-green-500',
       purple: 'bg-purple-500',
       red: 'bg-red-500',
-      indigo: 'bg-indigo-500',
+      indigo: 'bg-brand-500',
       yellow: 'bg-yellow-500'
     };
 
@@ -247,7 +247,7 @@ const AdminDashboard = () => {
     })),
     ...(analytics.recentListings || []).map((l) => ({
       key: `listing-${l._id}`,
-      dot: 'bg-blue-500',
+      dot: 'bg-brand-500',
       text: `New listing: ${l.title} (${l.status})`,
       date: l.createdAt
     }))
@@ -259,15 +259,15 @@ const AdminDashboard = () => {
   const DashboardOverview = () => (
     <div className="space-y-4 sm:space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 sm:p-6 text-white">
+      <div className="bg-gradient-to-r from-brand-600 to-brand-800 rounded-xl p-4 sm:p-6 text-white">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
           <div className="flex-1">
             <h1 className="text-xl sm:text-2xl font-bold mb-2">Welcome back, {user?.firstName || 'Admin'}!</h1>
-            <p className="text-blue-100 text-sm sm:text-base">Here's what's happening with your platform today.</p>
+            <p className="text-brand-100 text-sm sm:text-base">Here's what's happening with your platform today.</p>
           </div>
           <div className="flex items-center justify-between sm:block">
             <div className="text-left sm:text-right">
-              <p className="text-xs sm:text-sm text-blue-100">Last updated</p>
+              <p className="text-xs sm:text-sm text-brand-100">Last updated</p>
               <p className="text-sm sm:text-lg font-semibold">{new Date().toLocaleTimeString()}</p>
           </div>
         </div>
@@ -378,7 +378,7 @@ const AdminDashboard = () => {
     if (!users || !users.list) {
       return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto mb-4"></div>
             <p className="text-gray-500">Loading users...</p>
         </div>
       );
@@ -399,13 +399,13 @@ const AdminDashboard = () => {
             <input
               type="text"
               placeholder="Search users..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm w-64 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm w-64 focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                   value={users.filters.search || ''}
               onChange={(e) => dispatch(updateUserFilters({ search: e.target.value }))}
             />
               </div>
             <select
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 value={users.filters.role || ''}
               onChange={(e) => dispatch(updateUserFilters({ role: e.target.value }))}
             >
@@ -417,7 +417,7 @@ const AdminDashboard = () => {
               <option value="admin">Admin</option>
             </select>
             <select
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 value={users.filters.status || ''}
               onChange={(e) => dispatch(updateUserFilters({ status: e.target.value }))}
             >
@@ -458,7 +458,7 @@ const AdminDashboard = () => {
                       {userItem.profilePicture ? (
                         <img className="h-10 w-10 rounded-full" src={userItem.profilePicture} alt="" />
                       ) : (
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-r from-brand-500 to-brand-700 flex items-center justify-center">
                               <span className="text-sm font-medium text-white">
                             {userItem.firstName?.[0]}{userItem.lastName?.[0]}
                           </span>
@@ -474,7 +474,7 @@ const AdminDashboard = () => {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-100 text-brand-800">
                     {userItem.userType}
                   </span>
                 </td>
@@ -492,7 +492,7 @@ const AdminDashboard = () => {
                   <div className="flex space-x-2">
                     <button
                       onClick={() => setEditingUser(userItem)}
-                          className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                          className="text-brand-600 hover:text-brand-900 p-1 rounded"
                     >
                       <PencilIcon className="h-4 w-4" />
                     </button>
@@ -525,7 +525,7 @@ const AdminDashboard = () => {
     if (!listings || !listings.list) {
       return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto mb-4"></div>
             <p className="text-gray-500">Loading listings...</p>
         </div>
       );
@@ -546,13 +546,13 @@ const AdminDashboard = () => {
             <input
               type="text"
               placeholder="Search listings..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm w-64 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm w-64 focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                   value={listings.filters.search || ''}
               onChange={(e) => dispatch(updateListingFilters({ search: e.target.value }))}
             />
               </div>
             <select
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 value={listings.filters.status || ''}
               onChange={(e) => dispatch(updateListingFilters({ status: e.target.value }))}
             >
@@ -564,7 +564,7 @@ const AdminDashboard = () => {
                 <option value="inactive">Inactive</option>
               </select>
               <select
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 value={listings.filters.propertyType || ''}
                 onChange={(e) => dispatch(updateListingFilters({ propertyType: e.target.value }))}
               >
@@ -611,7 +611,7 @@ const AdminDashboard = () => {
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                     listing.status === 'active' ? 'bg-green-100 text-green-800' :
                     listing.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    listing.status === 'sold' ? 'bg-blue-100 text-blue-800' :
+                    listing.status === 'sold' ? 'bg-brand-100 text-brand-800' :
                     'bg-gray-100 text-gray-800'
                   }`}>
                     {listing.status}
@@ -626,7 +626,7 @@ const AdminDashboard = () => {
                   <div className="flex space-x-2">
                     <button
                       onClick={() => setEditingListing(listing)}
-                      className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-2 text-brand-600 hover:text-brand-900 hover:bg-brand-50 rounded-lg transition-colors"
                     >
                       <PencilIcon className="h-4 w-4" />
                     </button>
@@ -651,7 +651,7 @@ const AdminDashboard = () => {
     if (!reports || !reports.list) {
       return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto mb-4"></div>
             <p className="text-gray-500">Loading reports...</p>
         </div>
       );
@@ -668,7 +668,7 @@ const AdminDashboard = () => {
             </div>
             <div className="flex flex-wrap gap-3">
             <select
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 value={reports.filters.status || ''}
               onChange={(e) => dispatch(updateReportFilters({ status: e.target.value }))}
             >
@@ -679,7 +679,7 @@ const AdminDashboard = () => {
               <option value="dismissed">Dismissed</option>
             </select>
             <select
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 value={reports.filters.type || ''}
               onChange={(e) => dispatch(updateReportFilters({ type: e.target.value }))}
             >
@@ -710,7 +710,7 @@ const AdminDashboard = () => {
                   <div className="flex items-center space-x-3 mb-2">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                     report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      report.status === 'under_review' ? 'bg-blue-100 text-blue-800' :
+                      report.status === 'under_review' ? 'bg-brand-100 text-brand-800' :
                       report.status === 'resolved' ? 'bg-green-100 text-green-800' :
                     'bg-gray-100 text-gray-800'
                   }`}>
@@ -732,7 +732,7 @@ const AdminDashboard = () => {
                 <div className="flex space-x-2 ml-4">
                 <button
                     onClick={() => setEditingReport(report)}
-                    className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-brand-600 hover:text-brand-900 hover:bg-brand-50 rounded-lg transition-colors"
                 >
                     Review
                 </button>
@@ -757,10 +757,10 @@ const AdminDashboard = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Analytics Dashboard</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white">
+          <div className="bg-gradient-to-r from-brand-500 to-brand-800 rounded-lg p-6 text-white">
             <h3 className="text-lg font-semibold mb-2">User Growth</h3>
             <p className="text-3xl font-bold mb-2">+24%</p>
-            <p className="text-blue-100">Compared to last month</p>
+            <p className="text-brand-100">Compared to last month</p>
           </div>
           <div className="bg-gradient-to-r from-green-500 to-teal-600 rounded-lg p-6 text-white">
             <h3 className="text-lg font-semibold mb-2">Revenue</h3>
@@ -783,7 +783,7 @@ const AdminDashboard = () => {
               <h3 className="font-medium text-gray-900">Email Notifications</h3>
               <p className="text-sm text-gray-500">Send email notifications to users</p>
               </div>
-            <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-blue-600">
+            <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-brand-600">
               <span className="inline-block h-4 w-4 transform rounded-full bg-white transition translate-x-6" />
             </button>
               </div>
@@ -825,7 +825,7 @@ const AdminDashboard = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading admin dashboard...</p>
           </div>
         </div>
@@ -867,7 +867,7 @@ const AdminDashboard = () => {
                   }}
                   className={`w-full flex items-center px-3 py-2.5 sm:py-3 text-sm font-medium rounded-lg transition-colors ${
                     activeTab === item.id
-                      ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                      ? 'bg-brand-50 text-brand-700 border-r-2 border-brand-700'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }`}
                 >
@@ -899,7 +899,7 @@ const AdminDashboard = () => {
                 <span className="absolute -top-1 -right-1 h-2.5 w-2.5 sm:h-3 sm:w-3 bg-red-500 rounded-full"></span>
               </div>
               <div className="flex items-center space-x-2 sm:space-x-3">
-                <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-gradient-to-r from-brand-500 to-brand-700 flex items-center justify-center flex-shrink-0">
                   <span className="text-xs sm:text-sm font-medium text-white">
                     {user?.firstName?.[0]}{user?.lastName?.[0]}
                   </span>
@@ -977,7 +977,7 @@ const AdminDashboard = () => {
                     ...editingListing,
                     status: e.target.value
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   <option value="pending">Pending</option>
                   <option value="active">Active</option>
@@ -997,7 +997,7 @@ const AdminDashboard = () => {
               </button>
               <button
                 onClick={() => handleListingStatusUpdate(editingListing.id, { status: editingListing.status })}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-md transition-colors"
               >
                 Update Status
               </button>
@@ -1058,7 +1058,7 @@ const AdminDashboard = () => {
                     ...editingUser,
                     userType: e.target.value
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   <option value="buyer">Buyer</option>
                   <option value="seller">Seller</option>
@@ -1078,7 +1078,7 @@ const AdminDashboard = () => {
                     ...editingUser,
                     isBlocked: e.target.value === 'blocked'
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   <option value="active">Active</option>
                   <option value="blocked">Blocked</option>
@@ -1098,7 +1098,7 @@ const AdminDashboard = () => {
                   userType: editingUser.userType,
                   isBlocked: editingUser.isBlocked
                 })}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-md transition-colors"
               >
                 Update User
               </button>

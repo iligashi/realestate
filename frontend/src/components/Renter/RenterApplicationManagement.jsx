@@ -226,7 +226,7 @@ const RenterApplicationManagement = () => {
             ? 'bg-green-50 border-green-200 text-green-800' 
             : actionStatus === 'error'
             ? 'bg-red-50 border-red-200 text-red-800'
-            : 'bg-blue-50 border-blue-200 text-blue-800'
+            : 'bg-brand-50 border-brand-200 text-brand-800'
         }`}>
           <div className="flex items-center">
             {actionStatus === 'success' && (
@@ -236,7 +236,7 @@ const RenterApplicationManagement = () => {
               <ExclamationTriangleIcon className="h-5 w-5 mr-2 text-red-600" />
             )}
             {actionStatus === 'processing' && (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-2"></div>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-600 mr-2"></div>
             )}
             <span className="font-medium">{actionMessage}</span>
           </div>
@@ -588,7 +588,7 @@ const ApplicationDetailModal = ({
                 {application.messages.map((message, index) => (
                   <div key={index} className={`p-3 rounded-lg ${
                     message.isFromLandlord 
-                      ? 'bg-blue-50 border-l-4 border-blue-400' 
+                      ? 'bg-brand-50 border-l-4 border-brand-400' 
                       : 'bg-green-50 border-l-4 border-green-400'
                   }`}>
                     <div className="flex justify-between items-start">

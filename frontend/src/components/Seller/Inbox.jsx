@@ -277,7 +277,7 @@ const Inbox = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'new': return 'bg-red-100 text-red-800';
-      case 'replied': return 'bg-blue-100 text-blue-800';
+      case 'replied': return 'bg-brand-100 text-brand-800';
       case 'closed': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -346,7 +346,7 @@ const Inbox = () => {
                     selectedMessage?._id === message._id
                       ? 'border-green-500 bg-green-50'
                       : 'border-gray-200 hover:border-gray-300'
-                  } ${!message.readBy?.seller ? 'bg-blue-50 border-blue-200' : ''}`}
+                  } ${!message.readBy?.seller ? 'bg-brand-50 border-brand-200' : ''}`}
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
@@ -356,7 +356,7 @@ const Inbox = () => {
                           {message.status}
                         </span>
                         {!message.readBy?.seller && (
-                          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                          <span className="w-2 h-2 bg-brand-500 rounded-full"></span>
                         )}
                       </div>
                       
@@ -386,7 +386,7 @@ const Inbox = () => {
                             e.stopPropagation();
                             handleMarkAsRead(message._id);
                           }}
-                          className="p-1 text-blue-600 hover:text-blue-800"
+                          className="p-1 text-brand-600 hover:text-brand-800"
                           title="Mark as read"
                         >
                           <EyeIcon className="h-4 w-4" />

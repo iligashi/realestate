@@ -214,7 +214,7 @@ const OpenHouseManagement = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'scheduled': return 'bg-blue-100 text-blue-800';
+      case 'scheduled': return 'bg-brand-100 text-brand-800';
       case 'active': return 'bg-green-100 text-green-800';
       case 'completed': return 'bg-gray-100 text-gray-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
@@ -283,7 +283,7 @@ const OpenHouseManagement = () => {
           
           <button
             onClick={() => setShowCreateForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+            className="bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 transition-colors flex items-center"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
             Schedule Open House
@@ -326,7 +326,7 @@ const OpenHouseManagement = () => {
                   <select
                     value={formData.property}
                     onChange={(e) => handleInputChange('property', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                     required
                   >
                     <option value="">Select Property</option>
@@ -341,7 +341,7 @@ const OpenHouseManagement = () => {
                   <select
                     value={formData.type}
                     onChange={(e) => handleInputChange('type', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                     required
                   >
                     <option value="open-house">Open House</option>
@@ -360,7 +360,7 @@ const OpenHouseManagement = () => {
                   type="text"
                   value={formData.title}
                   onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                   placeholder="e.g., Weekend Open House"
                   required
                 />
@@ -374,7 +374,7 @@ const OpenHouseManagement = () => {
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                   placeholder="Describe the open house event..."
                 />
               </div>
@@ -388,7 +388,7 @@ const OpenHouseManagement = () => {
                     type="datetime-local"
                     value={formData.startDate}
                     onChange={(e) => handleInputChange('startDate', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                     required
                   />
                 </div>
@@ -401,7 +401,7 @@ const OpenHouseManagement = () => {
                     type="datetime-local"
                     value={formData.endDate}
                     onChange={(e) => handleInputChange('endDate', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                     required
                   />
                 </div>
@@ -415,7 +415,7 @@ const OpenHouseManagement = () => {
                     min="1"
                     value={formData.maxAttendees}
                     onChange={(e) => handleInputChange('maxAttendees', parseInt(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
               </div>
@@ -429,7 +429,7 @@ const OpenHouseManagement = () => {
                     type="text"
                     value={formData.meetingPoint}
                     onChange={(e) => handleInputChange('meetingPoint', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                     placeholder="e.g., Front entrance"
                   />
                 </div>
@@ -442,7 +442,7 @@ const OpenHouseManagement = () => {
                     type="text"
                     value={formData.parkingInfo}
                     onChange={(e) => handleInputChange('parkingInfo', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                     placeholder="e.g., Street parking available"
                   />
                 </div>
@@ -456,7 +456,7 @@ const OpenHouseManagement = () => {
                   value={formData.accessInstructions}
                   onChange={(e) => handleInputChange('accessInstructions', e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                   placeholder="Special instructions for attendees..."
                 />
               </div>
@@ -473,7 +473,7 @@ const OpenHouseManagement = () => {
                       <select
                         value={formData.virtualTour.platform}
                         onChange={(e) => handleInputChange('virtualTour.platform', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                       >
                         <option value="">Select Platform</option>
                         <option value="zoom">Zoom</option>
@@ -491,7 +491,7 @@ const OpenHouseManagement = () => {
                         type="url"
                         value={formData.virtualTour.link}
                         onChange={(e) => handleInputChange('virtualTour.link', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                         placeholder="https://..."
                       />
                     </div>
@@ -506,7 +506,7 @@ const OpenHouseManagement = () => {
                         type="text"
                         value={formData.virtualTour.password}
                         onChange={(e) => handleInputChange('virtualTour.password', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                       />
                     </div>
 
@@ -518,7 +518,7 @@ const OpenHouseManagement = () => {
                         type="text"
                         value={formData.virtualTour.instructions}
                         onChange={(e) => handleInputChange('virtualTour.instructions', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                         placeholder="e.g., Download app before joining"
                       />
                     </div>
@@ -532,7 +532,7 @@ const OpenHouseManagement = () => {
                   id="isPublic"
                   checked={formData.isPublic}
                   onChange={(e) => handleInputChange('isPublic', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
                 />
                 <label htmlFor="isPublic" className="ml-2 block text-sm text-gray-700">
                   Make this event public
@@ -553,7 +553,7 @@ const OpenHouseManagement = () => {
                 <button
                   type="submit"
                   disabled={localLoading}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-sm font-medium text-white bg-brand-600 border border-transparent rounded-md hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {localLoading ? 'Saving...' : (editingHouse ? 'Update' : 'Create')}
                 </button>
@@ -583,14 +583,14 @@ const OpenHouseManagement = () => {
                   setRequestCount(0);
                   setLastRequestTime(0);
                 }}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 transition-colors"
               >
                 Try Again
               </button>
             </div>
           ) : localLoading ? (
             <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
             </div>
           ) : openHouses.length === 0 ? (
             <div className="text-center py-12">
@@ -646,7 +646,7 @@ const OpenHouseManagement = () => {
                   <div className="mt-4 flex space-x-2">
                     <button
                       onClick={() => setEditingHouse(house)}
-                      className="flex-1 bg-blue-600 text-white py-2 px-3 rounded-md text-sm hover:bg-blue-700 transition-colors flex items-center justify-center"
+                      className="flex-1 bg-brand-600 text-white py-2 px-3 rounded-md text-sm hover:bg-brand-700 transition-colors flex items-center justify-center"
                     >
                       <PencilIcon className="h-4 w-4 mr-1" />
                       Edit

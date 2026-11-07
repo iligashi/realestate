@@ -20,9 +20,9 @@ const FILTERS = [
 const STATUS_STYLES = {
   pending: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-green-100 text-green-800',
-  rescheduled: 'bg-blue-100 text-blue-800',
+  rescheduled: 'bg-brand-100 text-brand-800',
   cancelled: 'bg-gray-100 text-gray-700',
-  completed: 'bg-indigo-100 text-indigo-800',
+  completed: 'bg-brand-100 text-brand-800',
   no_show: 'bg-red-100 text-red-800'
 };
 
@@ -101,7 +101,7 @@ const ViewingScheduler = () => {
         </div>
         <Link
           to="/properties"
-          className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
+          className="inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2 font-medium text-white hover:bg-brand-700"
         >
           Browse properties
         </Link>
@@ -116,7 +116,7 @@ const ViewingScheduler = () => {
             aria-selected={filter === f.id}
             onClick={() => setFilter(f.id)}
             className={`rounded-full px-4 py-1.5 text-sm font-medium ${
-              filter === f.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              filter === f.id ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             {f.label}
@@ -126,7 +126,7 @@ const ViewingScheduler = () => {
 
       {loading ? (
         <div className="flex justify-center py-12" role="status" aria-label="Loading viewings">
-          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
+          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-brand-600" />
         </div>
       ) : visible.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 py-12 text-center">
@@ -159,7 +159,7 @@ const ViewingScheduler = () => {
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
                         {a.property?._id ? (
-                          <Link to={`/properties/${a.property._id}`} className="font-semibold text-gray-900 hover:text-blue-600">
+                          <Link to={`/properties/${a.property._id}`} className="font-semibold text-gray-900 hover:text-brand-600">
                             {a.property.title}
                           </Link>
                         ) : (

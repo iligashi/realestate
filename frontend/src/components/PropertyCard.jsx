@@ -181,7 +181,7 @@ const PropertyCard = ({ property }) => {
 
         {/* Property Type and Location */}
         <div className="flex items-center text-sm text-gray-500 mb-3">
-          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+          <span className="bg-brand-100 text-brand-800 px-2 py-1 rounded-full text-xs">
             {getPropertyTypeLabel(property.propertyType)}
           </span>
           <span className="mx-2">•</span>
@@ -242,7 +242,7 @@ const PropertyCard = ({ property }) => {
               className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md transition-colors duration-200 text-sm font-medium ${
                 isSubmittingApplication
                   ? 'bg-gray-400 text-white cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-brand-600 text-white hover:bg-brand-700'
               }`}
             >
               {isSubmittingApplication ? (

@@ -86,7 +86,7 @@ const RenterDashboard = () => {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => navigate('/properties')}
-                className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 font-medium flex items-center"
+                className="px-6 py-3 bg-brand-600 text-white rounded-md hover:bg-brand-700 transition-colors duration-200 font-medium flex items-center"
               >
                 <HomeIcon className="h-5 w-5 mr-2" />
                 Browse Properties

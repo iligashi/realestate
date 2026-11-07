@@ -162,7 +162,7 @@ const RentalApplicationManagement = () => {
             ? 'bg-green-50 border-green-200 text-green-800' 
             : actionStatus === 'error'
             ? 'bg-red-50 border-red-200 text-red-800'
-            : 'bg-blue-50 border-blue-200 text-blue-800'
+            : 'bg-brand-50 border-brand-200 text-brand-800'
         }`}>
           <div className="flex items-center">
             {actionStatus === 'success' && (
@@ -172,7 +172,7 @@ const RentalApplicationManagement = () => {
               <XCircleIcon className="h-5 w-5 mr-2 text-red-600" />
             )}
             {actionStatus === 'processing' && (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-2"></div>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-600 mr-2"></div>
             )}
             <span className="font-medium">{actionMessage}</span>
           </div>

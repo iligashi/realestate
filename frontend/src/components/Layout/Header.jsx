@@ -161,7 +161,7 @@ const Header = () => {
                 {propertyTypeOptions.map((option) => {
                   const Icon = option.icon;
                   const colorClasses = option.color === 'blue' 
-                    ? 'text-blue-600' 
+                    ? 'text-brand-600' 
                     : 'text-green-600';
                   
                   return (
@@ -171,7 +171,7 @@ const Header = () => {
                       className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
                     >
                       <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
-                        option.color === 'blue' ? 'bg-blue-100' : 'bg-green-100'
+                        option.color === 'blue' ? 'bg-brand-100' : 'bg-green-100'
                       }`}>
                         <Icon className={`h-4 w-4 ${colorClasses}`} />
                       </div>
@@ -409,7 +409,7 @@ const Header = () => {
                     {propertyTypeOptions.map((option) => {
                       const Icon = option.icon;
                       const colorClasses = option.color === 'blue' 
-                        ? 'text-blue-600' 
+                        ? 'text-brand-600' 
                         : 'text-green-600';
                       
                       return (
@@ -422,7 +422,7 @@ const Header = () => {
                           className="-mx-3 flex items-center space-x-3 rounded-lg px-3 py-3 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50 w-full text-left"
                         >
                           <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
-                            option.color === 'blue' ? 'bg-blue-100' : 'bg-green-100'
+                            option.color === 'blue' ? 'bg-brand-100' : 'bg-green-100'
                           }`}>
                             <Icon className={`h-4 w-4 ${colorClasses}`} />
                           </div>

@@ -45,7 +45,7 @@ const UserReports = () => {
       case 'pending':
         return <ClockIcon className="h-5 w-5 text-yellow-500" />;
       case 'under_review':
-        return <EyeIcon className="h-5 w-5 text-blue-500" />;
+        return <EyeIcon className="h-5 w-5 text-brand-500" />;
       case 'resolved':
         return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
       case 'dismissed':
@@ -60,7 +60,7 @@ const UserReports = () => {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'under_review':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-brand-100 text-brand-800';
       case 'resolved':
         return 'bg-green-100 text-green-800';
       case 'dismissed':
@@ -130,7 +130,7 @@ const UserReports = () => {
               onClick={() => setActiveTab('against-me')}
               className={`${
                 activeTab === 'against-me'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-brand-500 text-brand-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center`}
             >
@@ -141,7 +141,7 @@ const UserReports = () => {
               onClick={() => setActiveTab('my-reports')}
               className={`${
                 activeTab === 'my-reports'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-brand-500 text-brand-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center`}
             >
@@ -155,7 +155,7 @@ const UserReports = () => {
       {/* Reports List */}
       {loading ? (
         <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
         </div>
       ) : currentReports.length === 0 ? (
         <div className="text-center py-12">

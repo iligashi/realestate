@@ -281,7 +281,7 @@ const ModernRentalApplicationForm = ({ isOpen, onClose, property, onSubmit }) =>
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">
-              <BuildingOfficeIcon className="h-12 w-12 text-blue-600 mx-auto mb-3" />
+              <BuildingOfficeIcon className="h-12 w-12 text-brand-600 mx-auto mb-3" />
               <h3 className="text-xl font-semibold text-gray-900">Employment & Financial Information</h3>
               <p className="text-gray-600">Help us verify your income and employment</p>
             </div>
@@ -360,7 +360,7 @@ const ModernRentalApplicationForm = ({ isOpen, onClose, property, onSubmit }) =>
               </div>
             </div>
 
-            <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="bg-brand-50 p-4 rounded-lg">
               <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                 <UserGroupIcon className="h-5 w-5" />
                 Guarantor Information (Optional)
@@ -544,7 +544,7 @@ const ModernRentalApplicationForm = ({ isOpen, onClose, property, onSubmit }) =>
               />
             </div>
 
-            <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="bg-brand-50 p-4 rounded-lg">
               <h4 className="font-medium text-gray-900 mb-2">Emergency Contact</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input
@@ -622,7 +622,7 @@ const ModernRentalApplicationForm = ({ isOpen, onClose, property, onSubmit }) =>
                   ? 'bg-green-50 border-green-200 text-green-800' 
                   : submitStatus === 'error'
                   ? 'bg-red-50 border-red-200 text-red-800'
-                  : 'bg-blue-50 border-blue-200 text-blue-800'
+                  : 'bg-brand-50 border-brand-200 text-brand-800'
               }`}>
                 <div className="flex items-center">
                   {submitStatus === 'success' && (
@@ -632,7 +632,7 @@ const ModernRentalApplicationForm = ({ isOpen, onClose, property, onSubmit }) =>
                     <ExclamationTriangleIcon className="h-5 w-5 mr-2 text-red-600" />
                   )}
                   {submitStatus === 'submitting' && (
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-2"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-600 mr-2"></div>
                   )}
                   <span className="font-medium">{submitMessage}</span>
                 </div>

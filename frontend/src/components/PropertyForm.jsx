@@ -399,9 +399,9 @@ const PropertyForm = ({ onSubmit, initialData = null, isEditing = false, isSubmi
 
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
         {/* Validation Summary */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-blue-800 mb-2">📋 Form Requirements Summary</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-blue-700">
+        <div className="bg-brand-50 border border-brand-200 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-brand-800 mb-2">📋 Form Requirements Summary</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-brand-700">
             <div className="flex items-center space-x-2">
               <span className={`w-2 h-2 rounded-full ${watchedValues.title && watchedValues.title.length >= 10 ? 'bg-green-500' : 'bg-red-400'}`}></span>
               <span>Title: {watchedValues.title ? `${watchedValues.title.length}/10` : '0/10'} characters</span>
@@ -980,7 +980,7 @@ const PropertyForm = ({ onSubmit, initialData = null, isEditing = false, isSubmi
                       className={`text-xs px-2 py-1 rounded ${
                         image.isPrimary 
                           ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-brand-600 text-white hover:bg-brand-700'
                       }`}
                     >
                       Set Primary

@@ -21,8 +21,8 @@ const PropertyListingWizard = ({ onClose }) => {
   const fileInputRef = useRef(null);
   
   // Consistent form input styling
-  const inputClasses = "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors";
-  const selectClasses = "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors";
+  const inputClasses = "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors";
+  const selectClasses = "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors";
   
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -229,7 +229,7 @@ const PropertyListingWizard = ({ onClose }) => {
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors resize-none"
                 placeholder="Describe your property in detail..."
               />
             </div>
@@ -430,7 +430,7 @@ const PropertyListingWizard = ({ onClose }) => {
                       type="checkbox"
                       checked={formData.features[feature]}
                       onChange={(e) => handleInputChange(`features.${feature}`, e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
                     />
                     <span className="ml-2 text-sm text-gray-700 capitalize">
                       {feature.replace(/([A-Z])/g, ' $1').trim()}
@@ -451,7 +451,7 @@ const PropertyListingWizard = ({ onClose }) => {
                       type="checkbox"
                       checked={formData.amenities.includes(amenity)}
                       onChange={() => toggleAmenity(amenity)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
                     />
                     <span className="ml-2 text-sm text-gray-700">{amenity}</span>
                   </label>
@@ -509,7 +509,7 @@ const PropertyListingWizard = ({ onClose }) => {
                 <div className="space-y-1 text-center">
                   <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
                   <div className="flex text-sm text-gray-600">
-                    <label className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                    <label className="relative cursor-pointer bg-white rounded-md font-medium text-brand-600 hover:text-brand-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-brand-500">
                       <span>Upload photos</span>
                       <input
                         ref={fileInputRef}
@@ -602,15 +602,15 @@ const PropertyListingWizard = ({ onClose }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 text-white">
+        <div className="bg-gradient-to-r from-brand-600 to-brand-700 px-8 py-6 text-white">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold">Create Property Listing</h2>
-              <p className="text-blue-100 mt-1">Step {currentStep} of {steps.length}</p>
+              <p className="text-brand-100 mt-1">Step {currentStep} of {steps.length}</p>
             </div>
             <button
               onClick={onClose}
-              className="text-blue-200 hover:text-white transition-colors p-2 rounded-full hover:bg-blue-600"
+              className="text-brand-200 hover:text-white transition-colors p-2 rounded-full hover:bg-brand-600"
             >
               <XMarkIcon className="h-6 w-6" />
             </button>
@@ -637,8 +637,8 @@ const PropertyListingWizard = ({ onClose }) => {
                   <li key={step.name} className="flex items-center">
                     <div className="flex items-center">
                       <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-200 ${
-                        isCompleted ? 'bg-blue-600 border-blue-600 text-white' :
-                        isCurrent ? 'bg-blue-50 border-blue-600 text-blue-600' :
+                        isCompleted ? 'bg-brand-600 border-brand-600 text-white' :
+                        isCurrent ? 'bg-brand-50 border-brand-600 text-brand-600' :
                         'bg-white border-gray-300 text-gray-400'
                       }`}>
                         {isCompleted ? (
@@ -648,15 +648,15 @@ const PropertyListingWizard = ({ onClose }) => {
                         )}
                       </div>
                       <span className={`ml-3 text-sm font-medium transition-colors ${
-                        isCurrent ? 'text-blue-600' : 
-                        isCompleted ? 'text-blue-600' : 'text-gray-500'
+                        isCurrent ? 'text-brand-600' : 
+                        isCompleted ? 'text-brand-600' : 'text-gray-500'
                       }`}>
                         {step.name}
                       </span>
                     </div>
                     {stepIdx < steps.length - 1 && (
                       <div className={`ml-8 w-12 h-0.5 transition-colors ${
-                        isCompleted ? 'bg-blue-600' : 'bg-gray-300'
+                        isCompleted ? 'bg-brand-600' : 'bg-gray-300'
                       }`} />
                     )}
                   </li>
@@ -694,7 +694,7 @@ const PropertyListingWizard = ({ onClose }) => {
               <button
                 onClick={() => setCurrentStep(prev => prev + 1)}
                 disabled={!isStepValid(currentStep)}
-                className="flex items-center px-6 py-3 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center px-6 py-3 text-sm font-medium text-white bg-brand-600 border border-transparent rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Next
                 <ChevronRightIcon className="h-4 w-4 ml-2" />

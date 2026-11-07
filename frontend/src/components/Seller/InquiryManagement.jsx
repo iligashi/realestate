@@ -166,7 +166,7 @@ const InquiryManagement = () => {
       case 'new': return 'bg-red-100 text-red-800';
       case 'read': return 'bg-yellow-100 text-yellow-800';
       case 'responded': return 'bg-green-100 text-green-800';
-      case 'scheduled': return 'bg-blue-100 text-blue-800';
+      case 'scheduled': return 'bg-brand-100 text-brand-800';
       case 'completed': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -267,7 +267,7 @@ const InquiryManagement = () => {
         <div className="flex-1 overflow-y-auto">
           {localLoading ? (
             <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
             </div>
           ) : inquiries.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-gray-500">
@@ -282,7 +282,7 @@ const InquiryManagement = () => {
                   onClick={() => handleInquiryClick(inquiry)}
                   className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                     selectedInquiry?._id === inquiry._id
-                      ? 'border-blue-500 bg-blue-50'
+                      ? 'border-brand-500 bg-brand-50'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >
@@ -377,7 +377,7 @@ const InquiryManagement = () => {
                 value={responseText}
                 onChange={(e) => setResponseText(e.target.value)}
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
                 placeholder="Type your response here..."
               />
 
@@ -392,7 +392,7 @@ const InquiryManagement = () => {
                         setScheduleViewing({ date: '', time: '', duration: 60, notes: '' });
                       }
                     }}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
                   />
                   <span className="ml-2 text-sm text-gray-700">Schedule a viewing</span>
                 </label>
@@ -444,7 +444,7 @@ const InquiryManagement = () => {
                 <button
                   onClick={handleRespond}
                   disabled={!responseText.trim() || localLoading}
-                  className="flex-1 bg-blue-600 text-white py-2 px-3 rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-brand-600 text-white py-2 px-3 rounded-md text-sm hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {localLoading ? 'Sending...' : 'Send Response'}
                 </button>

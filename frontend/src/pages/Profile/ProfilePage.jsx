@@ -221,7 +221,7 @@ const ProfilePage = () => {
   const getRoleColor = (userType) => {
     const colors = {
       admin: 'bg-red-100 text-red-800',
-      agent: 'bg-blue-100 text-blue-800',
+      agent: 'bg-brand-100 text-brand-800',
       buyer: 'bg-green-100 text-green-800',
       seller: 'bg-purple-100 text-purple-800',
       renter: 'bg-orange-100 text-orange-800'
@@ -250,7 +250,7 @@ const ProfilePage = () => {
             <div className="text-center">
               {/* Profile Picture */}
               <div className="relative inline-block mb-4">
-                <div className="h-32 w-32 rounded-full overflow-hidden border-4 border-blue-200">
+                <div className="h-32 w-32 rounded-full overflow-hidden border-4 border-brand-200">
                   {previewUrl ? (
                     <img
                       src={previewUrl}
@@ -262,7 +262,7 @@ const ProfilePage = () => {
                       }}
                     />
                   ) : (
-                    <div className="h-full w-full bg-blue-600 flex items-center justify-center text-white text-4xl font-bold">
+                    <div className="h-full w-full bg-brand-600 flex items-center justify-center text-white text-4xl font-bold">
                       {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
                     </div>
                   )}
@@ -270,7 +270,7 @@ const ProfilePage = () => {
                 
                 {/* Change Picture Button */}
                 {isEditing && (
-                  <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
+                  <label className="absolute bottom-0 right-0 bg-brand-600 text-white p-2 rounded-full cursor-pointer hover:bg-brand-700 transition-colors">
                     <CameraIcon className="h-4 w-4" />
                     <input
                       type="file"

@@ -97,7 +97,7 @@ const WishlistManager = () => {
           </button>
         </div>
         <div className="absolute bottom-4 left-4">
-          <span className="bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-medium">
+          <span className="bg-brand-600 text-white px-2 py-1 rounded-full text-xs font-medium">
             {favorite.propertyType}
           </span>
         </div>
@@ -113,7 +113,7 @@ const WishlistManager = () => {
           <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
             {favorite.title}
           </h3>
-          <span className="text-xl font-bold text-blue-600">
+          <span className="text-xl font-bold text-brand-600">
             {formatPrice(favorite.price, favorite.currency)}
           </span>
         </div>
@@ -143,7 +143,7 @@ const WishlistManager = () => {
         <div className="flex space-x-2">
           <button
             onClick={() => window.open(`/properties/${favorite._id}`, '_blank')}
-            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center"
+            className="flex-1 bg-brand-600 text-white py-2 px-4 rounded-md hover:bg-brand-700 transition-colors flex items-center justify-center"
           >
             <EyeIcon className="h-4 w-4 mr-2" />
             View Details
@@ -182,7 +182,7 @@ const WishlistManager = () => {
             <h3 className="text-lg font-semibold text-gray-900 truncate">
               {favorite.title}
             </h3>
-            <span className="text-xl font-bold text-blue-600 ml-4">
+            <span className="text-xl font-bold text-brand-600 ml-4">
               {formatPrice(favorite.price, favorite.currency)}
             </span>
           </div>
@@ -213,7 +213,7 @@ const WishlistManager = () => {
           <div className="flex space-x-2">
             <button
               onClick={() => window.open(`/properties/${favorite._id}`, '_blank')}
-              className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center"
+              className="bg-brand-600 text-white py-2 px-4 rounded-md hover:bg-brand-700 transition-colors flex items-center"
             >
               <EyeIcon className="h-4 w-4 mr-2" />
               View Details
@@ -253,13 +253,13 @@ const WishlistManager = () => {
           <div className="flex border border-gray-300 rounded-lg">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-3 ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+              className={`p-3 ${viewMode === 'grid' ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
             >
               <HomeIcon className="h-5 w-5" />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-3 ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+              className={`p-3 ${viewMode === 'list' ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
             >
               <EyeIcon className="h-5 w-5" />
             </button>
@@ -273,7 +273,7 @@ const WishlistManager = () => {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
           >
             <option value="all">All Types</option>
             <option value="house">Houses</option>
@@ -288,7 +288,7 @@ const WishlistManager = () => {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
           >
             <option value="dateAdded">Date Added</option>
             <option value="price-low">Price: Low to High</option>
@@ -301,7 +301,7 @@ const WishlistManager = () => {
       {/* Wishlist Content */}
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
         </div>
       ) : favorites.length === 0 ? (
         <div className="text-center py-12">
@@ -312,7 +312,7 @@ const WishlistManager = () => {
           </p>
           <button
             onClick={() => window.open('/properties', '_blank')}
-            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+            className="mt-4 bg-brand-600 text-white px-4 py-2 rounded-md hover:bg-brand-700 transition-colors"
           >
             Browse Properties
           </button>

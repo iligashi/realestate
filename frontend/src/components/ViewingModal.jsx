@@ -89,8 +89,8 @@ const ViewingModal = ({ isOpen, onClose, property }) => {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <CalendarIcon className="h-6 w-6 text-blue-600" />
+            <div className="p-2 bg-brand-100 rounded-lg">
+              <CalendarIcon className="h-6 w-6 text-brand-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Schedule Property Viewing</h2>
@@ -158,7 +158,7 @@ const ViewingModal = ({ isOpen, onClose, property }) => {
                 value={formData.preferredDate}
                 onChange={handleInputChange}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 required
               />
             </div>
@@ -172,7 +172,7 @@ const ViewingModal = ({ isOpen, onClose, property }) => {
                 name="preferredTime"
                 value={formData.preferredTime}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 required
               >
                 <option value="">Select a time</option>
@@ -226,7 +226,7 @@ const ViewingModal = ({ isOpen, onClose, property }) => {
                 onChange={handleInputChange}
                 rows={3}
                 placeholder="Any specific questions or requests for the viewing..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-transparent"
               />
             </div>
 
@@ -264,7 +264,7 @@ const ViewingModal = ({ isOpen, onClose, property }) => {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Sending...' : 'Send Viewing Request'}
             </button>

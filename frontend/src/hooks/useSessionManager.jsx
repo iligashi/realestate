@@ -47,7 +47,7 @@ const useSessionManager = () => {
                     extendSession();
                     toast.dismiss(t.id);
                   }}
-                  className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                  className="px-3 py-1 bg-brand-600 text-white rounded text-sm hover:bg-brand-700"
                 >
                   Extend Session
                 </button>
@@ -103,7 +103,7 @@ const useSessionManager = () => {
                   extendSession();
                   toast.dismiss(t.id);
                 }}
-                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                className="px-3 py-1 bg-brand-600 text-white rounded text-sm hover:bg-brand-700"
               >
                 Extend Session
               </button>

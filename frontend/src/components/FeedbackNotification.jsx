@@ -50,9 +50,9 @@ const FeedbackNotification = ({
       case 'warning':
         return <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600" />;
       case 'info':
-        return <InformationCircleIcon className="h-6 w-6 text-blue-600" />;
+        return <InformationCircleIcon className="h-6 w-6 text-brand-600" />;
       default:
-        return <InformationCircleIcon className="h-6 w-6 text-blue-600" />;
+        return <InformationCircleIcon className="h-6 w-6 text-brand-600" />;
     }
   };
 
@@ -71,7 +71,7 @@ const FeedbackNotification = ({
       success: "border-green-500",
       error: "border-red-500", 
       warning: "border-yellow-500",
-      info: "border-blue-500"
+      info: "border-brand-500"
     };
     
     return `${baseStyles} translate-x-0 opacity-100 ${typeStyles[type] || typeStyles.info}`;
@@ -98,7 +98,7 @@ const FeedbackNotification = ({
           </div>
           <div className="ml-4 flex-shrink-0 flex">
             <button
-              className="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
               onClick={handleClose}
             >
               <span className="sr-only">Close</span>

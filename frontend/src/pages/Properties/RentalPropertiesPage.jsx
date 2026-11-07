@@ -144,7 +144,7 @@ const RentalPropertiesPage = () => {
           </div>
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <MapPinIcon className="h-8 w-8 text-blue-600" />
+              <MapPinIcon className="h-8 w-8 text-brand-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Cities</p>
                 <p className="text-2xl font-bold text-gray-900">
@@ -292,7 +292,7 @@ const RentalPropertiesPage = () => {
               onClick={handleSearch}
               className={`px-6 py-2 rounded-md transition-colors duration-200 font-medium ${
                 hasUnsavedChanges 
-                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  ? 'bg-brand-600 text-white hover:bg-brand-700' 
                   : 'bg-green-600 text-white hover:bg-green-700'
               }`}
             >
@@ -347,7 +347,7 @@ const RentalPropertiesPage = () => {
 
         {/* Call to Action */}
         {!isAuthenticated && (
-          <div className="mt-12 bg-gradient-to-r from-green-600 to-blue-600 rounded-lg p-8 text-center text-white">
+          <div className="mt-12 bg-gradient-to-r from-green-600 to-brand-600 rounded-lg p-8 text-center text-white">
             <h3 className="text-2xl font-bold mb-4">Ready to Find Your Next Home?</h3>
             <p className="text-lg mb-6 opacity-90">
               Join thousands of renters who have found their perfect home through our platform.

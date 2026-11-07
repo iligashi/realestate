@@ -53,7 +53,7 @@ const LoginPage = () => {
             Or{' '}
             <Link
               to="/register"
-              className="font-medium text-blue-600 hover:text-blue-500"
+              className="font-medium text-brand-600 hover:text-brand-500"
             >
               create a new account
             </Link>
@@ -108,7 +108,7 @@ const LoginPage = () => {
           <div className="text-center">
             <Link
               to="/forgot-password"
-              className="font-medium text-blue-600 hover:text-blue-500"
+              className="font-medium text-brand-600 hover:text-brand-500"
             >
               Forgot your password?
             </Link>

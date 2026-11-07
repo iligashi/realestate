@@ -51,7 +51,7 @@ const Announcements = () => {
   const getTypeStyle = (type) => {
     switch (type) {
       case 'general':
-        return 'bg-blue-50 border-blue-200 text-blue-800';
+        return 'bg-brand-50 border-brand-200 text-brand-800';
       case 'update':
         return 'bg-green-50 border-green-200 text-green-800';
       case 'promotion':
@@ -211,7 +211,7 @@ const HomePage = () => {
       <Announcements />
       
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-blue-600 to-blue-800">
+      <div className="relative bg-gradient-to-r from-brand-600 to-brand-800">
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gray-900 mix-blend-multiply" />
         </div>
@@ -219,7 +219,7 @@ const HomePage = () => {
           <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
             Find Your Dream Property
           </h1>
-          <p className="mt-6 text-xl text-blue-100 max-w-3xl">
+          <p className="mt-6 text-xl text-brand-100 max-w-3xl">
             Discover the perfect home, apartment, or commercial property in our modern real estate marketplace. 
             Connect with trusted agents and make informed decisions.
           </p>
@@ -235,7 +235,7 @@ const HomePage = () => {
                 <div className="flex flex-col sm:flex-row gap-4">
                   {propertyCreationOptions.map((option, index) => {
                     const colorClasses = option.color === 'blue' 
-                      ? 'bg-blue-600 hover:bg-blue-700' 
+                      ? 'bg-brand-600 hover:bg-brand-700' 
                       : 'bg-green-600 hover:bg-green-700';
                     
                     return (
@@ -283,8 +283,8 @@ const HomePage = () => {
           <div className="mt-20 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {features.map((feature) => (
               <div key={feature.name} className="text-center">
-                <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-blue-100">
-                  <feature.icon className="h-8 w-8 text-blue-600" aria-hidden="true" />
+                <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-brand-100">
+                  <feature.icon className="h-8 w-8 text-brand-600" aria-hidden="true" />
                 </div>
                 <h3 className="mt-6 text-lg font-semibold text-gray-900">{feature.name}</h3>
                 <p className="mt-2 text-sm text-gray-600">{feature.description}</p>
@@ -304,11 +304,11 @@ const HomePage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                 {propertyCreationOptions.map((option, index) => {
                   const colorClasses = option.color === 'blue' 
-                    ? 'bg-blue-50 border-blue-200 hover:bg-blue-100' 
+                    ? 'bg-brand-50 border-brand-200 hover:bg-brand-100' 
                     : 'bg-green-50 border-green-200 hover:bg-green-100';
                   
                   const iconColorClasses = option.color === 'blue' 
-                    ? 'bg-blue-600 text-white' 
+                    ? 'bg-brand-600 text-white' 
                     : 'bg-green-600 text-white';
                   
                   return (
@@ -343,13 +343,13 @@ const HomePage = () => {
       </div>
 
       {/* CTA Section */}
-      <div className="bg-blue-600">
+      <div className="bg-brand-600">
         <div className="max-w-7xl mx-auto py-16 px-6 sm:py-24 lg:px-8">
           <div className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
               Ready to Find Your Perfect Property?
             </h2>
-            <p className="mt-4 text-lg text-blue-100">
+            <p className="mt-4 text-lg text-brand-100">
               Join thousands of satisfied users who found their dream homes through our platform.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
@@ -374,7 +374,7 @@ const HomePage = () => {
       {isAuthenticated && propertyCreationOptions && propertyCreationOptions.length > 0 && (
         <div className="fixed bottom-6 right-6 z-50 lg:hidden">
           <div className="relative group">
-            <button className="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center">
+            <button className="w-14 h-14 bg-brand-600 hover:bg-brand-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center">
               <PlusIcon className="h-6 w-6" />
             </button>
             {/* Dropdown menu */}
