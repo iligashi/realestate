@@ -1,8 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { 
-  fetchProperties
-} from '../../store/slices/propertySlice';
 import { 
   HeartIcon, 
   EyeIcon, 
@@ -13,35 +9,39 @@ import {
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import api from '../../services/api';
+import { useFavorites } from '../../context/FavoritesContext';
 import { propertyImage } from '../../config';
 
 const WishlistManager = () => {
-  const dispatch = useDispatch();
-  const { properties = [], loading = false } = useSelector(state => state.property || {});
+  const navigate = useNavigate();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [favorites, setFavorites] = useState([]);
-  
+  const [loading, setLoading] = useState(true);
+
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('dateAdded');
   const [filterType, setFilterType] = useState('all');
 
   useEffect(() => {
-    dispatch(fetchProperties());
-  }, [dispatch]);
+    let active = true;
+    api
+      .get('/favorites')
+      .then(({ data }) => active && setFavorites((data.properties || []).map((p) => ({ ...p, dateAdded: p.savedAt }))))
+      .catch(() => active && toast.error('Could not load your wishlist'))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const handleRemoveFromFavorites = async (propertyId) => {
-    // TODO: Implement favorites functionality
-    setFavorites(prev => prev.filter(fav => fav._id !== propertyId));
-    toast.success('Removed from wishlist!');
-  };
+  // Keep the list in sync when a heart is toggled
+  useEffect(() => {
+    setFavorites((prev) => prev.filter((p) => isFavorite(p._id)));
+  }, [isFavorite]);
 
-  const handleAddToFavorites = async (propertyId) => {
-    // TODO: Implement favorites functionality
-    const property = properties.find(p => p._id === propertyId);
-    if (property && !favorites.some(fav => fav._id === propertyId)) {
-      setFavorites(prev => [...prev, { ...property, dateAdded: new Date().toISOString() }]);
-      toast.success('Added to wishlist!');
-    }
-  };
+  const handleRemoveFromFavorites = (propertyId) => toggleFavorite(propertyId);
 
   const formatPrice = (price, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -142,7 +142,7 @@ const WishlistManager = () => {
         
         <div className="flex space-x-2">
           <button
-            onClick={() => window.open(`/properties/${favorite._id}`, '_blank')}
+            onClick={() => navigate(`/properties/${favorite._id}`)}
             className="flex-1 bg-brand-600 text-white py-2 px-4 rounded-md hover:bg-brand-700 transition-colors flex items-center justify-center"
           >
             <EyeIcon className="h-4 w-4 mr-2" />
@@ -212,7 +212,7 @@ const WishlistManager = () => {
           
           <div className="flex space-x-2">
             <button
-              onClick={() => window.open(`/properties/${favorite._id}`, '_blank')}
+              onClick={() => navigate(`/properties/${favorite._id}`)}
               className="bg-brand-600 text-white py-2 px-4 rounded-md hover:bg-brand-700 transition-colors flex items-center"
             >
               <EyeIcon className="h-4 w-4 mr-2" />
@@ -278,8 +278,7 @@ const WishlistManager = () => {
             <option value="all">All Types</option>
             <option value="house">Houses</option>
             <option value="apartment">Apartments</option>
-            <option value="condo">Condos</option>
-            <option value="townhouse">Townhouses</option>
+            <option value="office">Offices</option>
           </select>
         </div>
         
@@ -311,7 +310,7 @@ const WishlistManager = () => {
             Start browsing properties and add them to your wishlist.
           </p>
           <button
-            onClick={() => window.open('/properties', '_blank')}
+            onClick={() => navigate('/properties')}
             className="mt-4 bg-brand-600 text-white px-4 py-2 rounded-md hover:bg-brand-700 transition-colors"
           >
             Browse Properties

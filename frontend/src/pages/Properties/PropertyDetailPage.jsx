@@ -25,6 +25,7 @@ import ReportForm from '../../components/ReportForm';
 import ViewingModal from '../../components/ViewingModal';
 import rentalApplicationAPI from '../../services/rentalApplicationAPI';
 import { sameId } from '../../utils/ids';
+import FavoriteButton from '../../components/FavoriteButton';
 
 const PropertyDetailPage = () => {
   const { id } = useParams();
@@ -574,6 +575,7 @@ const PropertyDetailPage = () => {
           <div className="bg-white rounded-lg p-6 border border-gray-200 sticky top-6">
             {/* Contact Actions */}
             <div className="space-y-3 mb-6">
+              {!sameId(property.owner, user) && <FavoriteButton propertyId={property._id} variant="button" />}
               <button 
                 type="button"
                 onClick={handleContactOwner}

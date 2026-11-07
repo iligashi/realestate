@@ -201,8 +201,7 @@ const RentalPropertiesPage = () => {
                 <option value="">All Types</option>
                 <option value="apartment">Apartment</option>
                 <option value="house">House</option>
-                <option value="condo">Condo</option>
-                <option value="townhouse">Townhouse</option>
+                <option value="office">Office</option>
                 <option value="studio">Studio</option>
               </select>
             </div>

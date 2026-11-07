@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { propertyImage } from '../../config';
+import { useFavorites } from '../../context/FavoritesContext';
 
 const PropertyComparison = () => {
   const dispatch = useDispatch();
@@ -48,20 +49,9 @@ const PropertyComparison = () => {
     setComparisonList(prev => prev.filter(p => p._id !== propertyId));
   };
 
-  const handleAddToFavorites = async (propertyId) => {
-    // TODO: Implement favorites functionality
-    toast.success('Added to wishlist!');
-  };
-
-  const handleRemoveFromFavorites = async (propertyId) => {
-    // TODO: Implement favorites functionality
-    toast.success('Removed from wishlist!');
-  };
-
-  const isFavorite = (propertyId) => {
-    // TODO: Implement favorites functionality
-    return false;
-  };
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const handleAddToFavorites = (propertyId) => toggleFavorite(propertyId);
+  const handleRemoveFromFavorites = (propertyId) => toggleFavorite(propertyId);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', {

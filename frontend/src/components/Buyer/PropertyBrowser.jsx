@@ -17,6 +17,7 @@ import {
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import { propertyImage } from '../../config';
+import { useFavorites } from '../../context/FavoritesContext';
 
 const PropertyBrowser = () => {
   const dispatch = useDispatch();
@@ -53,20 +54,9 @@ const PropertyBrowser = () => {
     dispatch(fetchProperties(filters));
   };
 
-  const handleAddToFavorites = async (propertyId) => {
-    // TODO: Implement favorites functionality
-    toast.success('Added to wishlist!');
-  };
-
-  const handleRemoveFromFavorites = async (propertyId) => {
-    // TODO: Implement favorites functionality
-    toast.success('Removed from wishlist!');
-  };
-
-  const isFavorite = (propertyId) => {
-    // TODO: Implement favorites functionality
-    return false;
-  };
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const handleAddToFavorites = (propertyId) => toggleFavorite(propertyId);
+  const handleRemoveFromFavorites = (propertyId) => toggleFavorite(propertyId);
 
   const formatPrice = (price, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -221,8 +211,7 @@ const PropertyBrowser = () => {
                   <option value="">All Types</option>
                   <option value="house">House</option>
                   <option value="apartment">Apartment</option>
-                  <option value="condo">Condo</option>
-                  <option value="townhouse">Townhouse</option>
+                  <option value="office">Office</option>
                 </select>
               </div>
               

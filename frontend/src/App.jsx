@@ -8,6 +8,7 @@ import ProtectedRoute from './components/Auth/ProtectedRoute';
 import SellerRoute from './components/Auth/SellerRoute';
 import RenterRoute from './components/Auth/RenterRoute';
 import HomePage from './pages/HomePage';
+import { FavoritesProvider } from './context/FavoritesContext';
 
 // Pages are loaded on demand so the first visit only downloads what it needs
 const LoginPage = lazy(() => import('./pages/Auth/LoginPage'));
@@ -57,6 +58,7 @@ const protectedPage = (Page) => (
 function App() {
   return (
     <SessionProvider>
+      <FavoritesProvider>
       <Layout>
         <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
@@ -119,6 +121,7 @@ function App() {
           </Suspense>
         </ErrorBoundary>
       </Layout>
+      </FavoritesProvider>
     </SessionProvider>
   );
 }

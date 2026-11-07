@@ -15,6 +15,8 @@ import ViewingModal from './ViewingModal';
 import ReportForm from './ReportForm';
 import rentalApplicationAPI from '../services/rentalApplicationAPI';
 import { sameId } from '../utils/ids';
+import FavoriteButton from './FavoriteButton';
+import { propertyImage } from '../config';
 
 const PropertyCard = ({ property }) => {
   const navigate = useNavigate();
@@ -137,14 +139,16 @@ const PropertyCard = ({ property }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+    <div className="card-plain group overflow-hidden transition-shadow duration-300 hover:shadow-md">
       {/* Property Image */}
-      <div className="relative h-48 bg-gray-200">
+      <div className="relative h-48 overflow-hidden bg-gray-100">
+        <FavoriteButton propertyId={property._id || property.id} className="absolute left-3 top-3 z-10" />
         {property.photos && property.photos.length > 0 ? (
           <img
-            src={property.photos[0].url}
+            src={propertyImage(property.photos)}
             alt={property.title}
-            className="w-full h-full object-cover"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400">
