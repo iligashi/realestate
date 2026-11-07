@@ -4,8 +4,8 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://realestate-api.onrender.com/api/:path*" },
-    { "source": "/uploads/:path*", "destination": "https://realestate-api.onrender.com/uploads/:path*" },
+    { "source": "/api/:path*", "destination": "https://realestate-api-0sad.onrender.com/api/:path*" },
+    { "source": "/uploads/:path*", "destination": "https://realestate-api-0sad.onrender.com/uploads/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
