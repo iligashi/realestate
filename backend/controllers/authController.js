@@ -170,9 +170,8 @@ const updateProfile = async (req, res) => {
       });
       
       // Handle profile picture file from multer - ONLY if file exists and is valid
-      if (req.file && req.file.path && typeof req.file.path === 'string') {
-        logger.debug('Adding NEW profile picture from req.file:', req.file.path);
-        updates.profilePicture = req.file.path;
+      if (req.file?.url) {
+        updates.profilePicture = req.file.url;
       } else {
         logger.debug('No valid profile picture file uploaded');
       }

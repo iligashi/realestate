@@ -1,5 +1,8 @@
 const http = require('http');
 
+// Start error tracking before anything else runs
+require('./utils/sentry').initSentry();
+
 const config = require('./config/env');
 const app = require('./app');
 const connectDB = require('./config/database');

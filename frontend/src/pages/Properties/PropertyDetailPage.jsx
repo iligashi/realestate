@@ -26,6 +26,7 @@ import ViewingModal from '../../components/ViewingModal';
 import rentalApplicationAPI from '../../services/rentalApplicationAPI';
 import { sameId } from '../../utils/ids';
 import FavoriteButton from '../../components/FavoriteButton';
+import { assetUrl } from '../../config';
 
 const PropertyDetailPage = () => {
   const { id } = useParams();
@@ -345,7 +346,7 @@ const PropertyDetailPage = () => {
                     }`}
                   >
                     <img
-                      src={photo.url}
+                      src={assetUrl(photo.url)}
                       alt={photo.caption || `Property image ${index + 1}`}
                       className="w-full h-full object-cover"
                     />

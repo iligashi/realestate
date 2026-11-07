@@ -29,6 +29,7 @@ import PropertyListingWizard from '../../components/Seller/PropertyListingWizard
 import Inbox from '../../components/Seller/Inbox';
 import AnalyticsDashboard from '../../components/Seller/AnalyticsDashboard';
 import UserReports from '../../components/Buyer/UserReports';
+import { assetUrl } from '../../config';
 
 const SellerDashboard = () => {
   const dispatch = useDispatch();
@@ -547,7 +548,7 @@ const SellerDashboard = () => {
               <div className="h-56 bg-gray-200 relative">
                 {property.photos && property.photos.length > 0 ? (
                   <img
-                    src={property.photos[0].url}
+                    src={assetUrl(property.photos[0].url)}
                     alt={property.title}
                     className="h-full w-full object-cover"
                   />

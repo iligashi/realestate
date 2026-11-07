@@ -82,6 +82,11 @@ app.use('/api/contact', require('./routes/contact'));
 app.use('/api', require('./routes/public'));
 
 app.use(notFound);
+
+// Report unexpected errors (no-op unless SENTRY_DSN is set)
+const Sentry = require('./utils/sentry').getSentry();
+if (Sentry) Sentry.setupExpressErrorHandler(app);
+
 app.use(errorHandler);
 
 module.exports = app;

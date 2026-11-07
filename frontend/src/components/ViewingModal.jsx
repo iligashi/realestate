@@ -10,6 +10,7 @@ import {
   EnvelopeIcon
 } from '@heroicons/react/24/outline';
 import appointmentAPI from '../services/appointmentAPI';
+import { assetUrl } from '../config';
 
 const ViewingModal = ({ isOpen, onClose, property }) => {
   const { user } = useSelector(state => state.auth || {});
@@ -111,7 +112,7 @@ const ViewingModal = ({ isOpen, onClose, property }) => {
             <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
               {property.photos && property.photos.length > 0 ? (
                 <img
-                  src={property.photos[0].url}
+                  src={assetUrl(property.photos[0].url)}
                   alt={property.title}
                   className="w-full h-full object-cover"
                 />

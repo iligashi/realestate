@@ -172,7 +172,7 @@ const createProperty = async (req, res) => {
       const photos = req.files.map((file, index) => {
         logger.debug(`Processing file ${index + 1}:`, file.originalname);
         return {
-          url: `/uploads/property-images/${file.filename}`,
+          url: file.url,
           caption: file.originalname,
           isPrimary: index === 0, // First image is primary
           order: index + 1
@@ -288,7 +288,7 @@ const updateProperty = async (req, res) => {
     // Handle uploaded images
     if (req.files && req.files.length > 0) {
       const photos = req.files.map((file, index) => ({
-        url: `/uploads/property-images/${file.filename}`,
+        url: file.url,
         caption: file.originalname,
         isPrimary: index === 0, // First image is primary
         order: index + 1

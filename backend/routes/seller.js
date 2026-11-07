@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { auth, requireRole } = require('../middleware/auth');
-const upload = require('../middleware/upload');
+const { imageUpload } = require('../utils/imageUpload');
+
+const listingPhotos = imageUpload({ folder: 'property-images', field: 'photos', maxFiles: 10 });
 const { sellerRateLimit, strictRateLimit } = require('../middleware/rateLimiter');
 const sellerController = require('../controllers/sellerController');
 
@@ -16,8 +18,8 @@ router.use(requireRole(['seller', 'admin']));
 router.get('/dashboard', sellerController.getSellerDashboard);
 
 // ===== PROPERTY LISTING WIZARD =====
-router.post('/properties', upload.array('photos', 10), sellerController.createPropertyListing);
-router.put('/properties/:id', upload.array('photos', 10), sellerController.updatePropertyListing);
+router.post('/properties', listingPhotos, sellerController.createPropertyListing);
+router.put('/properties/:id', listingPhotos, sellerController.updatePropertyListing);
 router.put('/properties/:id/photos', sellerController.updatePropertyPhotos);
 
 // ===== INQUIRY DASHBOARD =====

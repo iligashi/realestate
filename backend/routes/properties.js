@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { auth, optionalAuth, requireRole } = require('../middleware/auth');
 const { validateProperty } = require('../middleware/validation');
-const { uploadPropertyImagesWithDebug } = require('../middleware/propertyUpload');
+const { imageUpload } = require('../utils/imageUpload');
+
+const propertyImages = imageUpload({ folder: 'property-images', field: 'images', maxFiles: 10 });
 const parseFormData = require('../middleware/parseFormData');
 const {
   getProperties,
@@ -28,7 +30,7 @@ router.get('/user/my-properties', auth, getUserProperties);
 // Create property with error handling
 router.post('/', 
   auth, 
-  uploadPropertyImagesWithDebug, 
+  propertyImages,
   parseFormData, 
   validateProperty, // Added back now that parsing is fixed
   asyncHandler(createProperty)
@@ -37,7 +39,7 @@ router.post('/',
 // Update property with error handling
 router.put('/:id', 
   auth, 
-  uploadPropertyImagesWithDebug, 
+  propertyImages,
   parseFormData, 
   validateProperty, // Added back now that parsing is fixed
   asyncHandler(updateProperty)

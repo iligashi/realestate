@@ -39,21 +39,7 @@ const ProfilePage = () => {
   const [previewUrl, setPreviewUrl] = useState('');
 
   // Helper function to get profile picture URL
-  const getProfilePictureUrl = (profilePicture) => {
-    if (!profilePicture) return null;
-    
-    // If it's already a full URL, return as is
-    if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) {
-      return profilePicture;
-    }
-    
-    // If it's a server path, construct the full URL
-    if (profilePicture.startsWith('uploads/')) {
-      return assetUrl(profilePicture);
-    }
-    
-    return profilePicture;
-  };
+  const getProfilePictureUrl = (profilePicture) => assetUrl(profilePicture) || null;
 
   // Watch for profile picture changes in the user object
   useEffect(() => {

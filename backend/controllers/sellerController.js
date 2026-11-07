@@ -111,7 +111,7 @@ const createPropertyListing = async (req, res) => {
     // Handle uploaded images
     if (req.files && req.files.length > 0) {
       const photos = req.files.map((file, index) => ({
-        url: `/uploads/property-images/${file.filename}`,
+        url: file.url,
         caption: file.originalname,
         isPrimary: index === 0,
         order: index + 1
@@ -156,7 +156,7 @@ const updatePropertyListing = async (req, res) => {
     // Handle uploaded images
     if (req.files && req.files.length > 0) {
       const photos = req.files.map((file, index) => ({
-        url: `/uploads/property-images/${file.filename}`,
+        url: file.url,
         caption: file.originalname,
         isPrimary: index === 0,
         order: index + 1
