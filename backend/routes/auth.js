@@ -13,6 +13,7 @@ const {
   updateProfile,
   changePassword,
   extendSession,
+  getSocketToken,
   logout
 } = require('../controllers/authController');
 
@@ -25,6 +26,7 @@ router.get('/profile', auth, getProfile);
 router.put('/profile', auth, profilePicture, updateProfile);
 router.put('/change-password', auth, changePassword);
 router.post('/extend-session', auth, extendSession);
+router.get('/socket-token', auth, getSocketToken);
 router.post('/logout', logout);
 
 module.exports = router;

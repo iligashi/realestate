@@ -28,6 +28,9 @@ module.exports = {
   isDevelopment: NODE_ENV === 'development',
   isTest: NODE_ENV === 'test',
   port: Number(process.env.PORT) || 5000,
+  // Number of proxies in front of the API (Vercel rewrite + Render = 2), so
+  // rate limits see the visitor's IP rather than the proxy's
+  trustProxy: Number(process.env.TRUST_PROXY) || 1,
   mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/real-estate-marketplace',
   allowedOrigins
 };
