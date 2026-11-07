@@ -16,6 +16,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
+import { propertyImage } from '../../config';
 
 const PropertyBrowser = () => {
   const dispatch = useDispatch();
@@ -83,7 +84,7 @@ const PropertyBrowser = () => {
       <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
         <div className="relative">
           <img
-            src={property.photos?.[0]?.url || '/api/placeholder/400/300'}
+            src={propertyImage(property.photos)}
             alt={property.title || 'Property'}
             className="w-full h-48 object-cover"
           />

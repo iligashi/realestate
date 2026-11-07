@@ -13,6 +13,7 @@ import {
   ScaleIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { propertyImage } from '../../config';
 
 const PropertyComparison = () => {
   const dispatch = useDispatch();
@@ -94,7 +95,7 @@ const PropertyComparison = () => {
               <th key={property._id} className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <div className="relative">
                   <img
-                    src={property.photos?.[0]?.url || '/api/placeholder/200/150'}
+                    src={propertyImage(property.photos)}
                     alt={property.title}
                     className="w-24 h-16 object-cover rounded mx-auto mb-2"
                   />
@@ -351,7 +352,7 @@ const PropertyComparison = () => {
                     >
                       <div className="flex items-center space-x-3">
                         <img
-                          src={property.photos?.[0]?.url || '/api/placeholder/60/60'}
+                          src={propertyImage(property.photos)}
                           alt={property.title}
                           className="w-12 h-12 object-cover rounded"
                         />

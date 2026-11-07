@@ -13,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
+import { propertyImage } from '../../config';
 
 const WishlistManager = () => {
   const dispatch = useDispatch();
@@ -83,7 +84,7 @@ const WishlistManager = () => {
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
       <div className="relative">
         <img
-          src={favorite.photos?.[0]?.url || '/api/placeholder/400/300'}
+          src={propertyImage(favorite.photos)}
           alt={favorite.title}
           className="w-full h-48 object-cover"
         />
@@ -164,7 +165,7 @@ const WishlistManager = () => {
       <div className="flex space-x-4">
         <div className="relative flex-shrink-0">
           <img
-            src={favorite.photos?.[0]?.url || '/api/placeholder/200/150'}
+            src={propertyImage(favorite.photos)}
             alt={favorite.title}
             className="w-32 h-24 object-cover rounded-lg"
           />

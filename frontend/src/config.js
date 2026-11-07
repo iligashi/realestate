@@ -9,3 +9,8 @@ export const assetUrl = (path) => {
   if (/^https?:\/\//i.test(path)) return path;
   return `${SERVER_URL}/${String(path).replace(/^\/+/, '')}`;
 };
+
+export const PROPERTY_PLACEHOLDER = '/property-placeholder.svg';
+
+// First photo of a property as a full URL, or a local placeholder image.
+export const propertyImage = (photos) => assetUrl(photos?.[0]?.url) || PROPERTY_PLACEHOLDER;
