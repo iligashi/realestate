@@ -69,8 +69,6 @@ app.use('/api/seller', require('./routes/seller'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/favorites', require('./routes/favorites'));
 app.use('/api/admin', require('./routes/admin'));
-app.use('/api/analytics', require('./routes/analytics'));
-app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/rental-applications', require('./routes/rentalApplications'));
 app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/reports', require('./routes/reports'));
