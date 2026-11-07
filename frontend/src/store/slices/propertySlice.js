@@ -26,6 +26,15 @@ export const fetchPropertyById = createAsyncThunk(
   }
 );
 
+// Prefer the server's field-level messages (e.g. "Title must be at least 10 characters long").
+const apiError = (error, fallback) => {
+  const body = error.response?.data;
+  if (Array.isArray(body?.details) && body.details.length) {
+    return body.details.map((d) => (typeof d === 'string' ? d : d.msg)).join('. ');
+  }
+  return body?.error || fallback;
+};
+
 export const createProperty = createAsyncThunk(
   'property/createProperty',
   async (propertyData, { rejectWithValue, getState }) => {
@@ -34,7 +43,7 @@ export const createProperty = createAsyncThunk(
       const response = await propertyAPI.createProperty(propertyData, token);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to create property');
+      return rejectWithValue(apiError(error, 'Failed to create property'));
     }
   }
 );
@@ -47,7 +56,7 @@ export const updateProperty = createAsyncThunk(
       const response = await propertyAPI.updateProperty(id, propertyData, token);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.error || 'Failed to update property');
+      return rejectWithValue(apiError(error, 'Failed to update property'));
     }
   }
 );

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import PropertyForm from '../../components/PropertyForm';
+import PropertyListingWizard from '../../components/Seller/PropertyListingWizard';
 import { createProperty, updateProperty } from '../../store/slices/propertySlice';
 import { getProperty } from '../../services/propertyService';
 import { toast } from 'react-hot-toast';
@@ -163,6 +164,20 @@ const PropertyFormPage = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading property data...</p>
         </div>
+      </div>
+    );
+  }
+
+  // New listings use the step-by-step wizard; the full form is kept for editing.
+  if (!isEditing) {
+    const home = user?.userType === 'renter' ? '/renter' : ['seller', 'agent'].includes(user?.userType) ? '/seller' : '/dashboard';
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <PropertyListingWizard
+          mode={isRentalProperty ? 'rental' : 'sale'}
+          onClose={() => (window.history.length > 1 ? navigate(-1) : navigate(home))}
+          onCreated={() => navigate(home === '/seller' ? '/seller?tab=properties' : home, { replace: true })}
+        />
       </div>
     );
   }

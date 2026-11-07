@@ -60,37 +60,40 @@ const validateProperty = [
     
     try {
       const errors = [];
+      // Updates (PUT) may send only the fields being changed; validate those.
+      const partial = req.method === 'PUT';
+      const has = (key) => !partial || req.body[key] !== undefined;
       
       // Check required fields
-      if (!req.body.title || req.body.title.trim().length < 10) {
+      if (has('title') && (!req.body.title || req.body.title.trim().length < 10)) {
         errors.push('Title must be at least 10 characters long');
       }
       
-      if (!req.body.description || req.body.description.trim().length < 50) {
+      if (has('description') && (!req.body.description || req.body.description.trim().length < 50)) {
         errors.push('Description must be at least 50 characters long');
       }
       
-      if (!req.body.propertyType || !['house', 'apartment', 'office'].includes(req.body.propertyType)) {
+      if (has('propertyType') && (!req.body.propertyType || !['house', 'apartment', 'office'].includes(req.body.propertyType))) {
         errors.push('Invalid property type');
       }
       
-      if (!req.body.listingType || !['sale', 'rent', 'rental', 'auction', 'pre-construction'].includes(req.body.listingType)) {
+      if (has('listingType') && (!req.body.listingType || !['sale', 'rent', 'rental', 'auction', 'pre-construction'].includes(req.body.listingType))) {
         errors.push('Invalid listing type');
       }
       
-      if (!req.body.price || req.body.price <= 0) {
+      if (has('price') && (!req.body.price || req.body.price <= 0)) {
         errors.push('Price must be a positive number');
       }
       
-      if (!req.body.address || !req.body.address.city || req.body.address.city.trim() === '') {
+      if (has('address') && (!req.body.address || !req.body.address.city || req.body.address.city.trim() === '')) {
         errors.push('City is required');
       }
       
-      if (!req.body.address || !req.body.address.country || req.body.address.country.trim() === '') {
+      if (has('address') && (!req.body.address || !req.body.address.country || req.body.address.country.trim() === '')) {
         errors.push('Country is required');
       }
       
-      if (!req.body.location || !req.body.location.coordinates || !Array.isArray(req.body.location.coordinates)) {
+      if (!partial && (!req.body.location || !req.body.location.coordinates || !Array.isArray(req.body.location.coordinates))) {
         errors.push('Location coordinates are required');
       }
       

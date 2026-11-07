@@ -15,7 +15,8 @@ const LoginPage = () => {
   const location = useLocation();
   const { loading, error, isAuthenticated } = useSelector((state) => state.auth);
 
-  const from = location.state?.from?.pathname || '/properties';
+  // Keep the query string too, e.g. /seller?tab=properties.
+  const from = location.state?.from ? `${location.state.from.pathname}${location.state.from.search || ''}` : '/properties';
 
   useEffect(() => {
     if (isAuthenticated) {

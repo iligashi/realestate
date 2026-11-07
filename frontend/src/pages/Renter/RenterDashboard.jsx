@@ -32,7 +32,7 @@ const RenterDashboard = () => {
   const [searchParams] = useSearchParams();
   const { user = null } = useSelector(state => state.auth || {});
   
-  const [activeTab, setActiveTab] = useState('browse');
+  const [activeTab, setActiveTab] = useState('wishlist');
 
   // WebSocket integration for real-time features
   useWebSocket();
@@ -75,44 +75,42 @@ const RenterDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
-        <div className="px-4 sm:px-0 mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Renter Dashboard</h1>
-              <p className="mt-2 text-gray-600">Find and manage your perfect rental properties</p>
+        <div className="mb-6 sm:mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex h-12 w-12 shrink-0 bg-green-600 rounded-full items-center justify-center">
+              <UserIcon className="h-6 w-6 text-white" />
             </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => navigate('/properties')}
-                className="px-6 py-3 bg-brand-600 text-white rounded-md hover:bg-brand-700 transition-colors duration-200 font-medium flex items-center"
-              >
-                <HomeIcon className="h-5 w-5 mr-2" />
-                Browse Properties
-              </button>
-              <button
-                onClick={() => navigate('/properties/create-rental')}
-                className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 font-medium flex items-center"
-              >
-                <PlusIcon className="h-5 w-5 mr-2" />
-                List Property for Rent
-              </button>
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Welcome back,</p>
-                <p className="text-lg font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
-              </div>
-              <div className="h-10 w-10 bg-green-600 rounded-full flex items-center justify-center">
-                <UserIcon className="h-6 w-6 text-white" />
-              </div>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Renter Dashboard</h1>
+              <p className="mt-1 text-gray-600">
+                Welcome back{user?.firstName ? `, ${user.firstName}` : ''}. Find and manage your rentals.
+              </p>
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center">
+            <button
+              onClick={() => navigate('/properties')}
+              className="btn-secondary inline-flex items-center justify-center gap-2"
+            >
+              <HomeIcon className="h-5 w-5" />
+              Browse
+            </button>
+            <button
+              onClick={() => navigate('/properties/create-rental')}
+              className="btn-primary inline-flex items-center justify-center gap-2"
+            >
+              <PlusIcon className="h-5 w-5" />
+              List a rental
+            </button>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-white shadow rounded-lg mb-8">
+        <div className="bg-white shadow rounded-lg mb-6 sm:mb-8">
           <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6 overflow-x-auto">
+            <nav className="flex gap-6 px-4 sm:px-6 overflow-x-auto">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
