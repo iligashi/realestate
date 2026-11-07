@@ -629,7 +629,7 @@ const getEnhancedAnalytics = async (req, res) => {
             $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
           },
           count: { $sum: 1 },
-          totalViews: { $sum: '$views' || 0 }
+          totalViews: { $sum: { $ifNull: ['$analytics.views', 0] } }
         }
       },
       { $sort: { _id: 1 } }

@@ -1,1110 +1,246 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { toast } from 'react-hot-toast';
-import { 
+import { useSearchParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import {
+  Bars3Icon,
+  ChartBarIcon,
+  ChartPieIcon,
+  EnvelopeIcon,
+  FlagIcon,
+  HomeIcon,
+  UsersIcon,
+  XMarkIcon
+} from '@heroicons/react/24/outline';
+import {
   fetchDashboardAnalytics,
   fetchAllUsers,
   fetchAllListings,
   fetchAllReports,
+  fetchEnhancedAnalytics,
+  fetchRevenueAnalytics,
   updateUser,
   deleteUser,
   updateListingStatus,
   deleteListing,
   resolveReport,
-  clearError,
-  clearSuccessMessage,
   updateUserFilters,
   updateListingFilters,
   updateReportFilters,
   resetUserFilters,
   resetListingFilters,
   resetReportFilters,
-  fetchPlatformSettings,
-  fetchFeaturedListings,
-  fetchAnnouncements,
-  fetchEnhancedAnalytics,
-  fetchRevenueAnalytics
+  clearError,
+  clearSuccessMessage
 } from '../../store/slices/adminSlice';
-import { 
-  UsersIcon, 
-  HomeIcon, 
-  FlagIcon, 
-  ChartBarIcon,
-  PencilIcon,
-  TrashIcon,
-  ArrowPathIcon,
-  Cog6ToothIcon,
-  CurrencyDollarIcon,
-  BellIcon,
-  MagnifyingGlassIcon,
-  XMarkIcon,
-  ClockIcon,
-  UserGroupIcon,
-  ShieldCheckIcon,
-  ChartPieIcon,
-  ArrowTrendingUpIcon,
-  ArrowTrendingDownIcon
-} from '@heroicons/react/24/outline';
 import ReportForm from '../../components/ReportForm';
-import { assetUrl } from '../../config';
+import OverviewSection from './sections/OverviewSection';
+import UsersSection from './sections/UsersSection';
+import ListingsSection from './sections/ListingsSection';
+import ReportsSection from './sections/ReportsSection';
+import AnalyticsSection from './sections/AnalyticsSection';
+import MessagesSection from './sections/MessagesSection';
+import { EditListingModal, EditUserModal, ReviewReportModal } from './AdminModals';
+import { docId } from './shared';
+
+const NAV = [
+  { id: 'dashboard', name: 'Overview', icon: ChartBarIcon },
+  { id: 'users', name: 'Users', icon: UsersIcon },
+  { id: 'listings', name: 'Listings', icon: HomeIcon },
+  { id: 'reports', name: 'Reports', icon: FlagIcon },
+  { id: 'analytics', name: 'Analytics', icon: ChartPieIcon },
+  { id: 'messages', name: 'Messages', icon: EnvelopeIcon }
+];
 
 const AdminDashboard = () => {
   const dispatch = useDispatch();
-  const {
-    analytics,
-    revenueAnalytics,
-    users,
-    listings, 
-    reports, 
-    loading, 
-    error, 
-    successMessage 
-  } = useSelector(state => state.admin);
-  const { user } = useSelector(state => state.auth);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { analytics, revenueAnalytics, enhancedAnalytics, users, listings, reports, loading, error, successMessage } =
+    useSelector((state) => state.admin);
+  const { user } = useSelector((state) => state.auth);
 
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const activeTab = NAV.some((n) => n.id === searchParams.get('tab')) ? searchParams.get('tab') : 'dashboard';
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [editingListing, setEditingListing] = useState(null);
-  const [editingReport, setEditingReport] = useState(null);
-  const [showReportModal, setShowReportModal] = useState(false);
+  const [reviewingReport, setReviewingReport] = useState(null);
   const [reportingUser, setReportingUser] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  // Load initial data
-  useEffect(() => {
-    if (user?.userType === 'admin') {
-      dispatch(fetchDashboardAnalytics());
-      dispatch(fetchAllUsers());
-      dispatch(fetchAllListings());
-      dispatch(fetchAllReports());
-      dispatch(fetchPlatformSettings());
-      dispatch(fetchFeaturedListings());
-      dispatch(fetchAnnouncements());
-      dispatch(fetchEnhancedAnalytics());
-      dispatch(fetchRevenueAnalytics());
-    }
-  }, [dispatch, user]);
+  const isAdmin = user?.userType === 'admin';
 
-  // Handle success/error messages
   useEffect(() => {
-    if (successMessage) {
-      toast.success(successMessage);
-      dispatch(clearSuccessMessage());
-    }
+    if (!isAdmin) return;
+    dispatch(fetchDashboardAnalytics());
+    dispatch(fetchEnhancedAnalytics());
+    dispatch(fetchRevenueAnalytics());
+  }, [dispatch, isAdmin]);
+
+  // Lists refetch when their filters change (search is debounced in the section)
+  useEffect(() => {
+    if (isAdmin) dispatch(fetchAllUsers(users.filters));
+  }, [dispatch, isAdmin, users.filters]);
+  useEffect(() => {
+    if (isAdmin) dispatch(fetchAllListings(listings.filters));
+  }, [dispatch, isAdmin, listings.filters]);
+  useEffect(() => {
+    if (isAdmin) dispatch(fetchAllReports(reports.filters));
+  }, [dispatch, isAdmin, reports.filters]);
+
+  useEffect(() => {
+    if (successMessage) dispatch(clearSuccessMessage());
     if (error) {
-      toast.error(error);
+      toast.error(typeof error === 'string' ? error : 'Something went wrong');
       dispatch(clearError());
     }
   }, [successMessage, error, dispatch]);
 
-  // Handle filter changes
-  useEffect(() => {
-    if (user?.userType === 'admin') {
-      dispatch(fetchAllUsers(users.filters));
-    }
-  }, [dispatch, user, users.filters]);
-
-  useEffect(() => {
-    if (user?.userType === 'admin') {
-      dispatch(fetchAllListings(listings.filters));
-    }
-  }, [dispatch, user, listings.filters]);
-
-  useEffect(() => {
-    if (user?.userType === 'admin') {
-      dispatch(fetchAllReports(reports.filters));
-    }
-  }, [dispatch, user, reports.filters]);
-
-  // Action handlers
-  const handleUserUpdate = async (userId, userData) => {
-    try {
-      await dispatch(updateUser({ userId, userData })).unwrap();
-      setEditingUser(null);
-      toast.success('User updated successfully');
-    } catch (error) {
-      toast.error('Failed to update user');
-    }
+  const selectTab = (id) => {
+    setSearchParams(id === 'dashboard' ? {} : { tab: id });
+    setSidebarOpen(false);
   };
 
-  const handleUserDelete = async (userId) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
+  // Runs an admin action, shows feedback and refreshes the overview numbers
+  const run = useCallback(
+    async (thunk, message, after) => {
+      setSaving(true);
       try {
-        await dispatch(deleteUser(userId)).unwrap();
-        toast.success('User deleted successfully');
-      } catch (error) {
-        toast.error('Failed to delete user');
+        await dispatch(thunk).unwrap();
+        toast.success(message);
+        after?.();
+        dispatch(fetchDashboardAnalytics());
+      } catch (err) {
+        toast.error(typeof err === 'string' ? err : 'Action failed. Please try again.');
+      } finally {
+        setSaving(false);
       }
-    }
-  };
-
-  const handleListingStatusUpdate = async (listingId, statusData) => {
-    try {
-      await dispatch(updateListingStatus({ listingId, statusData })).unwrap();
-      setEditingListing(null);
-      toast.success('Listing status updated successfully');
-    } catch (error) {
-      toast.error('Failed to update listing status');
-    }
-  };
-
-  const handleListingDelete = async (listingId) => {
-    if (window.confirm('Are you sure you want to delete this listing?')) {
-      try {
-        await dispatch(deleteListing(listingId)).unwrap();
-        toast.success('Listing deleted successfully');
-      } catch (error) {
-        toast.error('Failed to delete listing');
-      }
-    }
-  };
-
-  const handleReportResolution = async (reportId, resolutionData) => {
-    try {
-      await dispatch(resolveReport({ reportId, resolutionData })).unwrap();
-      setEditingReport(null);
-      toast.success('Report resolved successfully');
-    } catch (error) {
-      toast.error('Failed to resolve report');
-    }
-  };
-
-  const handleReportUser = (userItem) => {
-    setReportingUser(userItem);
-    setShowReportModal(true);
-  };
-
-  // Navigation items
-  const navigationItems = [
-    { id: 'dashboard', name: 'Dashboard', icon: ChartBarIcon, color: 'blue' },
-    { id: 'users', name: 'Users', icon: UsersIcon, color: 'green' },
-    { id: 'listings', name: 'Listings', icon: HomeIcon, color: 'purple' },
-    { id: 'reports', name: 'Reports', icon: FlagIcon, color: 'red' },
-    { id: 'analytics', name: 'Analytics', icon: ChartPieIcon, color: 'indigo' },
-    { id: 'settings', name: 'Settings', icon: Cog6ToothIcon, color: 'gray' }
-  ];
-
-  // Stats Card Component
-  const StatsCard = ({ title, value, subtitle, icon: Icon, color, trend, trendValue }) => {
-    const colorClasses = {
-      blue: 'bg-brand-500',
-      green: 'bg-green-500',
-      purple: 'bg-purple-500',
-      red: 'bg-red-500',
-      indigo: 'bg-brand-500',
-      yellow: 'bg-yellow-500'
-    };
-
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
-        <div className="flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1 truncate">{title}</p>
-            <p className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{value}</p>
-            {subtitle && (
-              <p className="text-xs sm:text-sm text-gray-500 truncate">{subtitle}</p>
-            )}
-            {trend && (
-              <div className={`flex items-center mt-2 text-xs sm:text-sm ${
-                trend === 'up' ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {trend === 'up' ? (
-                  <ArrowTrendingUpIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
-                ) : (
-                  <ArrowTrendingDownIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
-                )}
-                <span className="truncate">{trendValue}</span>
-          </div>
-            )}
-          </div>
-          <div className={`p-2 sm:p-3 rounded-lg flex-shrink-0 ${colorClasses[color] || 'bg-gray-500'}`}>
-            <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-        </div>
-        </div>
-      </div>
-    );
-  };
-
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
-
-  const timeAgo = (date) => {
-    const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
-    const units = [['year', 31536000], ['month', 2592000], ['day', 86400], ['hour', 3600], ['minute', 60]];
-    for (const [unit, size] of units) {
-      const n = Math.floor(seconds / size);
-      if (n >= 1) return `${n} ${unit}${n > 1 ? 's' : ''} ago`;
-    }
-    return 'just now';
-  };
-
-  const recentActivity = [
-    ...(analytics.recentUsers || []).map((u) => ({
-      key: `user-${u._id}`,
-      dot: 'bg-green-500',
-      text: `${u.firstName} ${u.lastName} joined as ${u.userType}`,
-      date: u.createdAt
-    })),
-    ...(analytics.recentListings || []).map((l) => ({
-      key: `listing-${l._id}`,
-      dot: 'bg-brand-500',
-      text: `New listing: ${l.title} (${l.status})`,
-      date: l.createdAt
-    }))
-  ]
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .slice(0, 6);
-
-  // Dashboard Overview Component
-  const DashboardOverview = () => (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-brand-600 to-brand-800 rounded-xl p-4 sm:p-6 text-white">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-          <div className="flex-1">
-            <h1 className="text-xl sm:text-2xl font-bold mb-2">Welcome back, {user?.firstName || 'Admin'}!</h1>
-            <p className="text-brand-100 text-sm sm:text-base">Here's what's happening with your platform today.</p>
-          </div>
-          <div className="flex items-center justify-between sm:block">
-            <div className="text-left sm:text-right">
-              <p className="text-xs sm:text-sm text-brand-100">Last updated</p>
-              <p className="text-sm sm:text-lg font-semibold">{new Date().toLocaleTimeString()}</p>
-          </div>
-        </div>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
-        <StatsCard
-          title="Total Users"
-          value={analytics.users?.total || 0}
-          subtitle={`${analytics.users?.active || 0} active, ${analytics.users?.blocked || 0} blocked`}
-          icon={UsersIcon}
-          color="blue"
-        />
-        <StatsCard
-          title="Total Listings"
-          value={analytics.listings?.total || 0}
-          subtitle={`${analytics.listings?.pending || 0} pending review`}
-          icon={HomeIcon}
-          color="green"
-        />
-        <StatsCard
-          title="Reports"
-          value={analytics.reports?.total || 0}
-          subtitle={`${analytics.reports?.pending || 0} pending`}
-          icon={FlagIcon}
-          color="red"
-        />
-        <StatsCard
-          title="Featured Revenue"
-          value={formatCurrency(revenueAnalytics?.featuredListingRevenue)}
-          subtitle={`${revenueAnalytics?.featuredListingsSold || 0} featured (30 days)`}
-          icon={CurrencyDollarIcon}
-          color="purple"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-        {/* Recent Activity (newest users and listings) */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-            <BellIcon className="h-5 w-5 text-gray-400" />
-          </div>
-          {recentActivity.length === 0 ? (
-            <p className="text-sm text-gray-500">No activity yet.</p>
-          ) : (
-            <ul className="space-y-3">
-              {recentActivity.map((item) => (
-                <li key={item.key} className="flex items-center space-x-3">
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${item.dot}`}></div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900 truncate">{item.text}</p>
-                    <p className="text-xs text-gray-500">{timeAgo(item.date)}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Users by role */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Users by Role</h3>
-            <UserGroupIcon className="h-5 w-5 text-gray-400" />
-          </div>
-          {(analytics.roleDistribution || []).length === 0 ? (
-            <p className="text-sm text-gray-500">No users yet.</p>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              {analytics.roleDistribution.map((role) => (
-                <div key={role._id} className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{role.count}</p>
-                  <p className="text-xs sm:text-sm text-gray-600 capitalize">{role._id}s</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Listing moderation summary */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Listings by Status</h3>
-          <ShieldCheckIcon className="h-5 w-5 text-gray-400" />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          {[
-            { label: 'Pending review', value: analytics.listings?.pending, color: 'text-yellow-600' },
-            { label: 'Approved', value: analytics.listings?.approved, color: 'text-green-600' },
-            { label: 'Rejected', value: analytics.listings?.rejected, color: 'text-red-600' }
-          ].map((s) => (
-            <div key={s.label} className="text-center p-3 bg-gray-50 rounded-lg">
-              <p className={`text-2xl font-bold ${s.color}`}>{s.value || 0}</p>
-              <p className="text-sm text-gray-600">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+    },
+    [dispatch]
   );
 
-  // User Management Component
-  const UserManagement = () => {
-    if (!users || !users.list) {
-      return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading users...</p>
-        </div>
-      );
-    }
+  const confirmDelete = (what, thunk) => {
+    if (window.confirm(`Delete this ${what}? This cannot be undone.`)) run(thunk, `${what[0].toUpperCase()}${what.slice(1)} deleted`);
+  };
 
-    return (
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
-              <p className="text-gray-600 mt-1">{users.total || 0} users found</p>
-              </div>
-            <div className="flex flex-wrap gap-3">
-              <div className="relative">
-                <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search users..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm w-64 focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                  value={users.filters.search || ''}
-              onChange={(e) => dispatch(updateUserFilters({ search: e.target.value }))}
-            />
-              </div>
-            <select
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                value={users.filters.role || ''}
-              onChange={(e) => dispatch(updateUserFilters({ role: e.target.value }))}
-            >
-              <option value="">All Roles</option>
-              <option value="buyer">Buyer</option>
-              <option value="seller">Seller</option>
-              <option value="renter">Renter</option>
-              <option value="agent">Agent</option>
-              <option value="admin">Admin</option>
-            </select>
-            <select
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                value={users.filters.status || ''}
-              onChange={(e) => dispatch(updateUserFilters({ status: e.target.value }))}
-            >
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="blocked">Blocked</option>
-            </select>
-            <button
-              onClick={() => dispatch(resetUserFilters())}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Reset filters"
-            >
-              <ArrowPathIcon className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
+  const content = {
+    dashboard: <OverviewSection user={user} analytics={analytics} revenue={revenueAnalytics} />,
+    users: (
+      <UsersSection
+        users={users}
+        loading={loading}
+        onFilter={(f) => dispatch(updateUserFilters(f))}
+        onReset={() => dispatch(resetUserFilters())}
+        onEdit={setEditingUser}
+        onReport={setReportingUser}
+        onDelete={(id) => confirmDelete('user', deleteUser(id))}
+      />
+    ),
+    listings: (
+      <ListingsSection
+        listings={listings}
+        loading={loading}
+        onFilter={(f) => dispatch(updateListingFilters(f))}
+        onReset={() => dispatch(resetListingFilters())}
+        onEdit={setEditingListing}
+        onDelete={(id) => confirmDelete('listing', deleteListing(id))}
+      />
+    ),
+    reports: (
+      <ReportsSection
+        reports={reports}
+        loading={loading}
+        onFilter={(f) => dispatch(updateReportFilters(f))}
+        onReset={() => dispatch(resetReportFilters())}
+        onReview={setReviewingReport}
+      />
+    ),
+    analytics: <AnalyticsSection enhanced={enhancedAnalytics} revenue={revenueAnalytics} />,
+    messages: <MessagesSection />
+  }[activeTab];
 
-        {/* Users Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {users.list.map((userItem) => (
-                  <tr key={userItem.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 h-10 w-10">
-                      {userItem.profilePicture ? (
-                        <img className="h-10 w-10 rounded-full" src={userItem.profilePicture} alt="" />
-                      ) : (
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-r from-brand-500 to-brand-700 flex items-center justify-center">
-                              <span className="text-sm font-medium text-white">
-                            {userItem.firstName?.[0]}{userItem.lastName?.[0]}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        {userItem.firstName} {userItem.lastName}
-                      </div>
-                      <div className="text-sm text-gray-500">{userItem.email}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-100 text-brand-800">
-                    {userItem.userType}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    userItem.isBlocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                  }`}>
-                    {userItem.isBlocked ? 'Blocked' : 'Active'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {new Date(userItem.createdAt).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setEditingUser(userItem)}
-                          className="text-brand-600 hover:text-brand-900 p-1 rounded"
-                    >
-                      <PencilIcon className="h-4 w-4" />
-                    </button>
-                        <button
-                          onClick={() => handleReportUser(userItem)}
-                          className="text-yellow-600 hover:text-yellow-900 p-1 rounded"
-                        >
-                          <FlagIcon className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleUserDelete(userItem.id)}
-                          className="text-red-600 hover:text-red-900 p-1 rounded"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-          </div>
-      </div>
-    </div>
+  const nav = (
+    <nav className="space-y-1 px-3 py-4" aria-label="Admin sections">
+      {NAV.map(({ id, name, icon: Icon }) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => selectTab(id)}
+          aria-current={activeTab === id ? 'page' : undefined}
+          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+            activeTab === id ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+          }`}
+        >
+          <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+          {name}
+        </button>
+      ))}
+    </nav>
   );
-  };
-
-  // Listing Management Component
-  const ListingManagement = () => {
-    if (!listings || !listings.list) {
-      return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading listings...</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Listing Management</h2>
-              <p className="text-gray-600 mt-1">{listings.total || 0} listings found</p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <div className="relative">
-                <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search listings..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm w-64 focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                  value={listings.filters.search || ''}
-              onChange={(e) => dispatch(updateListingFilters({ search: e.target.value }))}
-            />
-              </div>
-            <select
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                value={listings.filters.status || ''}
-              onChange={(e) => dispatch(updateListingFilters({ status: e.target.value }))}
-            >
-              <option value="">All Status</option>
-                <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="sold">Sold</option>
-              <option value="rented">Rented</option>
-                <option value="inactive">Inactive</option>
-              </select>
-              <select
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                value={listings.filters.propertyType || ''}
-                onChange={(e) => dispatch(updateListingFilters({ propertyType: e.target.value }))}
-              >
-                <option value="">All Types</option>
-                <option value="house">House</option>
-                <option value="apartment">Apartment</option>
-                <option value="condo">Condo</option>
-                <option value="townhouse">Townhouse</option>
-            </select>
-            <button
-              onClick={() => dispatch(resetListingFilters())}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Reset filters"
-            >
-              <ArrowPathIcon className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-        {/* Listings Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {listings.list.map((listing) => (
-            <div key={listing.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-              <div className="aspect-w-16 aspect-h-9 bg-gray-200">
-                {listing.photos && listing.photos.length > 0 && listing.photos[0].url ? (
-                  <img
-                    src={assetUrl(listing.photos[0].url)}
-                    alt={listing.title}
-                    className="w-full h-48 object-cover"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
-                ) : null}
-                <div className="w-full h-48 bg-gray-200 flex items-center justify-center" style={{ display: listing.photos && listing.photos.length > 0 && listing.photos[0].url ? 'none' : 'flex' }}>
-                  <HomeIcon className="h-12 w-12 text-gray-400" />
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900 truncate">{listing.title}</h3>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    listing.status === 'active' ? 'bg-green-100 text-green-800' :
-                    listing.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    listing.status === 'sold' ? 'bg-brand-100 text-brand-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {listing.status}
-                  </span>
-                </div>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{listing.description}</p>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900">${listing.price?.toLocaleString()}</p>
-                    <p className="text-sm text-gray-500">{listing.propertyType}</p>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setEditingListing(listing)}
-                      className="p-2 text-brand-600 hover:text-brand-900 hover:bg-brand-50 rounded-lg transition-colors"
-                    >
-                      <PencilIcon className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleListingDelete(listing.id)}
-                      className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-          </div>
-      </div>
-                </div>
-          ))}
-              </div>
-    </div>
-  );
-  };
-
-  // Reports Management Component
-  const ReportsManagement = () => {
-    if (!reports || !reports.list) {
-      return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading reports...</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Reports Management</h2>
-              <p className="text-gray-600 mt-1">{reports.total || 0} reports found</p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-            <select
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                value={reports.filters.status || ''}
-              onChange={(e) => dispatch(updateReportFilters({ status: e.target.value }))}
-            >
-              <option value="">All Status</option>
-              <option value="pending">Pending</option>
-                <option value="under_review">Under Review</option>
-              <option value="resolved">Resolved</option>
-              <option value="dismissed">Dismissed</option>
-            </select>
-            <select
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                value={reports.filters.type || ''}
-              onChange={(e) => dispatch(updateReportFilters({ type: e.target.value }))}
-            >
-              <option value="">All Types</option>
-              <option value="spam">Spam</option>
-              <option value="inappropriate">Inappropriate</option>
-              <option value="fraud">Fraud</option>
-                <option value="harassment">Harassment</option>
-              <option value="other">Other</option>
-            </select>
-            <button
-              onClick={() => dispatch(resetReportFilters())}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Reset filters"
-            >
-              <ArrowPathIcon className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-        {/* Reports List */}
-        <div className="space-y-4">
-            {reports.list.map((report) => (
-            <div key={report.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      report.status === 'under_review' ? 'bg-brand-100 text-brand-800' :
-                      report.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                      {report.status.replace('_', ' ')}
-                  </span>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      {report.type}
-                  </span>
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Report #{report.id}
-                  </h3>
-                  <p className="text-gray-600 mb-4">{report.reason}</p>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <ClockIcon className="h-4 w-4 mr-1" />
-                    {new Date(report.createdAt).toLocaleDateString()}
-          </div>
-      </div>
-                <div className="flex space-x-2 ml-4">
-                <button
-                    onClick={() => setEditingReport(report)}
-                    className="px-4 py-2 text-sm font-medium text-brand-600 hover:text-brand-900 hover:bg-brand-50 rounded-lg transition-colors"
-                >
-                    Review
-                </button>
-                <button
-                    onClick={() => handleReportResolution(report.id, { status: 'resolved' })}
-                    className="px-4 py-2 text-sm font-medium text-green-600 hover:text-green-900 hover:bg-green-50 rounded-lg transition-colors"
-                >
-                    Resolve
-                </button>
-              </div>
-          </div>
-        </div>
-          ))}
-          </div>
-        </div>
-      );
-  };
-
-  // Analytics Component
-  const Analytics = () => (
-      <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Analytics Dashboard</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-gradient-to-r from-brand-500 to-brand-800 rounded-lg p-6 text-white">
-            <h3 className="text-lg font-semibold mb-2">User Growth</h3>
-            <p className="text-3xl font-bold mb-2">+24%</p>
-            <p className="text-brand-100">Compared to last month</p>
-          </div>
-          <div className="bg-gradient-to-r from-green-500 to-teal-600 rounded-lg p-6 text-white">
-            <h3 className="text-lg font-semibold mb-2">Revenue</h3>
-            <p className="text-3xl font-bold mb-2">$45,678</p>
-            <p className="text-green-100">This quarter</p>
-          </div>
-        </div>
-              </div>
-              </div>
-  );
-
-  // Settings Component
-  const Settings = () => (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Platform Settings</h2>
-            <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-              <div>
-              <h3 className="font-medium text-gray-900">Email Notifications</h3>
-              <p className="text-sm text-gray-500">Send email notifications to users</p>
-              </div>
-            <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-brand-600">
-              <span className="inline-block h-4 w-4 transform rounded-full bg-white transition translate-x-6" />
-            </button>
-              </div>
-          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-          <div>
-              <h3 className="font-medium text-gray-900">Maintenance Mode</h3>
-              <p className="text-sm text-gray-500">Enable maintenance mode for the platform</p>
-          </div>
-            <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200">
-              <span className="inline-block h-4 w-4 transform rounded-full bg-white transition translate-x-1" />
-                    </button>
-                  </div>
-                </div>
-        </div>
-      </div>
-    );
-
-  // Render content based on active tab
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return <DashboardOverview />;
-      case 'users':
-        return <UserManagement />;
-      case 'listings':
-        return <ListingManagement />;
-      case 'reports':
-        return <ReportsManagement />;
-      case 'analytics':
-        return <Analytics />;
-      case 'settings':
-        return <Settings />;
-      default:
-        return <DashboardOverview />;
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading admin dashboard...</p>
-          </div>
-        </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Mobile sidebar overlay */}
+    <div className="flex min-h-screen bg-gray-50">
+      <aside className="hidden w-60 flex-shrink-0 border-r border-gray-200 bg-white lg:block">
+        <div className="flex h-16 items-center border-b border-gray-100 px-6">
+          <h1 className="text-base font-semibold text-gray-900">Admin</h1>
+        </div>
+        {nav}
+      </aside>
+
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)}></div>
+          <div className="absolute inset-0 bg-gray-900/40" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
+          <aside className="absolute inset-y-0 left-0 w-64 bg-white shadow-xl">
+            <div className="flex h-16 items-center justify-between border-b border-gray-100 px-4">
+              <h1 className="text-base font-semibold text-gray-900">Admin</h1>
+              <button type="button" onClick={() => setSidebarOpen(false)} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100" aria-label="Close menu">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            {nav}
+          </aside>
         </div>
       )}
 
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 sm:w-72 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        <div className="flex items-center justify-between h-16 px-4 sm:px-6 border-b border-gray-200">
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Admin Panel</h1>
-                    <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-          >
-            <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-                    </button>
-                  </div>
-        <nav className="mt-4 sm:mt-6 px-3 overflow-y-auto h-full pb-20">
-          <div className="space-y-1">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                  <button
-                  key={item.id}
-                    onClick={() => {
-                    setActiveTab(item.id);
-                    setSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center px-3 py-2.5 sm:py-3 text-sm font-medium rounded-lg transition-colors ${
-                    activeTab === item.id
-                      ? 'bg-brand-50 text-brand-700 border-r-2 border-brand-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <Icon className="h-4 w-4 sm:h-5 sm:w-5 mr-3 flex-shrink-0" />
-                  <span className="truncate">{item.name}</span>
-                  </button>
-              );
-            })}
-            </div>
-        </nav>
-          </div>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen">
-        {/* Top bar */}
-        <div className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
-          <div className="flex items-center justify-between h-14 sm:h-16 px-3 sm:px-4 lg:px-6 xl:px-8">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-            >
-              <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="relative">
-                <BellIcon className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400 hover:text-gray-600 cursor-pointer transition-colors" />
-                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 sm:h-3 sm:w-3 bg-red-500 rounded-full"></span>
-              </div>
-              <div className="flex items-center space-x-2 sm:space-x-3">
-                <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-gradient-to-r from-brand-500 to-brand-700 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs sm:text-sm font-medium text-white">
-                    {user?.firstName?.[0]}{user?.lastName?.[0]}
-                  </span>
-                </div>
-                <div className="hidden sm:block min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{user?.firstName} {user?.lastName}</p>
-                  <p className="text-xs text-gray-500">Administrator</p>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex h-14 items-center border-b border-gray-200 bg-white px-4 lg:hidden">
+          <button type="button" onClick={() => setSidebarOpen(true)} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100" aria-label="Open menu">
+            <Bars3Icon className="h-5 w-5" />
+          </button>
+          <span className="ml-2 font-semibold text-gray-900">{NAV.find((n) => n.id === activeTab)?.name}</span>
         </div>
-
-        {/* Page content */}
-        <main className="flex-1 p-3 sm:p-4 lg:p-6 xl:p-8">
-          <div className="max-w-7xl mx-auto">
-            {renderContent()}
-          </div>
-        </main>
+        <main className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">{content}</main>
       </div>
 
-      {/* Report Modal */}
-      {reportingUser && (
-        <ReportForm
-          isOpen={showReportModal}
-          onClose={() => {
-            setShowReportModal(false);
-            setReportingUser(null);
-          }}
-          reportedItem={reportingUser}
-          reportedItemType="User"
+      {editingUser && (
+        <EditUserModal
+          user={editingUser}
+          saving={saving}
+          onClose={() => setEditingUser(null)}
+          onSave={(userData) => run(updateUser({ userId: docId(editingUser), userData }), 'User updated', () => setEditingUser(null))}
         />
       )}
-
-      {/* Edit Listing Modal */}
       {editingListing && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Edit Listing Status</h3>
-              <button
-                onClick={() => setEditingListing(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Property Title
-                </label>
-                <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-                  {editingListing.title}
-                </p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Current Status
-                </label>
-                <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-                  {editingListing.status}
-                </p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  New Status
-                </label>
-                <select
-                  value={editingListing.status}
-                  onChange={(e) => setEditingListing({
-                    ...editingListing,
-                    status: e.target.value
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="sold">Sold</option>
-                  <option value="rented">Rented</option>
-                </select>
-              </div>
-            </div>
-            
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setEditingListing(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleListingStatusUpdate(editingListing.id, { status: editingListing.status })}
-                className="px-4 py-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-md transition-colors"
-              >
-                Update Status
-              </button>
-            </div>
-          </div>
-        </div>
+        <EditListingModal
+          listing={editingListing}
+          saving={saving}
+          onClose={() => setEditingListing(null)}
+          onSave={(statusData) =>
+            run(updateListingStatus({ listingId: docId(editingListing), statusData }), 'Listing updated', () => setEditingListing(null))
+          }
+        />
       )}
-
-      {/* Edit User Modal */}
-      {editingUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Edit User</h3>
-              <button
-                onClick={() => setEditingUser(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  User Name
-                </label>
-                <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-                  {editingUser.firstName} {editingUser.lastName}
-                </p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
-                </label>
-                <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-                  {editingUser.email}
-                </p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Current Role
-                </label>
-                <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-                  {editingUser.userType}
-                </p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  New Role
-                </label>
-                <select
-                  value={editingUser.userType}
-                  onChange={(e) => setEditingUser({
-                    ...editingUser,
-                    userType: e.target.value
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
-                >
-                  <option value="buyer">Buyer</option>
-                  <option value="seller">Seller</option>
-                  <option value="renter">Renter</option>
-                  <option value="agent">Agent</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status
-                </label>
-                <select
-                  value={editingUser.isBlocked ? 'blocked' : 'active'}
-                  onChange={(e) => setEditingUser({
-                    ...editingUser,
-                    isBlocked: e.target.value === 'blocked'
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
-                >
-                  <option value="active">Active</option>
-                  <option value="blocked">Blocked</option>
-                </select>
-              </div>
-            </div>
-            
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setEditingUser(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleUserUpdate(editingUser.id, { 
-                  userType: editingUser.userType,
-                  isBlocked: editingUser.isBlocked
-                })}
-                className="px-4 py-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-md transition-colors"
-              >
-                Update User
-              </button>
-            </div>
-          </div>
-        </div>
+      {reviewingReport && (
+        <ReviewReportModal
+          report={reviewingReport}
+          saving={saving}
+          onClose={() => setReviewingReport(null)}
+          onSave={(resolutionData) =>
+            run(resolveReport({ reportId: docId(reviewingReport), resolutionData }), 'Report updated', () => setReviewingReport(null))
+          }
+        />
+      )}
+      {reportingUser && (
+        <ReportForm isOpen onClose={() => setReportingUser(null)} reportedItem={reportingUser} reportedItemType="User" />
       )}
     </div>
   );
