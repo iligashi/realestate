@@ -55,9 +55,9 @@ const parseFormData = (req, res, next) => {
     }
     if (parsedBody.details) {
       if (parsedBody.details.bedrooms) parsedBody.details.bedrooms = parseInt(parsedBody.details.bedrooms) || 0;
-      if (parsedBody.details.bathrooms) parsedBody.details.bathrooms = parseInt(parsedBody.details.bathrooms) || 0;
+      if (parsedBody.details.bathrooms) parsedBody.details.bathrooms = parseFloat(parsedBody.details.bathrooms) || 0;
       if (parsedBody.details.squareMeters) parsedBody.details.squareMeters = parseInt(parsedBody.details.squareMeters) || 0;
-      if (parsedBody.details.yearBuilt) parsedBody.details.yearBuilt = parseInt(parsedBody.details.yearBuilt) || 2025;
+      if (parsedBody.details.yearBuilt) parsedBody.details.yearBuilt = parseInt(parsedBody.details.yearBuilt) || undefined;
     }
     if (parsedBody.features) {
       if (parsedBody.features.parkingAvailable) parsedBody.features.parkingAvailable = parsedBody.features.parkingAvailable === 'true';

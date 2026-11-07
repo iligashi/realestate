@@ -5,6 +5,13 @@ const { searchRegex } = require('../utils/searchRegex');
 // only visible to their owner and admins.
 const PUBLIC_STATUSES = ['active', 'under-contract', 'sold', 'rented'];
 
+// Statuses an owner may switch between once a listing has been approved.
+// 'pending' (awaiting review) and approval itself are admin-only.
+const OWNER_STATUSES = ['active', 'inactive', 'under-contract', 'sold', 'rented'];
+const ALL_STATUSES = ['pending', ...OWNER_STATUSES];
+
+const isAdmin = (user) => user?.userType === 'admin';
+
 const canSeeUnlisted = (user, property) =>
   Boolean(user) && (user.userType === 'admin' || String(property.owner?._id || property.owner) === String(user._id));
 const logger = require('../utils/logger');
@@ -123,7 +130,8 @@ const createProperty = async (req, res) => {
       listingType: req.body.listingType || 'sale',
       price: parseFloat(req.body.price) || 0,
       currency: req.body.currency || 'USD',
-      status: req.body.status || 'active',
+      // New listings wait for admin review unless an admin creates them
+      status: isAdmin(req.user) && ALL_STATUSES.includes(req.body.status) ? req.body.status : isAdmin(req.user) ? 'active' : 'pending',
       owner: req.user._id,
       address: {
         street: req.body.address?.street || '',
@@ -138,15 +146,16 @@ const createProperty = async (req, res) => {
       },
       details: {
         bedrooms: parseInt(req.body.details?.bedrooms) || 0,
-        bathrooms: parseInt(req.body.details?.bathrooms) || 0,
+        bathrooms: parseFloat(req.body.details?.bathrooms) || 0,
         squareMeters: parseInt(req.body.details?.squareMeters) || 0,
-        yearBuilt: parseInt(req.body.details?.yearBuilt) || 2025
+        yearBuilt: parseInt(req.body.details?.yearBuilt) || undefined
       },
       features: {
         parkingAvailable: req.body.features?.parkingAvailable === 'true',
         furnished: req.body.features?.furnished === 'true',
         petFriendly: req.body.features?.petFriendly === 'true',
-        featured: req.body.features?.featured === 'true'
+        // Featuring is a paid product, set by admins only
+        featured: isAdmin(req.user) && req.body.features?.featured === 'true'
       },
       amenities: Array.isArray(req.body.amenities) ? req.body.amenities : []
     };
@@ -203,9 +212,9 @@ const createProperty = async (req, res) => {
     
     // Ensure all numeric fields are actually numbers
     if (propertyData.details.bedrooms) propertyData.details.bedrooms = parseInt(propertyData.details.bedrooms) || 0;
-    if (propertyData.details.bathrooms) propertyData.details.bathrooms = parseInt(propertyData.details.bathrooms) || 0;
+    if (propertyData.details.bathrooms) propertyData.details.bathrooms = parseFloat(propertyData.details.bathrooms) || 0;
     if (propertyData.details.squareMeters) propertyData.details.squareMeters = parseInt(propertyData.details.squareMeters) || 0;
-    if (propertyData.details.yearBuilt) propertyData.details.yearBuilt = parseInt(propertyData.details.yearBuilt) || 2025;
+    if (propertyData.details.yearBuilt) propertyData.details.yearBuilt = parseInt(propertyData.details.yearBuilt) || undefined;
 
     // Log the exact data structure being sent to mongoose
     logger.debug('=== DATABASE SAVE ATTEMPT ===');
@@ -265,11 +274,34 @@ const updateProperty = async (req, res) => {
     }
 
     // Check ownership
-    if (property.owner.toString() !== req.user._id.toString()) {
+    if (property.owner.toString() !== req.user._id.toString() && !isAdmin(req.user)) {
       return res.status(403).json({ error: 'Not authorized to update this property.' });
     }
 
-    const updateData = { ...req.body };
+    // Only these fields can be edited by the owner. Copying req.body wholesale
+    // let owners change owner, featured status, analytics, verification, etc.
+    const updateData = {};
+    for (const key of ['title', 'description', 'propertyType', 'listingType', 'currency', 'amenities']) {
+      if (req.body[key] !== undefined) updateData[key] = req.body[key];
+    }
+    if (req.body.price !== undefined) updateData.price = parseFloat(req.body.price);
+    for (const group of ['address', 'details']) {
+      if (req.body[group] && typeof req.body[group] === 'object') {
+        for (const [k, v] of Object.entries(req.body[group])) updateData[`${group}.${k}`] = v;
+      }
+    }
+    if (req.body.features && typeof req.body.features === 'object') {
+      for (const k of ['parkingAvailable', 'furnished', 'petFriendly']) {
+        if (req.body.features[k] !== undefined) updateData[`features.${k}`] = String(req.body.features[k]) === 'true';
+      }
+    }
+    if (req.body.status !== undefined) {
+      const allowed = isAdmin(req.user) ? ALL_STATUSES : property.status === 'pending' ? [] : OWNER_STATUSES;
+      if (!allowed.includes(req.body.status)) {
+        return res.status(403).json({ error: 'You cannot set this listing status.' });
+      }
+      updateData.status = req.body.status;
+    }
 
     // Handle rental details if it's a rental property
     if (req.body.listingType === 'rental' && req.body.rentalDetails) {

@@ -14,7 +14,7 @@ const getSellerDashboard = async (req, res) => {
     
     // Get seller's properties with basic stats
     const properties = await Property.find({ owner: sellerId })
-      .select('title address price status photos analytics createdAt')
+      .select('title address price currency listingType status photos analytics createdAt')
       .sort({ createdAt: -1 });
     
     // Get inquiry stats
