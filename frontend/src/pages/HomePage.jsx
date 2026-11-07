@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { 
   HomeIcon, 
@@ -7,9 +7,16 @@ import {
   UserGroupIcon,
   MagnifyingGlassIcon,
   XMarkIcon,
-  PlusIcon
+  PlusIcon,
+  ChatBubbleLeftRightIcon,
+  CalendarDaysIcon,
+  ShieldCheckIcon,
+  MapPinIcon,
+  ArrowRightIcon
 } from '@heroicons/react/24/outline';
 import api from '../services/api';
+import { propertyImage } from '../config';
+import FavoriteButton from '../components/FavoriteButton';
 
 // Enhanced Announcements Component
 const Announcements = () => {
@@ -55,7 +62,7 @@ const Announcements = () => {
       case 'update':
         return 'bg-green-50 border-green-200 text-green-800';
       case 'promotion':
-        return 'bg-purple-50 border-purple-200 text-purple-800';
+        return 'bg-amber-50 border-amber-200 text-amber-900';
       case 'maintenance':
         return 'bg-orange-50 border-orange-200 text-orange-800';
       case 'alert':
@@ -146,254 +153,256 @@ const Announcements = () => {
   );
 };
 
+const formatPrice = (price, listingType) => {
+  const value = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(price || 0);
+  return ['rent', 'rental'].includes(listingType) ? `${value}/mo` : value;
+};
+
+const ListingCard = ({ property }) => (
+  <Link to={`/properties/${property._id}`} className="card-plain group block overflow-hidden transition-shadow hover:shadow-md">
+    <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+      <img
+        src={propertyImage(property.photos)}
+        alt={property.title}
+        loading="lazy"
+        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+      />
+      <FavoriteButton propertyId={property._id} className="absolute right-3 top-3" />
+      <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold capitalize text-gray-800 backdrop-blur">
+        For {['rent', 'rental'].includes(property.listingType) ? 'rent' : 'sale'}
+      </span>
+    </div>
+    <div className="p-5">
+      <p className="text-lg font-bold text-gray-900">{formatPrice(property.price, property.listingType)}</p>
+      <h3 className="mt-1 truncate font-medium text-gray-800">{property.title}</h3>
+      <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
+        <MapPinIcon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+        <span className="truncate">{[property.address?.city, property.address?.state].filter(Boolean).join(', ')}</span>
+      </p>
+      <p className="mt-3 flex gap-4 border-t border-gray-100 pt-3 text-sm text-gray-600">
+        {property.details?.bedrooms != null && <span>{property.details.bedrooms} beds</span>}
+        {property.details?.bathrooms != null && <span>{property.details.bathrooms} baths</span>}
+        {property.details?.squareMeters != null && <span>{property.details.squareMeters} m²</span>}
+      </p>
+    </div>
+  </Link>
+);
+
+const HeroSearch = () => {
+  const navigate = useNavigate();
+  const [type, setType] = useState('');
+  const [city, setCity] = useState('');
+
+  const submit = (e) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (type) params.set('type', type);
+    if (city.trim()) params.set('city', city.trim());
+    navigate(`/properties${params.toString() ? `?${params}` : ''}`);
+  };
+
+  return (
+    <form onSubmit={submit} className="mt-10 flex w-full max-w-2xl flex-col gap-2 rounded-2xl bg-white p-2 shadow-xl sm:flex-row" role="search">
+      <label className="sr-only" htmlFor="hero-city">City</label>
+      <div className="relative flex-1">
+        <MapPinIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+        <input
+          id="hero-city"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          placeholder="City, e.g. Miami"
+          className="h-12 w-full rounded-xl border-0 pl-10 pr-3 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-brand-500"
+        />
+      </div>
+      <label className="sr-only" htmlFor="hero-type">Property type</label>
+      <select
+        id="hero-type"
+        value={type}
+        onChange={(e) => setType(e.target.value)}
+        className="h-12 rounded-xl border-0 bg-gray-50 px-3 text-gray-700 focus:ring-2 focus:ring-brand-500 sm:w-40"
+      >
+        <option value="">Any type</option>
+        <option value="house">Houses</option>
+        <option value="apartment">Apartments</option>
+        <option value="office">Offices</option>
+      </select>
+      <button type="submit" className="btn-primary h-12 px-6">
+        <MagnifyingGlassIcon className="h-5 w-5" aria-hidden="true" />
+        Search
+      </button>
+    </form>
+  );
+};
+
 const HomePage = () => {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
-  
-  // Determine what type of property the user can create
-  const getPropertyCreationOptions = () => {
-    if (!isAuthenticated || !user) return null;
-    
-    const options = [];
-    
-    // Sellers and agents can create properties for sale
-    if (['seller', 'agent', 'admin'].includes(user.userType)) {
-      options.push({
-        label: 'List Property for Sale',
-        href: '/properties/create',
-        description: 'Sell your property',
-        icon: HomeIcon,
-        color: 'blue'
-      });
-    }
-    
-    // Renters, sellers, agents, and admins can create rental properties
-    if (['renter', 'seller', 'agent', 'admin'].includes(user.userType)) {
-      options.push({
-        label: 'List Property for Rent',
-        href: '/properties/create-rental',
-        description: 'Rent out your property',
-        icon: BuildingOfficeIcon,
-        color: 'green'
-      });
-    }
-    
-    return options;
-  };
-  
-  const propertyCreationOptions = getPropertyCreationOptions();
-  
-  const features = [
-    {
-      name: 'Find Your Dream Home',
-      description: 'Browse thousands of properties with detailed information and high-quality images.',
-      icon: HomeIcon,
-    },
-    {
-      name: 'Professional Agents',
-      description: 'Connect with verified real estate agents who can help you find the perfect property.',
-      icon: UserGroupIcon,
-    },
-    {
-      name: 'Smart Search',
-      description: 'Use advanced filters to find properties that match your exact requirements.',
-      icon: MagnifyingGlassIcon,
-    },
-    {
-      name: 'Secure Transactions',
-      description: 'Safe and secure platform for all your real estate transactions.',
-      icon: BuildingOfficeIcon,
-    },
+  const [latest, setLatest] = useState(null);
+
+  useEffect(() => {
+    api
+      .get('/properties', { params: { limit: 6 } })
+      .then(({ data }) => setLatest(data.properties || []))
+      .catch(() => setLatest([]));
+  }, []);
+
+  const canSell = isAuthenticated && ['seller', 'agent', 'admin'].includes(user?.userType);
+  const canRentOut = isAuthenticated && ['renter', 'seller', 'agent', 'admin'].includes(user?.userType);
+  const collage = (latest || []).filter((p) => p.photos?.length).slice(0, 3);
+
+  const steps = [
+    { icon: MagnifyingGlassIcon, title: 'Search', text: 'Filter by city, type, price and bedrooms to find places that fit.' },
+    { icon: ChatBubbleLeftRightIcon, title: 'Talk to the owner', text: 'Message owners and agents directly, in real time.' },
+    { icon: CalendarDaysIcon, title: 'Book a viewing', text: 'Pick a date and time; the owner confirms it in their dashboard.' }
   ];
 
   return (
     <div className="bg-white">
-      {/* Announcements Banner */}
       <Announcements />
-      
-      {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-brand-600 to-brand-800">
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gray-900 mix-blend-multiply" />
-        </div>
-        <div className="relative max-w-7xl mx-auto py-24 px-6 sm:py-32 lg:px-8">
-          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
-            Find Your Dream Property
-          </h1>
-          <p className="mt-6 text-xl text-brand-100 max-w-3xl">
-            Discover the perfect home, apartment, or commercial property in our modern real estate marketplace. 
-            Connect with trusted agents and make informed decisions.
-          </p>
-          <div className="mt-10 flex flex-col sm:flex-row gap-4">
-            <Link
-              to="/properties"
-              className="btn-primary text-lg px-8 py-3 text-center"
-            >
-              Browse Properties
-            </Link>
-            {isAuthenticated ? (
-              propertyCreationOptions && propertyCreationOptions.length > 0 ? (
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {propertyCreationOptions.map((option, index) => {
-                    const colorClasses = option.color === 'blue' 
-                      ? 'bg-brand-600 hover:bg-brand-700' 
-                      : 'bg-green-600 hover:bg-green-700';
-                    
-                    return (
-                      <Link
-                        key={index}
-                        to={option.href}
-                        className={`inline-flex items-center justify-center px-6 py-3 border border-transparent text-lg font-medium rounded-md text-white ${colorClasses} transition-colors duration-200`}
-                      >
-                        <option.icon className="h-5 w-5 mr-2" />
-                        {option.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              ) : (
-                <Link
-                  to="/dashboard"
-                  className="btn-secondary text-lg px-8 py-3 text-center"
-                >
-                  Go to Dashboard
-                </Link>
-              )
-            ) : (
-              <Link
-                to="/register"
-                className="btn-secondary text-lg px-8 py-3 text-center"
-              >
-                Get Started
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {/* Features Section */}
-      <div className="py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="section-title">Why Choose RealEstate?</h2>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              We provide a comprehensive platform that makes buying, selling, and renting properties 
-              simple, secure, and efficient.
+      {/* Hero */}
+      <section className="relative isolate overflow-hidden bg-gray-950">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(60rem_40rem_at_10%_-10%,rgba(22,163,74,0.35),transparent),radial-gradient(40rem_30rem_at_90%_110%,rgba(22,163,74,0.18),transparent)]" />
+        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:px-8 lg:py-28">
+          <div>
+            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-sm text-brand-200">
+              <ShieldCheckIcon className="h-4 w-4" aria-hidden="true" />
+              Reviewed listings, direct contact with owners
             </p>
+            <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
+              Find a place that <span className="text-brand-400">feels like home</span>
+            </h1>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-gray-300">
+              Homes, apartments and offices for sale or rent. Search, message owners and book viewings, all in one place.
+            </p>
+            <HeroSearch />
+            <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              {canSell && (
+                <Link to="/properties/create" className="font-medium text-white hover:text-brand-300">
+                  List a property for sale →
+                </Link>
+              )}
+              {canRentOut && (
+                <Link to="/properties/create-rental" className="font-medium text-white hover:text-brand-300">
+                  List a property for rent →
+                </Link>
+              )}
+              {!isAuthenticated && (
+                <Link to="/register" className="font-medium text-white hover:text-brand-300">
+                  Own a property? List it free →
+                </Link>
+              )}
+            </div>
           </div>
-          <div className="mt-20 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map((feature) => (
-              <div key={feature.name} className="text-center">
-                <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-brand-100">
-                  <feature.icon className="h-8 w-8 text-brand-600" aria-hidden="true" />
-                </div>
-                <h3 className="mt-6 text-lg font-semibold text-gray-900">{feature.name}</h3>
-                <p className="mt-2 text-sm text-gray-600">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-          
-          {/* Property Creation Section for Authenticated Users */}
-          {isAuthenticated && propertyCreationOptions && propertyCreationOptions.length > 0 && (
-            <div className="mt-20">
-              <div className="text-center mb-12">
-                <h2 className="text-3xl font-bold text-gray-900">Ready to List Your Property?</h2>
-                <p className="mt-4 text-lg text-gray-600">
-                  Join thousands of property owners who trust our platform to showcase their properties.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                {propertyCreationOptions.map((option, index) => {
-                  const colorClasses = option.color === 'blue' 
-                    ? 'bg-brand-50 border-brand-200 hover:bg-brand-100' 
-                    : 'bg-green-50 border-green-200 hover:bg-green-100';
-                  
-                  const iconColorClasses = option.color === 'blue' 
-                    ? 'bg-brand-600 text-white' 
-                    : 'bg-green-600 text-white';
-                  
-                  return (
-                    <Link
-                      key={index}
-                      to={option.href}
-                      className={`group relative rounded-lg border-2 p-6 transition-all duration-200 hover:shadow-lg ${colorClasses}`}
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${iconColorClasses}`}>
-                          <option.icon className="h-6 w-6" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-gray-900 group-hover:text-gray-700">
-                            {option.label}
-                          </h3>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {option.description}
-                          </p>
-                        </div>
-                        <div className="flex-shrink-0">
-                          <PlusIcon className="h-5 w-5 text-gray-400 group-hover:text-gray-600" />
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
+
+          {collage.length > 0 && (
+            <div className="relative hidden h-[30rem] lg:block" aria-hidden="true">
+              {collage.map((p, i) => (
+                <img
+                  key={p._id}
+                  src={propertyImage(p.photos)}
+                  alt=""
+                  className={`absolute rounded-3xl object-cover shadow-2xl ring-1 ring-white/10 ${
+                    [
+                      'right-0 top-0 h-72 w-80',
+                      'left-4 top-24 h-64 w-72',
+                      'bottom-0 right-16 h-56 w-64'
+                    ][i]
+                  }`}
+                />
+              ))}
             </div>
           )}
         </div>
-      </div>
+      </section>
 
-      {/* CTA Section */}
-      <div className="bg-brand-600">
-        <div className="max-w-7xl mx-auto py-16 px-6 sm:py-24 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Ready to Find Your Perfect Property?
-            </h2>
-            <p className="mt-4 text-lg text-brand-100">
-              Join thousands of satisfied users who found their dream homes through our platform.
-            </p>
-            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/register"
-                className="btn-primary text-lg px-8 py-3"
-              >
-                Sign Up Now
-              </Link>
-              <Link
-                to="/properties"
-                className="btn-secondary text-lg px-8 py-3"
-              >
-                View Properties
-              </Link>
-            </div>
+      {/* Latest listings */}
+      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900">Latest properties</h2>
+            <p className="mt-2 text-gray-600">Freshly listed homes and spaces.</p>
           </div>
+          <Link to="/properties" className="btn-secondary">
+            View all <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
+          </Link>
         </div>
-      </div>
-      
-      {/* Floating Action Button for Mobile - Only for authenticated users with property creation rights */}
-      {isAuthenticated && propertyCreationOptions && propertyCreationOptions.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-50 lg:hidden">
-          <div className="relative group">
-            <button className="w-14 h-14 bg-brand-600 hover:bg-brand-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center">
-              <PlusIcon className="h-6 w-6" />
-            </button>
-            {/* Dropdown menu */}
-            <div className="absolute bottom-16 right-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
-              <div className="bg-white rounded-lg shadow-xl border border-gray-200 py-2 min-w-48">
-                {propertyCreationOptions.map((option, index) => (
-                  <Link
-                    key={index}
-                    to={option.href}
-                    className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <option.icon className="h-4 w-4 mr-3" />
-                    {option.label}
-                  </Link>
-                ))}
+
+        <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {latest === null
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="card-plain animate-pulse overflow-hidden" aria-hidden="true">
+                  <div className="aspect-[4/3] bg-gray-100" />
+                  <div className="space-y-3 p-5">
+                    <div className="h-5 w-1/3 rounded bg-gray-100" />
+                    <div className="h-4 w-2/3 rounded bg-gray-100" />
+                  </div>
+                </div>
+              ))
+            : latest.map((p) => <ListingCard key={p._id} property={p} />)}
+        </div>
+        {latest?.length === 0 && (
+          <p className="mt-6 text-center text-gray-500">No listings yet. Be the first to publish one.</p>
+        )}
+      </section>
+
+      {/* How it works */}
+      <section className="border-y border-gray-100 bg-gray-50">
+        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+          <h2 className="text-center text-3xl font-bold text-gray-900">How it works</h2>
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {steps.map((step, i) => (
+              <div key={step.title} className="card">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white">
+                    <step.icon className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <span className="text-sm font-semibold text-brand-700">Step {i + 1}</span>
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-gray-900">{step.title}</h3>
+                <p className="mt-1 text-gray-600">{step.text}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+        <div className="relative overflow-hidden rounded-3xl bg-brand-700 px-6 py-14 text-center sm:px-12">
+          <div className="absolute inset-0 -z-0 bg-[radial-gradient(30rem_20rem_at_80%_0%,rgba(255,255,255,0.15),transparent)]" aria-hidden="true" />
+          <div className="relative">
+            <h2 className="text-3xl font-bold text-white sm:text-4xl">
+              {isAuthenticated ? 'Pick up where you left off' : 'Start your search today'}
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-brand-100">
+              {isAuthenticated
+                ? 'Your saved properties, messages and viewings are waiting in your dashboard.'
+                : 'Create a free account to save properties, message owners and book viewings.'}
+            </p>
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link
+                to={isAuthenticated ? '/dashboard' : '/register'}
+                className="btn bg-white px-6 py-3 text-base text-brand-800 shadow-sm hover:bg-brand-50"
+              >
+                {isAuthenticated ? 'Go to dashboard' : 'Create free account'}
+              </Link>
+              <Link to="/properties" className="btn border border-white/40 px-6 py-3 text-base text-white hover:bg-white/10">
+                Browse properties
+              </Link>
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Mobile quick-create button for people who can list */}
+      {(canSell || canRentOut) && (
+        <Link
+          to={canSell ? '/properties/create' : '/properties/create-rental'}
+          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg hover:bg-brand-700 lg:hidden"
+          aria-label="List a property"
+        >
+          <PlusIcon className="h-6 w-6" />
+        </Link>
       )}
     </div>
   );

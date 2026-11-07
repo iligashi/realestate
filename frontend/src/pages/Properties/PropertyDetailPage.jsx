@@ -383,6 +383,7 @@ const PropertyDetailPage = () => {
                   <div className="text-3xl font-bold text-green-600 mb-2">
                     {new Intl.NumberFormat('en-US', {
                       style: 'currency',
+      maximumFractionDigits: 0,
                       currency: property.currency || 'USD'
                     }).format(property.rentalDetails?.monthlyRent || property.price)}
                     <span className="text-lg font-normal text-gray-600">/month</span>
@@ -391,6 +392,7 @@ const PropertyDetailPage = () => {
                     <div className="text-lg text-gray-700">
                       Deposit: {new Intl.NumberFormat('en-US', {
                         style: 'currency',
+      maximumFractionDigits: 0,
                         currency: property.currency || 'USD'
                       }).format(property.rentalDetails.depositRequired)}
                     </div>
@@ -400,6 +402,7 @@ const PropertyDetailPage = () => {
                 <div className="text-3xl font-bold text-green-600">
                   {new Intl.NumberFormat('en-US', {
                     style: 'currency',
+      maximumFractionDigits: 0,
                     currency: property.currency || 'USD'
                   }).format(property.price)}
                 </div>
@@ -516,6 +519,7 @@ const PropertyDetailPage = () => {
                         <div className="font-medium text-lg">
                           {new Intl.NumberFormat('en-US', {
                             style: 'currency',
+      maximumFractionDigits: 0,
                             currency: property.currency || 'USD'
                           }).format(property.rentalDetails.depositRequired)}
                         </div>

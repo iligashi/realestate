@@ -30,6 +30,7 @@ const PropertyCard = ({ property }) => {
   const formatPrice = (price, currency) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
+      maximumFractionDigits: 0,
       currency: currency || 'USD'
     }).format(price);
   };

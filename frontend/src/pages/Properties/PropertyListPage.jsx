@@ -13,7 +13,7 @@ const PropertyListPage = () => {
     listingType: searchParams.get('listingType') || '',
     minPrice: '',
     maxPrice: '',
-    city: '',
+    city: searchParams.get('city') || '',
     bedrooms: ''
   });
   
@@ -22,19 +22,21 @@ const PropertyListPage = () => {
 
   // Update filters when URL params change
   useEffect(() => {
-    const typeFromUrl = searchParams.get('type');
-    const listingTypeFromUrl = searchParams.get('listingType');
-    
-    if (typeFromUrl !== filters.propertyType || listingTypeFromUrl !== filters.listingType) {
+    const typeFromUrl = searchParams.get('type') || '';
+    const listingTypeFromUrl = searchParams.get('listingType') || '';
+    const cityFromUrl = searchParams.get('city') || '';
+
+    if (typeFromUrl !== filters.propertyType || listingTypeFromUrl !== filters.listingType || cityFromUrl !== filters.city) {
       const newFilters = {
         ...filters,
-        propertyType: typeFromUrl || '',
-        listingType: listingTypeFromUrl || ''
+        propertyType: typeFromUrl,
+        listingType: listingTypeFromUrl,
+        city: cityFromUrl
       };
       setFilters(newFilters);
       setSearchFilters(newFilters);
     }
-  }, [searchParams, filters.propertyType, filters.listingType]);
+  }, [searchParams]);
 
   useEffect(() => {
     fetchProperties();
