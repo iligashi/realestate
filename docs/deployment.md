@@ -38,7 +38,7 @@ flowchart LR
 
 3. When it's live, open `https://<service>.onrender.com/health` and check that it returns `{"status":"OK"}`.
 
-If Render gives the service a different URL than `https://realestate-api.onrender.com`, update the two rewrite destinations in `frontend/vercel.json`.
+If Render gives the service a different URL than `https://realestate-api-0sad.onrender.com`, update the two rewrite destinations in `frontend/vercel.json`.
 
 ## 3. Vercel (frontend)
 
@@ -49,7 +49,7 @@ Project settings:
 | Root directory | `frontend` |
 | Framework | Vite |
 | `VITE_SERVER_URL` | *(empty)*, so requests go through the proxy |
-| `VITE_SOCKET_URL` | Your Render URL, e.g. `https://realestate-api.onrender.com` |
+| `VITE_SOCKET_URL` | Your Render URL, e.g. `https://realestate-api-0sad.onrender.com` |
 | `VITE_SENTRY_DSN` | Optional |
 
 ## Notes
