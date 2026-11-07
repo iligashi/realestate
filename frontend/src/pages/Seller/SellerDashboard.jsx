@@ -90,8 +90,40 @@ const SellerDashboard = () => {
     setSearchParams({ tab: tabId });
   };
 
+  // Listings waiting for admin approval or paused show that instead of the sales stage.
+  const stageOf = (property) => {
+    if (property.status === 'pending') return 'In review';
+    if (property.status === 'inactive') return 'Paused';
+    if (property.status === 'rented') return 'Rented';
+    return property.workflowStage;
+  };
+
+  const formatPrice = (property) => {
+    const amount = Number(property.price) || 0;
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency: property.currency || 'USD', maximumFractionDigits: 0 }).format(amount);
+    } catch {
+      return `${property.currency || ''} ${amount.toLocaleString()}`.trim();
+    }
+  };
+
+  const formatPlace = (address) => {
+    let addr = address;
+    if (typeof addr === 'string') {
+      try {
+        addr = JSON.parse(addr);
+      } catch {
+        return addr;
+      }
+    }
+    return [addr?.city, addr?.state || addr?.country].filter(Boolean).join(', ');
+  };
+
   const getWorkflowStageColor = (stage) => {
     switch (stage) {
+      case 'In review': return 'bg-amber-100 text-amber-800';
+      case 'Paused': return 'bg-gray-200 text-gray-700';
+      case 'Rented': return 'bg-green-100 text-green-800';
       case 'List': return 'bg-gray-100 text-gray-800';
       case 'Market': return 'bg-brand-100 text-brand-800';
       case 'Show': return 'bg-yellow-100 text-yellow-800';
@@ -103,6 +135,9 @@ const SellerDashboard = () => {
 
   const getWorkflowStageIcon = (stage) => {
     switch (stage) {
+      case 'In review': return '⏳';
+      case 'Paused': return '⏸️';
+      case 'Rented': return '🔑';
       case 'List': return '📝';
       case 'Market': return '📢';
       case 'Show': return '👀';
@@ -159,16 +194,26 @@ const SellerDashboard = () => {
                 <HomeIcon className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Seller Dashboard</h1>
+                <h1 className="text-lg font-semibold text-gray-900 truncate">Seller Dashboard</h1>
                 <p className="text-sm text-gray-500">Welcome back, {user?.firstName}</p>
               </div>
             </div>
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
-            >
-              <Bars3Icon className="h-6 w-6" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowPropertyWizard(true)}
+                className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+              >
+                <PlusIcon className="h-4 w-4" />
+                New
+              </button>
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+                aria-label="Open menu"
+              >
+                <Bars3Icon className="h-6 w-6" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -338,7 +383,14 @@ const SellerDashboard = () => {
 
       {/* Property Listing Wizard Modal */}
       {showPropertyWizard && (
-        <PropertyListingWizard onClose={() => setShowPropertyWizard(false)} />
+        <PropertyListingWizard
+          onClose={() => setShowPropertyWizard(false)}
+          onCreated={() => {
+            setShowPropertyWizard(false);
+            dispatch(setActiveTab('properties'));
+            dispatch(getSellerDashboard());
+          }}
+        />
       )}
     </div>
   );
@@ -480,26 +532,16 @@ const SellerDashboard = () => {
                   <div className="flex-1">
                     <h4 className="text-lg font-semibold text-gray-900 mb-1">{property.title}</h4>
                     <p className="text-sm text-gray-600 mb-2">
-                      {typeof property.address === 'string' ? 
-                        (() => {
-                          try {
-                            const addr = JSON.parse(property.address);
-                            return `${addr.city || ''}, ${addr.state || ''}`;
-                          } catch (e) {
-                            return property.address;
-                          }
-                        })() : 
-                        `${property.address?.city || ''}, ${property.address?.state || ''}`
-                      }
+                      {formatPlace(property.address)}
                     </p>
                     <p className="text-2xl font-bold text-brand-600">
-                      ${property.price?.toLocaleString() || '0'}
+                      {formatPrice(property)}
                     </p>
                   </div>
                   <div className="ml-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getWorkflowStageColor(property.workflowStage)}`}>
-                      <span className="mr-1">{getWorkflowStageIcon(property.workflowStage)}</span>
-                      {property.workflowStage}
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getWorkflowStageColor(stageOf(property))}`}>
+                      <span className="mr-1">{getWorkflowStageIcon(stageOf(property))}</span>
+                      {stageOf(property)}
                     </span>
                   </div>
                 </div>
@@ -527,22 +569,22 @@ const SellerDashboard = () => {
   // Properties Management Component
   function PropertiesManagement() {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-8">
+      <div className="p-4 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">My Properties</h2>
             <p className="text-gray-600 mt-1">Manage and track your property listings</p>
           </div>
           <button 
             onClick={() => setShowPropertyWizard(true)}
-            className="bg-gradient-to-r from-brand-600 to-brand-700 text-white px-6 py-3 rounded-xl hover:from-brand-700 hover:to-brand-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center space-x-2 font-medium"
+            className="bg-gradient-to-r from-brand-600 to-brand-700 text-white px-6 py-3 rounded-xl hover:from-brand-700 hover:to-brand-800 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-medium"
           >
             <PlusIcon className="h-5 w-5" />
             <span>Add New Property</span>
           </button>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-8">
           {dashboard?.properties?.map((property, index) => (
             <div key={property.id || property._id || `property-${index}`} className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
               <div className="h-56 bg-gray-200 relative">
@@ -563,29 +605,19 @@ const SellerDashboard = () => {
                   </div>
                 )}
                 <div className="absolute top-4 right-4">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getWorkflowStageColor(property.workflowStage)}`}>
-                    <span className="mr-1">{getWorkflowStageIcon(property.workflowStage)}</span>
-                    {property.workflowStage}
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getWorkflowStageColor(stageOf(property))}`}>
+                    <span className="mr-1">{getWorkflowStageIcon(stageOf(property))}</span>
+                    {stageOf(property)}
                   </span>
                 </div>
               </div>
               <div className="p-6">
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{property.title}</h3>
                 <p className="text-gray-600 mb-3">
-                  {typeof property.address === 'string' ? 
-                    (() => {
-                      try {
-                        const addr = JSON.parse(property.address);
-                        return `${addr.city || ''}, ${addr.state || ''}`;
-                      } catch (e) {
-                        return property.address;
-                      }
-                    })() : 
-                    `${property.address?.city || ''}, ${property.address?.state || ''}`
-                  }
+                  {formatPlace(property.address)}
                 </p>
                 <p className="text-2xl font-bold text-brand-600 mb-4">
-                  ${property.price?.toLocaleString() || '0'}
+                  {formatPrice(property)}
                 </p>
                 <div className="flex items-center justify-between text-sm text-gray-500 mb-6">
                   <span>{property.daysOnMarket || 0} days on market</span>
