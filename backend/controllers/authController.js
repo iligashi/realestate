@@ -268,6 +268,15 @@ const changePassword = async (req, res) => {
   }
 };
 
+// Short-lived token for the real-time connection. The browser can't read the
+// httpOnly session cookie, and the WebSocket may connect to a different
+// origin than the API proxy, so it authenticates with this instead.
+const getSocketToken = (req, res) => {
+  const token = jwt.sign({ userId: req.user._id, purpose: 'socket' }, process.env.JWT_SECRET, { expiresIn: '5m' });
+  res.set('Cache-Control', 'no-store');
+  res.json({ token });
+};
+
 // Extend session (refresh token)
 const extendSession = async (req, res) => {
   try {
@@ -304,5 +313,6 @@ module.exports = {
   updateProfile,
   changePassword,
   extendSession,
+  getSocketToken,
   logout
 };

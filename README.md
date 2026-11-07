@@ -187,6 +187,7 @@ The API tests run against an in-memory MongoDB, so they need no database setup. 
 
 ## Documentation
 
+- [Deployment (Vercel + Render + MongoDB Atlas)](docs/deployment.md)
 - [REST API reference](docs/api.md)
 - [Real-time messaging (WebSockets)](docs/websockets.md)
 - [Property image uploads](docs/image-uploads.md)

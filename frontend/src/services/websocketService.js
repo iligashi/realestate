@@ -1,5 +1,6 @@
 import { io } from 'socket.io-client';
-import { SERVER_URL } from '../config';
+import { SOCKET_URL } from '../config';
+import api from './api';
 
 class WebSocketService {
   constructor() {
@@ -12,34 +13,22 @@ class WebSocketService {
     this.currentMessageThread = null;
   }
 
-  connect(token) {
-    if (this.socket && this.isConnected) {
-      console.log('WebSocket already connected');
-      return;
-    }
+  connect() {
+    if (this.socket) return;
 
-    const serverUrl = SERVER_URL;
-    
-    // The session cookie is sent with the handshake (withCredentials)
-    this.socket = io(serverUrl, {
-      ...(token && { auth: { token } }),
+    // Authenticate with a short-lived token from the API (the session cookie
+    // is httpOnly and may not reach a socket server on another domain).
+    // Socket.IO calls this on every connect and reconnect, so it stays fresh.
+    this.socket = io(SOCKET_URL, {
+      auth: (cb) => {
+        api
+          .get('/auth/socket-token')
+          .then(({ data }) => cb({ token: data.token }))
+          .catch(() => cb({}));
+      },
       withCredentials: true,
       transports: ['websocket', 'polling'],
-      timeout: 20000,
-      forceNew: true
-    });
-
-    // Add connection event listeners for debugging
-    this.socket.on('connect', () => {
-      console.log('WebSocket connected successfully');
-    });
-
-    this.socket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error);
-    });
-
-    this.socket.on('disconnect', (reason) => {
-      console.log('WebSocket disconnected:', reason);
+      timeout: 20000
     });
 
     this.setupEventListeners();
