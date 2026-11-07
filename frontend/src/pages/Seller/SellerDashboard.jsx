@@ -29,7 +29,6 @@ import PropertyListingWizard from '../../components/Seller/PropertyListingWizard
 import Inbox from '../../components/Seller/Inbox';
 import AnalyticsDashboard from '../../components/Seller/AnalyticsDashboard';
 import UserReports from '../../components/Buyer/UserReports';
-import NotificationCenter from '../../components/Buyer/NotificationCenter';
 
 const SellerDashboard = () => {
   const dispatch = useDispatch();
@@ -82,7 +81,6 @@ const SellerDashboard = () => {
     { id: 'inquiries', name: 'Inquiries', icon: ClipboardDocumentListIcon, description: 'Manage property inquiries', priority: 'high' },
     { id: 'analytics', name: 'Analytics', icon: ChartBarIcon, description: 'Track performance metrics', priority: 'medium' },
     { id: 'reports', name: 'Reports', icon: ExclamationTriangleIcon, description: 'View reports and moderation', priority: 'medium' },
-    { id: 'notifications', name: 'Notifications', icon: BellIcon, description: 'System notifications', priority: 'low' },
     { id: 'settings', name: 'Settings', icon: Cog6ToothIcon, description: 'Account and preferences', priority: 'low' }
   ];
 
@@ -127,8 +125,6 @@ const SellerDashboard = () => {
         return <AnalyticsDashboard />;
       case 'reports':
         return <UserReports />;
-      case 'notifications':
-        return <NotificationCenter />;
       case 'settings':
         return <SettingsPanel />;
       default:

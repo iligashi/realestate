@@ -3,6 +3,7 @@ const router = express.Router();
 const { auth } = require('../middleware/auth');
 const { validateRegistration, validateLogin } = require('../middleware/validation');
 const upload = require('../middleware/upload');
+const { authRateLimit } = require('../middleware/rateLimiter');
 const {
   register,
   login,
@@ -14,8 +15,8 @@ const {
 } = require('../controllers/authController');
 
 // Public routes (no authentication required)
-router.post('/register', validateRegistration, register);
-router.post('/login', validateLogin, login);
+router.post('/register', authRateLimit, validateRegistration, register);
+router.post('/login', authRateLimit, validateLogin, login);
 
 // Protected routes (authentication required)
 router.get('/profile', auth, getProfile);

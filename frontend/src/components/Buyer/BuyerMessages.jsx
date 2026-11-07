@@ -15,7 +15,7 @@ import {
   PaperAirplaneIcon,
   PlusIcon
 } from '@heroicons/react/24/outline';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import useWebSocket from '../../hooks/useWebSocket';
 import OnlineStatus from '../OnlineStatus';
 import RealTimeNotificationCenter from '../RealTimeNotificationCenter';
@@ -227,7 +227,7 @@ const BuyerMessages = () => {
 
     // This would need to be implemented in the backend
     // For now, we'll show a placeholder
-    toast.info('New message feature coming soon!');
+    toast('New message feature coming soon!');
     setNewMessageText('');
     setShowNewMessageModal(false);
   };

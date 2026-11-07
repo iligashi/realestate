@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const logger = require('../utils/logger');
 
 class SocketServer {
   constructor(server) {
@@ -33,7 +34,7 @@ class SocketServer {
       try {
         const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
         
-        console.log('WebSocket authentication attempt:', {
+        logger.debug('WebSocket authentication attempt:', {
           hasToken: !!token,
           authToken: !!socket.handshake.auth.token,
           headerToken: !!socket.handshake.headers.authorization,
@@ -41,26 +42,26 @@ class SocketServer {
         });
         
         if (!token) {
-          console.log('No token provided for WebSocket connection');
+          logger.debug('No token provided for WebSocket connection');
           return next(new Error('Authentication token required'));
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log('JWT decoded:', { userId: decoded.userId, exp: decoded.exp });
+        logger.debug('JWT decoded:', { userId: decoded.userId, exp: decoded.exp });
         
         const user = await User.findById(decoded.userId).select('-password');
         
         if (!user) {
-          console.log('User not found for userId:', decoded.userId);
+          logger.debug('User not found for userId:', decoded.userId);
           return next(new Error('User not found'));
         }
 
-        console.log('WebSocket authentication successful for user:', user.name, user.email);
+        logger.debug('WebSocket authentication successful for user:', user.name, user.email);
         socket.userId = user._id.toString();
         socket.user = user;
         next();
       } catch (error) {
-        console.error('Socket authentication error:', error);
+        logger.error('Socket authentication error:', error);
         next(new Error('Authentication failed'));
       }
     });
@@ -68,7 +69,7 @@ class SocketServer {
 
   setupEventHandlers() {
     this.io.on('connection', (socket) => {
-      console.log(`User ${socket.user.name} connected with socket ${socket.id}`);
+      logger.debug(`User ${socket.user.name} connected with socket ${socket.id}`);
       
       // Store user connection
       this.connectedUsers.set(socket.userId, socket.id);
@@ -125,7 +126,7 @@ class SocketServer {
 
       // Handle errors
       socket.on('error', (error) => {
-        console.error(`Socket error for user ${socket.userId}:`, error);
+        logger.error(`Socket error for user ${socket.userId}:`, error);
       });
     });
   }
@@ -141,7 +142,7 @@ class SocketServer {
     }
     this.messageRooms.get(messageId).add(socket.userId);
 
-    console.log(`User ${socket.user.name} joined message thread ${messageId}`);
+    logger.debug(`User ${socket.user.name} joined message thread ${messageId}`);
   }
 
   leaveMessageThread(socket, messageId) {
@@ -156,7 +157,7 @@ class SocketServer {
       }
     }
 
-    console.log(`User ${socket.user.name} left message thread ${messageId}`);
+    logger.debug(`User ${socket.user.name} left message thread ${messageId}`);
   }
 
   async handleSendMessage(socket, data) {
@@ -190,10 +191,10 @@ class SocketServer {
         timestamp: new Date()
       });
 
-      console.log(`Message sent in thread ${messageId} by ${socket.user.name}`);
+      logger.debug(`Message sent in thread ${messageId} by ${socket.user.name}`);
 
     } catch (error) {
-      console.error('Error handling send message:', error);
+      logger.error('Error handling send message:', error);
       socket.emit('error', { message: 'Failed to send message' });
     }
   }
@@ -255,10 +256,10 @@ class SocketServer {
         readAt: new Date()
       });
 
-      console.log(`Message ${messageId} marked as read by ${socket.user.name}`);
+      logger.debug(`Message ${messageId} marked as read by ${socket.user.name}`);
 
     } catch (error) {
-      console.error('Error handling mark message read:', error);
+      logger.error('Error handling mark message read:', error);
     }
   }
 
@@ -272,7 +273,7 @@ class SocketServer {
   }
 
   handleDisconnect(socket) {
-    console.log(`User ${socket.user?.name || 'Unknown'} disconnected`);
+    logger.debug(`User ${socket.user?.name || 'Unknown'} disconnected`);
 
     // Remove from connected users
     this.connectedUsers.delete(socket.userId);

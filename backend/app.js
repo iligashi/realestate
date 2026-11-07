@@ -8,6 +8,7 @@ const path = require('path');
 
 const config = require('./config/env');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
+const { sanitize } = require('./middleware/sanitize');
 
 const app = express();
 
@@ -49,6 +50,9 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Strip MongoDB operators from user input and cap page sizes
+app.use(sanitize);
+
 // Uploaded images (profile pictures, property photos)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -65,7 +69,6 @@ app.use('/api/seller', require('./routes/seller'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/favorites', require('./routes/favorites'));
 app.use('/api/admin', require('./routes/admin'));
-app.use('/api/payments', require('./routes/payments'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/rental-applications', require('./routes/rentalApplications'));

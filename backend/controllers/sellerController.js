@@ -3,6 +3,7 @@ const Inquiry = require('../models/Inquiry');
 const OpenHouse = require('../models/OpenHouse');
 const ListingAnalytics = require('../models/ListingAnalytics');
 const User = require('../models/User');
+const logger = require('../utils/logger');
 
 // ===== DASHBOARD OVERVIEW =====
 const getSellerDashboard = async (req, res) => {
@@ -91,7 +92,7 @@ const getSellerDashboard = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get seller dashboard error:', error);
+    logger.error('Get seller dashboard error:', error);
     res.status(500).json({ error: 'Failed to fetch seller dashboard.' });
   }
 };
@@ -132,7 +133,7 @@ const createPropertyListing = async (req, res) => {
       workflowStage: 'List'
     });
   } catch (error) {
-    console.error('Create property listing error:', error);
+    logger.error('Create property listing error:', error);
     res.status(500).json({ error: 'Failed to create property listing.' });
   }
 };
@@ -172,7 +173,7 @@ const updatePropertyListing = async (req, res) => {
       property: updatedProperty
     });
   } catch (error) {
-    console.error('Update property listing error:', error);
+    logger.error('Update property listing error:', error);
     res.status(500).json({ error: 'Failed to update property listing.' });
   }
 };
@@ -210,7 +211,7 @@ const updatePropertyPhotos = async (req, res) => {
       photos: property.photos
     });
   } catch (error) {
-    console.error('Update property photos error:', error);
+    logger.error('Update property photos error:', error);
     res.status(500).json({ error: 'Failed to update property photos.' });
   }
 };
@@ -244,7 +245,7 @@ const getInquiries = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get inquiries error:', error);
+    logger.error('Get inquiries error:', error);
     // Return empty data instead of error to prevent infinite loading
     res.json({
       inquiries: [],
@@ -273,7 +274,7 @@ const getInquiryDetails = async (req, res) => {
     
     res.json({ inquiry });
   } catch (error) {
-    console.error('Get inquiry details error:', error);
+    logger.error('Get inquiry details error:', error);
     res.status(500).json({ error: 'Failed to fetch inquiry details.' });
   }
 };
@@ -334,7 +335,7 @@ const respondToInquiry = async (req, res) => {
       inquiry
     });
   } catch (error) {
-    console.error('Respond to inquiry error:', error);
+    logger.error('Respond to inquiry error:', error);
     res.status(500).json({ error: 'Failed to respond to inquiry.' });
   }
 };
@@ -375,7 +376,7 @@ const getListingAnalytics = async (req, res) => {
     
     res.json({ analytics: periodData });
   } catch (error) {
-    console.error('Get listing analytics error:', error);
+    logger.error('Get listing analytics error:', error);
     // Return empty data instead of error to prevent infinite loading
     res.json({ analytics: [] });
   }
@@ -413,7 +414,7 @@ const getAnalyticsDetails = async (req, res) => {
       recommendations: analytics.recommendations
     });
   } catch (error) {
-    console.error('Get analytics details error:', error);
+    logger.error('Get analytics details error:', error);
     res.status(500).json({ error: 'Failed to fetch analytics details.' });
   }
 };
@@ -471,7 +472,7 @@ const updatePropertyPrice = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Update property price error:', error);
+    logger.error('Update property price error:', error);
     res.status(500).json({ error: 'Failed to update property price.' });
   }
 };
@@ -492,7 +493,7 @@ const getPriceHistory = async (req, res) => {
       currentPrice: property.price
     });
   } catch (error) {
-    console.error('Get price history error:', error);
+    logger.error('Get price history error:', error);
     res.status(500).json({ error: 'Failed to fetch price history.' });
   }
 };
@@ -513,7 +514,7 @@ const createOpenHouse = async (req, res) => {
       openHouse
     });
   } catch (error) {
-    console.error('Create open house error:', error);
+    logger.error('Create open house error:', error);
     res.status(500).json({ error: 'Failed to create open house.' });
   }
 };
@@ -531,7 +532,7 @@ const getOpenHouses = async (req, res) => {
     
     res.json({ openHouses });
   } catch (error) {
-    console.error('Get open houses error:', error);
+    logger.error('Get open houses error:', error);
     // Return empty data instead of error to prevent infinite loading
     res.json({ openHouses: [] });
   }
@@ -559,7 +560,7 @@ const updateOpenHouse = async (req, res) => {
       openHouse: updatedOpenHouse
     });
   } catch (error) {
-    console.error('Update open house error:', error);
+    logger.error('Update open house error:', error);
     res.status(500).json({ error: 'Failed to update open house.' });
   }
 };
@@ -584,7 +585,7 @@ const cancelOpenHouse = async (req, res) => {
       openHouse
     });
   } catch (error) {
-    console.error('Cancel open house error:', error);
+    logger.error('Cancel open house error:', error);
     res.status(500).json({ error: 'Failed to cancel open house.' });
   }
 };
@@ -632,7 +633,7 @@ const updatePropertyWorkflow = async (req, res) => {
       workflowStage: stage
     });
   } catch (error) {
-    console.error('Update property workflow error:', error);
+    logger.error('Update property workflow error:', error);
     res.status(500).json({ error: 'Failed to update property workflow.' });
   }
 };

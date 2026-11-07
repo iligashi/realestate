@@ -3,6 +3,7 @@ const Report = require('../models/Report');
 const User = require('../models/User');
 const Property = require('../models/Property');
 const Message = require('../models/Message');
+const logger = require('../utils/logger');
 
 // Map the lowercase item types the client sends to Mongoose model names
 const ITEM_MODELS = {
@@ -105,7 +106,7 @@ const createReport = async (req, res) => {
     if (error.name === 'ValidationError') {
       return res.status(400).json({ success: false, message: error.message });
     }
-    console.error('Create report error:', error);
+    logger.error('Create report error:', error);
     res.status(500).json({ success: false, message: 'Failed to create report' });
   }
 };
@@ -117,7 +118,7 @@ const getMyReports = async (req, res) => {
     if (req.query.status) filter.status = req.query.status;
     res.json(await paginatedReports(filter, req.query));
   } catch (error) {
-    console.error('Get my reports error:', error);
+    logger.error('Get my reports error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch reports' });
   }
 };
@@ -129,7 +130,7 @@ const getReportsAgainstMe = async (req, res) => {
     if (req.query.status) filter.status = req.query.status;
     res.json(await paginatedReports(filter, req.query));
   } catch (error) {
-    console.error('Get reports against me error:', error);
+    logger.error('Get reports against me error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch reports against you' });
   }
 };
@@ -158,7 +159,7 @@ const getReport = async (req, res) => {
 
     res.json({ success: true, report });
   } catch (error) {
-    console.error('Get report error:', error);
+    logger.error('Get report error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch report' });
   }
 };

@@ -1,6 +1,7 @@
 const Appointment = require('../models/Appointment');
 const Property = require('../models/Property');
 const User = require('../models/User');
+const logger = require('../utils/logger');
 
 // Create a new viewing request
 const createViewingRequest = async (req, res) => {
@@ -33,8 +34,22 @@ const createViewingRequest = async (req, res) => {
       });
     }
 
-    // Parse date and time
+    // Parse date (YYYY-MM-DD) and time (HH:mm, 24-hour)
+    const validFormat =
+      /^\d{4}-\d{2}-\d{2}$/.test(String(preferredDate)) && /^\d{2}:\d{2}$/.test(String(preferredTime));
     const startDateTime = new Date(`${preferredDate}T${preferredTime}`);
+    if (!validFormat || Number.isNaN(startDateTime.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date or time. Use YYYY-MM-DD and HH:mm (24-hour).'
+      });
+    }
+    if (startDateTime <= new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please choose a date and time in the future.'
+      });
+    }
     const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
 
     // Check for conflicts
@@ -87,11 +102,11 @@ const createViewingRequest = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Create viewing request error:', error);
+    logger.error('Create viewing request error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to create viewing request',
-      error: error.message
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 };
@@ -130,11 +145,11 @@ const getUserAppointments = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get user appointments error:', error);
+    logger.error('Get user appointments error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch appointments',
-      error: error.message
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 };
@@ -153,11 +168,11 @@ const getUpcomingAppointments = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get upcoming appointments error:', error);
+    logger.error('Get upcoming appointments error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch upcoming appointments',
-      error: error.message
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 };
@@ -197,11 +212,11 @@ const confirmAppointment = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Confirm appointment error:', error);
+    logger.error('Confirm appointment error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to confirm appointment',
-      error: error.message
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 };
@@ -242,11 +257,11 @@ const cancelAppointment = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Cancel appointment error:', error);
+    logger.error('Cancel appointment error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to cancel appointment',
-      error: error.message
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 };
@@ -310,11 +325,11 @@ const rescheduleAppointment = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Reschedule appointment error:', error);
+    logger.error('Reschedule appointment error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to reschedule appointment',
-      error: error.message
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 };
@@ -354,11 +369,11 @@ const getAppointmentDetails = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get appointment details error:', error);
+    logger.error('Get appointment details error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch appointment details',
-      error: error.message
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 };

@@ -1,5 +1,6 @@
 const { validationResult } = require('express-validator');
 const { body } = require('express-validator');
+const logger = require('../utils/logger');
 
 // Middleware to check for validation errors
 const validate = (req, res, next) => {
@@ -54,8 +55,8 @@ const validateLogin = [
 // Validation rules for property creation
 const validateProperty = [
   (req, res, next) => {
-    console.log('=== validateProperty middleware ===');
-    console.log('Validating parsed body:', req.body);
+    logger.debug('=== validateProperty middleware ===');
+    logger.debug('Validating parsed body:', req.body);
     
     try {
       const errors = [];
@@ -117,19 +118,19 @@ const validateProperty = [
       }
       
       if (errors.length > 0) {
-        console.log('Validation errors:', errors);
+        logger.debug('Validation errors:', errors);
         return res.status(400).json({
           error: 'Validation failed',
           details: errors
         });
       }
       
-      console.log('Validation passed successfully');
-      console.log('=== End validateProperty middleware ===');
+      logger.debug('Validation passed successfully');
+      logger.debug('=== End validateProperty middleware ===');
       next();
       
     } catch (error) {
-      console.error('Error in validation middleware:', error);
+      logger.error('Error in validation middleware:', error);
       res.status(500).json({
         error: 'Validation error',
         details: error.message
@@ -140,8 +141,8 @@ const validateProperty = [
 
 // Validation rules for rental application
 const validateRentalApplication = (req, res, next) => {
-  console.log('=== validateRentalApplication middleware ===');
-  console.log('Validating rental application:', req.body);
+  logger.debug('=== validateRentalApplication middleware ===');
+  logger.debug('Validating rental application:', req.body);
   
   try {
     const errors = [];
@@ -201,19 +202,19 @@ const validateRentalApplication = (req, res, next) => {
     }
     
     if (errors.length > 0) {
-      console.log('Rental application validation errors:', errors);
+      logger.debug('Rental application validation errors:', errors);
       return res.status(400).json({
         error: 'Validation failed',
         details: errors
       });
     }
     
-    console.log('Rental application validation passed successfully');
-    console.log('=== End validateRentalApplication middleware ===');
+    logger.debug('Rental application validation passed successfully');
+    logger.debug('=== End validateRentalApplication middleware ===');
     next();
     
   } catch (error) {
-    console.error('Error in rental application validation middleware:', error);
+    logger.error('Error in rental application validation middleware:', error);
     res.status(500).json({
       error: 'Validation error',
       details: error.message

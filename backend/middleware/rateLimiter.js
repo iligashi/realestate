@@ -22,7 +22,20 @@ const strictRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
+// Brute-force protection for login and registration (failed attempts only)
+const authRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'test' ? 1000 : 10,
+  skipSuccessfulRequests: true,
+  message: {
+    error: 'Too many attempts. Please try again in 15 minutes.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   sellerRateLimit,
-  strictRateLimit
+  strictRateLimit,
+  authRateLimit
 };

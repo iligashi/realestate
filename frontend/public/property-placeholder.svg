@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="No photo available">
+  <rect width="400" height="300" fill="#f3f4f6"/>
+  <path d="M200 105 150 145h14v50h28v-30h16v30h28v-50h14z" fill="#d1d5db"/>
+  <text x="200" y="230" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" fill="#9ca3af">No photo available</text>
+</svg>

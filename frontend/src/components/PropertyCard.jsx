@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import { 
   DocumentTextIcon,
   ChatBubbleLeftRightIcon,
@@ -14,6 +14,7 @@ import MessageModal from './MessageModal';
 import ViewingModal from './ViewingModal';
 import ReportForm from './ReportForm';
 import rentalApplicationAPI from '../services/rentalApplicationAPI';
+import { sameId } from '../utils/ids';
 
 const PropertyCard = ({ property }) => {
   const navigate = useNavigate();
@@ -127,7 +128,7 @@ const PropertyCard = ({ property }) => {
     }
 
     // Check if user is trying to report their own property
-    if (property && property.owner && user && property.owner.id === user.id) {
+    if (property && sameId(property.owner, user)) {
       toast.error('You cannot report your own property');
       return;
     }

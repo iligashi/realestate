@@ -1,7 +1,8 @@
+const logger = require('../utils/logger');
 const parseFormData = (req, res, next) => {
-  console.log('=== parseFormData middleware ===');
-  console.log('Raw req.body keys:', Object.keys(req.body));
-  console.log('Raw req.body values:', Object.values(req.body));
+  logger.debug('=== parseFormData middleware ===');
+  logger.debug('Raw req.body keys:', Object.keys(req.body));
+  logger.debug('Raw req.body values:', Object.values(req.body));
   
   try {
     // Parse FormData bracket notation into nested objects
@@ -68,11 +69,11 @@ const parseFormData = (req, res, next) => {
     // Replace req.body with parsed data
     req.body = parsedBody;
     
-    console.log('Parsed body:', parsedBody);
-    console.log('=== End parseFormData middleware - Data parsed successfully ===');
+    logger.debug('Parsed body:', parsedBody);
+    logger.debug('=== End parseFormData middleware - Data parsed successfully ===');
     
   } catch (error) {
-    console.error('Error parsing FormData:', error);
+    logger.error('Error parsing FormData:', error);
     return res.status(400).json({ 
       error: 'Failed to parse form data',
       details: error.message 

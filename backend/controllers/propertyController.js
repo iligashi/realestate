@@ -1,4 +1,6 @@
 const Property = require('../models/Property');
+const { searchRegex } = require('../utils/searchRegex');
+const logger = require('../utils/logger');
 
 // Get all properties (with optional filtering)
 const getProperties = async (req, res) => {
@@ -22,9 +24,9 @@ const getProperties = async (req, res) => {
     
     if (propertyType) filter.propertyType = propertyType;
     if (listingType) filter.listingType = listingType;
-    if (city) filter['address.city'] = { $regex: city, $options: 'i' };
-    if (state) filter['address.state'] = { $regex: state, $options: 'i' };
-    if (country) filter['address.country'] = { $regex: country, $options: 'i' };
+    if (city) filter['address.city'] = searchRegex(city);
+    if (state) filter['address.state'] = searchRegex(state);
+    if (country) filter['address.country'] = searchRegex(country);
     if (bedrooms) filter['details.bedrooms'] = { $gte: parseInt(bedrooms) };
     if (bathrooms) filter['details.bathrooms'] = { $gte: parseInt(bathrooms) };
     
@@ -62,7 +64,7 @@ const getProperties = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get properties error:', error);
+    logger.error('Get properties error:', error);
     res.status(500).json({ error: 'Failed to fetch properties.' });
   }
 };
@@ -80,7 +82,7 @@ const getProperty = async (req, res) => {
 
     res.json({ property });
   } catch (error) {
-    console.error('Get property error:', error);
+    logger.error('Get property error:', error);
     res.status(500).json({ error: 'Failed to fetch property.' });
   }
 };
@@ -88,13 +90,13 @@ const getProperty = async (req, res) => {
 // Create new property (requires authentication)
 const createProperty = async (req, res) => {
   try {
-    console.log('=== createProperty controller ===');
-    console.log('Request body:', req.body);
-    console.log('Request files:', req.files);
+    logger.debug('=== createProperty controller ===');
+    logger.debug('Request body:', req.body);
+    logger.debug('Request files:', req.files);
     
     // Defensive check - ensure req.body exists
     if (!req.body) {
-      console.error('No request body received');
+      logger.error('No request body received');
       return res.status(400).json({ error: 'No request body received' });
     }
     
@@ -150,10 +152,10 @@ const createProperty = async (req, res) => {
 
     // Handle uploaded images
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-      console.log('Processing uploaded files:', req.files.length);
+      logger.debug('Processing uploaded files:', req.files.length);
       
       const photos = req.files.map((file, index) => {
-        console.log(`Processing file ${index + 1}:`, file.originalname);
+        logger.debug(`Processing file ${index + 1}:`, file.originalname);
         return {
           url: `/uploads/property-images/${file.filename}`,
           caption: file.originalname,
@@ -163,14 +165,14 @@ const createProperty = async (req, res) => {
       });
       
       propertyData.photos = photos;
-      console.log('Property images processed:', photos.length, 'files');
-      console.log('Photo URLs:', photos.map(p => p.url));
+      logger.debug('Property images processed:', photos.length, 'files');
+      logger.debug('Photo URLs:', photos.map(p => p.url));
     } else {
-      console.log('No files uploaded or files array is invalid');
+      logger.debug('No files uploaded or files array is invalid');
       propertyData.photos = [];
     }
 
-    console.log('Final property data to save:', propertyData);
+    logger.debug('Final property data to save:', propertyData);
 
     // Clean and validate data before saving
     if (propertyData.amenities.length === 0) {
@@ -191,31 +193,31 @@ const createProperty = async (req, res) => {
     if (propertyData.details.yearBuilt) propertyData.details.yearBuilt = parseInt(propertyData.details.yearBuilt) || 2025;
 
     // Log the exact data structure being sent to mongoose
-    console.log('=== DATABASE SAVE ATTEMPT ===');
-    console.log('Property data type:', typeof propertyData);
-    console.log('Property data keys:', Object.keys(propertyData));
-    console.log('Owner ID:', propertyData.owner);
-    console.log('Photos array:', propertyData.photos);
-    console.log('Features object:', propertyData.features);
-    console.log('Amenities array:', propertyData.amenities);
+    logger.debug('=== DATABASE SAVE ATTEMPT ===');
+    logger.debug('Property data type:', typeof propertyData);
+    logger.debug('Property data keys:', Object.keys(propertyData));
+    logger.debug('Owner ID:', propertyData.owner);
+    logger.debug('Photos array:', propertyData.photos);
+    logger.debug('Features object:', propertyData.features);
+    logger.debug('Amenities array:', propertyData.amenities);
     
     const property = new Property(propertyData);
-    console.log('Mongoose model created successfully');
+    logger.debug('Mongoose model created successfully');
     
-    console.log('Attempting to save to database...');
+    logger.debug('Attempting to save to database...');
     const savedProperty = await property.save();
-    console.log('Property saved successfully with ID:', savedProperty._id);
-    console.log('Saved property data:', savedProperty);
-    console.log('=== DATABASE SAVE SUCCESS ===');
-    console.log('=== End createProperty controller ===');
+    logger.debug('Property saved successfully with ID:', savedProperty._id);
+    logger.debug('Saved property data:', savedProperty);
+    logger.debug('=== DATABASE SAVE SUCCESS ===');
+    logger.debug('=== End createProperty controller ===');
 
     res.status(201).json({
       message: 'Property created successfully',
       property: savedProperty
     });
   } catch (error) {
-    console.error('Create property error:', error);
-    console.error('Error stack:', error.stack);
+    logger.error('Create property error:', error);
+    logger.error('Error stack:', error.stack);
     
     // Provide more specific error messages
     if (error.name === 'ValidationError') {
@@ -278,7 +280,7 @@ const updateProperty = async (req, res) => {
       }));
       
       updateData.photos = photos;
-      console.log('Property images updated:', photos.length, 'files');
+      logger.debug('Property images updated:', photos.length, 'files');
     }
 
     const updatedProperty = await Property.findByIdAndUpdate(
@@ -292,7 +294,7 @@ const updateProperty = async (req, res) => {
       property: updatedProperty
     });
   } catch (error) {
-    console.error('Update property error:', error);
+    logger.error('Update property error:', error);
     res.status(500).json({ error: 'Failed to update property.' });
   }
 };
@@ -315,7 +317,7 @@ const deleteProperty = async (req, res) => {
 
     res.json({ message: 'Property deleted successfully' });
   } catch (error) {
-    console.error('Delete property error:', error);
+    logger.error('Delete property error:', error);
     res.status(500).json({ error: 'Failed to delete property.' });
   }
 };
@@ -328,7 +330,7 @@ const getUserProperties = async (req, res) => {
 
     res.json({ properties });
   } catch (error) {
-    console.error('Get user properties error:', error);
+    logger.error('Get user properties error:', error);
     res.status(500).json({ error: 'Failed to fetch user properties.' });
   }
 };

@@ -21,10 +21,8 @@ import ErrorBoundary from '../../components/ErrorBoundary';
 // Import components (we'll create these)
 import WishlistManager from '../../components/Buyer/WishlistManager';
 import PropertyComparison from '../../components/Buyer/PropertyComparison';
-import SavedSearches from '../../components/Buyer/SavedSearches';
 import ViewingScheduler from '../../components/Buyer/ViewingScheduler';
 import MortgageCalculator from '../../components/Buyer/MortgageCalculator';
-import PropertyAlerts from '../../components/Buyer/PropertyAlerts';
 import RenterApplicationManagement from '../../components/Renter/RenterApplicationManagement';
 import RenterMessages from '../../components/Renter/RenterMessages';
 
@@ -50,14 +48,10 @@ const RenterDashboard = () => {
   const tabs = [
     { id: 'wishlist', name: 'Wishlist', icon: HeartIcon, description: 'Manage saved properties' },
     { id: 'compare', name: 'Compare', icon: ScaleIcon, description: 'Compare properties side by side' },
-    { id: 'saved-searches', name: 'Saved Searches', icon: MagnifyingGlassIcon, description: 'Manage search alerts' },
     { id: 'viewings', name: 'Viewings', icon: CalendarIcon, description: 'Schedule property viewings' },
     { id: 'calculator', name: 'Rent Calculator', icon: CalculatorIcon, description: 'Calculate rental costs' },
-    { id: 'alerts', name: 'Property Alerts', icon: BellIcon, description: 'New listing notifications' },
     { id: 'applications', name: 'Rental Applications', icon: DocumentTextIcon, description: 'Manage rental applications' },
-    { id: 'messages', name: 'Messages', icon: ChatBubbleLeftRightIcon, description: 'Chat with landlords' },
-    { id: 'notifications', name: 'Notifications', icon: BellIcon, description: 'All notifications' },
-    { id: 'my-rentals', name: 'My Rentals', icon: BuildingOfficeIcon, description: 'Manage my rental properties' }
+    { id: 'messages', name: 'Messages', icon: ChatBubbleLeftRightIcon, description: 'Chat with landlords' }
   ];
 
   const renderTabContent = () => {
@@ -66,22 +60,14 @@ const RenterDashboard = () => {
         return <WishlistManager />;
       case 'compare':
         return <PropertyComparison />;
-      case 'saved-searches':
-        return <SavedSearches />;
       case 'viewings':
         return <ViewingScheduler />;
       case 'calculator':
         return <MortgageCalculator />;
-      case 'alerts':
-        return <PropertyAlerts />;
       case 'applications':
         return <RenterApplicationManagement />;
       case 'messages':
         return <RenterMessages />;
-      case 'notifications':
-        return <div className="p-6 text-center text-gray-500">Notifications feature coming soon...</div>;
-      case 'my-rentals':
-        return <div className="p-6 text-center text-gray-500">My Rentals feature coming soon...</div>;
       default:
         return <div className="p-6 text-center text-gray-500">Select a tab to get started</div>;
     }

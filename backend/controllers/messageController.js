@@ -2,6 +2,7 @@ const Message = require('../models/Message');
 const Property = require('../models/Property');
 const User = require('../models/User');
 const mongoose = require('mongoose');
+const logger = require('../utils/logger');
 
 // Create a new message (buyer contacting seller)
 const createMessage = async (req, res) => {
@@ -117,7 +118,7 @@ const createMessage = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error creating message:', error);
+    logger.error('Error creating message:', error);
     res.status(500).json({ error: 'Failed to send message' });
   }
 };
@@ -190,7 +191,7 @@ const getMessages = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching messages:', error);
+    logger.error('Error fetching messages:', error);
     res.status(500).json({ error: 'Failed to fetch messages' });
   }
 };
@@ -236,7 +237,7 @@ const getMessageThread = async (req, res) => {
     res.json({ message });
 
   } catch (error) {
-    console.error('Error fetching message thread:', error);
+    logger.error('Error fetching message thread:', error);
     res.status(500).json({ error: 'Failed to fetch message thread' });
   }
 };
@@ -316,7 +317,7 @@ const replyToMessage = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error replying to message:', error);
+    logger.error('Error replying to message:', error);
     res.status(500).json({ error: 'Failed to send reply' });
   }
 };
@@ -362,7 +363,7 @@ const markAsRead = async (req, res) => {
     res.json({ message: 'Message marked as read' });
 
   } catch (error) {
-    console.error('Error marking message as read:', error);
+    logger.error('Error marking message as read:', error);
     res.status(500).json({ error: 'Failed to mark message as read' });
   }
 };
@@ -414,7 +415,7 @@ const getUnreadCount = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting unread count:', error);
+    logger.error('Error getting unread count:', error);
     res.status(500).json({ error: 'Failed to get unread count' });
   }
 };
@@ -453,7 +454,7 @@ const closeMessage = async (req, res) => {
     res.json({ message: 'Message thread closed' });
 
   } catch (error) {
-    console.error('Error closing message:', error);
+    logger.error('Error closing message:', error);
     res.status(500).json({ error: 'Failed to close message' });
   }
 };
@@ -577,7 +578,7 @@ const createRentalMessage = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error creating rental message:', error);
+    logger.error('Error creating rental message:', error);
     res.status(500).json({ error: 'Failed to send rental message' });
   }
 };

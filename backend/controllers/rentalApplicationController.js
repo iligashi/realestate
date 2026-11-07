@@ -3,6 +3,7 @@ const Property = require('../models/Property');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { validationResult } = require('express-validator');
+const logger = require('../utils/logger');
 
 // Create a new rental application
 const createRentalApplication = async (req, res) => {
@@ -92,11 +93,11 @@ const createRentalApplication = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error creating rental application:', error);
+    logger.error('Error creating rental application:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
-      error: error.message
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 };
@@ -134,11 +135,11 @@ const getLandlordApplications = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching landlord applications:', error);
+    logger.error('Error fetching landlord applications:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
-      error: error.message
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 };
@@ -176,11 +177,11 @@ const getApplicantApplications = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching applicant applications:', error);
+    logger.error('Error fetching applicant applications:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
-      error: error.message
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 };
@@ -219,11 +220,11 @@ const getApplication = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching application:', error);
+    logger.error('Error fetching application:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
-      error: error.message
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 };
@@ -293,11 +294,11 @@ const updateApplicationStatus = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error updating application status:', error);
+    logger.error('Error updating application status:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
-      error: error.message
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 };
@@ -362,11 +363,11 @@ const addApplicationMessage = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error adding application message:', error);
+    logger.error('Error adding application message:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
-      error: error.message
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 };
@@ -411,11 +412,11 @@ const withdrawApplication = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error withdrawing application:', error);
+    logger.error('Error withdrawing application:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
-      error: error.message
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 };

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import { 
   ChevronLeftIcon, 
   ChevronRightIcon,
@@ -22,7 +22,9 @@ import { getProperty } from '../../services/propertyService';
 import MessageModal from '../../components/MessageModal';
 import ModernRentalApplicationForm from '../../components/Renter/ModernRentalApplicationForm';
 import ReportForm from '../../components/ReportForm';
+import ViewingModal from '../../components/ViewingModal';
 import rentalApplicationAPI from '../../services/rentalApplicationAPI';
+import { sameId } from '../../utils/ids';
 
 const PropertyDetailPage = () => {
   const { id } = useParams();
@@ -35,6 +37,7 @@ const PropertyDetailPage = () => {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showViewingModal, setShowViewingModal] = useState(false);
 
 
   // Fetch real property data from backend
@@ -85,7 +88,7 @@ const PropertyDetailPage = () => {
     }
 
     // Check if user is trying to contact themselves
-    if (property && property.owner && user && (property.owner._id === user._id || property.owner.id === user.id)) {
+    if (property && sameId(property.owner, user)) {
       toast.error('You cannot contact yourself about your own property');
       return;
     }
@@ -136,7 +139,7 @@ const PropertyDetailPage = () => {
     }
 
     // Check if user is trying to report their own property
-    if (property && property.owner && user && (property.owner._id === user._id || property.owner.id === user.id)) {
+    if (property && sameId(property.owner, user)) {
       toast.error('You cannot report your own property');
       return;
     }
@@ -153,12 +156,12 @@ const PropertyDetailPage = () => {
     }
 
     // Check if user is trying to schedule viewing for their own property
-    if (property && property.owner && user && (property.owner._id === user._id || property.owner.id === user.id)) {
+    if (property && sameId(property.owner, user)) {
       toast.error('You cannot schedule viewing for your own property');
       return;
     }
 
-    toast.info('Schedule viewing feature coming soon!');
+    setShowViewingModal(true);
   };
 
   const nextImage = () => {
@@ -715,6 +718,15 @@ const PropertyDetailPage = () => {
           onClose={() => setShowReportModal(false)}
           reportedItem={property}
           reportedItemType="Property"
+        />
+      )}
+
+      {/* Viewing Modal */}
+      {showViewingModal && property && (
+        <ViewingModal
+          isOpen={showViewingModal}
+          onClose={() => setShowViewingModal(false)}
+          property={property}
         />
       )}
     </div>

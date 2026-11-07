@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const logger = require('../utils/logger');
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -46,7 +47,7 @@ const register = async (req, res) => {
       token
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    logger.error('Registration error:', error);
     res.status(500).json({ error: 'Registration failed. Please try again.' });
   }
 };
@@ -106,7 +107,7 @@ const login = async (req, res) => {
       token
     });
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
     res.status(500).json({ error: 'Login failed. Please try again.' });
   }
 };
@@ -117,7 +118,7 @@ const getProfile = async (req, res) => {
     const user = await User.findById(req.user._id).select('-password');
     res.json({ user });
   } catch (error) {
-    console.error('Get profile error:', error);
+    logger.error('Get profile error:', error);
     res.status(500).json({ error: 'Failed to fetch profile.' });
   }
 };
@@ -125,11 +126,11 @@ const getProfile = async (req, res) => {
 // Update User Profile
 const updateProfile = async (req, res) => {
   try {
-    console.log('=== UPDATE PROFILE DEBUG ===');
-    console.log('Content-Type:', req.headers['content-type']);
-    console.log('Body keys:', Object.keys(req.body));
-    console.log('File:', req.file);
-    console.log('===========================');
+    logger.debug('=== UPDATE PROFILE DEBUG ===');
+    logger.debug('Content-Type:', req.headers['content-type']);
+    logger.debug('Body keys:', Object.keys(req.body));
+    logger.debug('File:', req.file);
+    logger.debug('===========================');
     
     let updates = {};
     
@@ -140,18 +141,18 @@ const updateProfile = async (req, res) => {
       
       // Extract text fields - be very careful with profilePicture
       Object.keys(formData).forEach(key => {
-        console.log(`Processing key: ${key}, value:`, formData[key], 'type:', typeof formData[key]);
+        logger.debug(`Processing key: ${key}, value:`, formData[key], 'type:', typeof formData[key]);
         
         // Handle profilePicture field very carefully
         if (key === 'profilePicture') {
-          console.log('Found profilePicture field in formData');
+          logger.debug('Found profilePicture field in formData');
           
           // If it's a string and looks like a path, it might be the existing path
           if (typeof formData[key] === 'string' && formData[key].trim() !== '') {
-            console.log('profilePicture is a non-empty string, keeping existing path');
+            logger.debug('profilePicture is a non-empty string, keeping existing path');
             // Don't update profilePicture if it's just the existing path
           } else {
-            console.log('profilePicture field is empty or invalid, ignoring');
+            logger.debug('profilePicture field is empty or invalid, ignoring');
           }
           return; // Skip this field
         }
@@ -169,10 +170,10 @@ const updateProfile = async (req, res) => {
       
       // Handle profile picture file from multer - ONLY if file exists and is valid
       if (req.file && req.file.path && typeof req.file.path === 'string') {
-        console.log('Adding NEW profile picture from req.file:', req.file.path);
+        logger.debug('Adding NEW profile picture from req.file:', req.file.path);
         updates.profilePicture = req.file.path;
       } else {
-        console.log('No valid profile picture file uploaded');
+        logger.debug('No valid profile picture file uploaded');
       }
     } else {
       // Handle JSON data
@@ -180,12 +181,12 @@ const updateProfile = async (req, res) => {
       
       // For JSON requests, don't allow profilePicture updates (security)
       if (updates.profilePicture !== undefined) {
-        console.log('Removing profilePicture from JSON update for security');
+        logger.debug('Removing profilePicture from JSON update for security');
         delete updates.profilePicture;
       }
     }
     
-    console.log('Processed updates:', updates);
+    logger.debug('Processed updates:', updates);
     
     // Remove sensitive fields that shouldn't be updated
     delete updates.password;
@@ -211,9 +212,9 @@ const updateProfile = async (req, res) => {
         if (key === 'profilePicture') {
           if (typeof updates[key] === 'string' && updates[key].trim() !== '') {
             sanitizedUpdates[key] = updates[key];
-            console.log('Valid profilePicture path added:', updates[key]);
+            logger.debug('Valid profilePicture path added:', updates[key]);
           } else {
-            console.log('Invalid profilePicture value, skipping:', updates[key]);
+            logger.debug('Invalid profilePicture value, skipping:', updates[key]);
           }
         } else {
           sanitizedUpdates[key] = updates[key];
@@ -221,7 +222,7 @@ const updateProfile = async (req, res) => {
       }
     });
 
-    console.log('Sanitized updates:', sanitizedUpdates);
+    logger.debug('Sanitized updates:', sanitizedUpdates);
 
     const user = await User.findByIdAndUpdate(
       req.user._id,
@@ -238,7 +239,7 @@ const updateProfile = async (req, res) => {
       user
     });
   } catch (error) {
-    console.error('Update profile error:', error);
+    logger.error('Update profile error:', error);
     res.status(500).json({ error: 'Failed to update profile.' });
   }
 };
@@ -262,7 +263,7 @@ const changePassword = async (req, res) => {
 
     res.json({ message: 'Password changed successfully' });
   } catch (error) {
-    console.error('Change password error:', error);
+    logger.error('Change password error:', error);
     res.status(500).json({ error: 'Failed to change password.' });
   }
 };
@@ -280,7 +281,7 @@ const extendSession = async (req, res) => {
       lastLogin: user.lastLogin
     });
   } catch (error) {
-    console.error('Extend session error:', error);
+    logger.error('Extend session error:', error);
     res.status(500).json({ error: 'Failed to extend session.' });
   }
 };
@@ -292,7 +293,7 @@ const logout = async (req, res) => {
     // For now, we'll just return a success message
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
-    console.error('Logout error:', error);
+    logger.error('Logout error:', error);
     res.status(500).json({ error: 'Logout failed.' });
   }
 };

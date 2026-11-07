@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const logger = require('../utils/logger');
 
 // Get all users (admin only)
 const getAllUsers = async (req, res) => {
@@ -6,7 +7,7 @@ const getAllUsers = async (req, res) => {
     const users = await User.find({}).select('-password');
     res.json({ users });
   } catch (error) {
-    console.error('Get all users error:', error);
+    logger.error('Get all users error:', error);
     res.status(500).json({ error: 'Failed to fetch users.' });
   }
 };
@@ -22,7 +23,7 @@ const getUserById = async (req, res) => {
 
     res.json({ user });
   } catch (error) {
-    console.error('Get user by ID error:', error);
+    logger.error('Get user by ID error:', error);
     res.status(500).json({ error: 'Failed to fetch user.' });
   }
 };
@@ -58,7 +59,7 @@ const updateUser = async (req, res) => {
       user
     });
   } catch (error) {
-    console.error('Update user error:', error);
+    logger.error('Update user error:', error);
     res.status(500).json({ error: 'Failed to update user.' });
   }
 };
@@ -81,7 +82,7 @@ const deleteUser = async (req, res) => {
 
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
-    console.error('Delete user error:', error);
+    logger.error('Delete user error:', error);
     res.status(500).json({ error: 'Failed to delete user.' });
   }
 };
@@ -114,7 +115,7 @@ const toggleUserBlock = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Toggle user block error:', error);
+    logger.error('Toggle user block error:', error);
     res.status(500).json({ error: 'Failed to update user status.' });
   }
 };
@@ -138,7 +139,7 @@ const getUserStats = async (req, res) => {
 
     res.json({ stats: stats[0] || {} });
   } catch (error) {
-    console.error('Get user stats error:', error);
+    logger.error('Get user stats error:', error);
     res.status(500).json({ error: 'Failed to fetch user statistics.' });
   }
 };

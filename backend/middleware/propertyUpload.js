@@ -1,33 +1,34 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const logger = require('../utils/logger');
 
 // Create property-images directory if it doesn't exist
 const uploadDir = 'uploads/property-images/';
 if (!fs.existsSync(uploadDir)) {
-  console.log('Creating property-images directory:', uploadDir);
+  logger.debug('Creating property-images directory:', uploadDir);
   fs.mkdirSync(uploadDir, { recursive: true });
 } else {
-  console.log('Property-images directory already exists:', uploadDir);
+  logger.debug('Property-images directory already exists:', uploadDir);
 }
 
 // Simple storage configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    console.log('Saving file to:', uploadDir);
+    logger.debug('Saving file to:', uploadDir);
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const filename = 'property-' + uniqueSuffix + path.extname(file.originalname);
-    console.log('Generated filename:', filename);
+    logger.debug('Generated filename:', filename);
     cb(null, filename);
   }
 });
 
 // Simple file filter
 const fileFilter = (req, file, cb) => {
-  console.log('Processing file:', file.originalname, 'Type:', file.mimetype);
+  logger.debug('Processing file:', file.originalname, 'Type:', file.mimetype);
   
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
@@ -56,20 +57,20 @@ const uploadPropertyImage = multer({
 
 // Debug wrapper
 const uploadPropertyImagesWithDebug = (req, res, next) => {
-  console.log('=== uploadPropertyImages middleware ===');
-  console.log('Content-Type:', req.headers['content-type']);
+  logger.debug('=== uploadPropertyImages middleware ===');
+  logger.debug('Content-Type:', req.headers['content-type']);
   
   uploadPropertyImages(req, res, (err) => {
     if (err) {
-      console.error('Multer error:', err);
+      logger.error('Multer error:', err);
       return res.status(400).json({ 
         error: 'File upload failed', 
         details: err.message 
       });
     }
     
-    console.log('Files uploaded successfully:', req.files ? req.files.length : 0);
-    console.log('=== End uploadPropertyImages middleware ===');
+    logger.debug('Files uploaded successfully:', req.files ? req.files.length : 0);
+    logger.debug('=== End uploadPropertyImages middleware ===');
     next();
   });
 };

@@ -17,7 +17,7 @@ A full-stack real estate marketplace where buyers, sellers, renters and agents l
 - **Real-time messaging:** Socket.IO conversations with typing indicators, read receipts, online status and live notifications
 - **Rentals:** rental applications that renters submit and owners review
 - **Viewings and open houses:** buyers schedule viewings and sellers manage open houses
-- **Buyer tools:** wishlist, saved searches, property comparison and a mortgage calculator
+- **Buyer tools:** wishlist, property comparison and a mortgage calculator
 - **Moderation:** users report listings, people or messages, and admins review the reports, manage users and approve listings
 - **Seller analytics:** views, inquiries and listing performance
 
@@ -100,6 +100,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 | `JWT_EXPIRE` | backend | Token lifetime, e.g. `7d` |
 | `FRONTEND_URL` | backend | Allowed CORS origins, comma-separated |
 | `PORT` | backend | API port (default `5000`) |
+| `LOG_LEVEL` | backend | `debug`, `info`, `warn`, `error` or `silent` |
 | `VITE_SERVER_URL` | frontend | URL of the API server (default `http://localhost:5000`) |
 
 ### 3. Seed demo data (optional)
@@ -145,7 +146,7 @@ Run these from the repository root:
 npm test
 ```
 
-The API tests run against an in-memory MongoDB, so they need no database setup. They cover authentication (including blocking self-registration as admin), authorization on property changes, the reports API and error handling. CI runs lint, tests and a production build on every push and pull request.
+The API tests run against an in-memory MongoDB, so they need no database setup. They cover authentication (including blocking self-registration as admin), authorization on property changes, NoSQL-injection and regex-injection protection, page-size limits, viewing bookings, the reports API and error handling. CI runs lint, tests and a production build on every push and pull request.
 
 ## Project structure
 
