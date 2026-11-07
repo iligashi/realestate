@@ -1,8 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { 
-  fetchProperties
-} from '../../store/slices/propertySlice';
 import { 
   HeartIcon, 
   EyeIcon, 
@@ -13,35 +9,39 @@ import {
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import api from '../../services/api';
+import { useFavorites } from '../../context/FavoritesContext';
 import { propertyImage } from '../../config';
 
 const WishlistManager = () => {
-  const dispatch = useDispatch();
-  const { properties = [], loading = false } = useSelector(state => state.property || {});
+  const navigate = useNavigate();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [favorites, setFavorites] = useState([]);
-  
+  const [loading, setLoading] = useState(true);
+
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('dateAdded');
   const [filterType, setFilterType] = useState('all');
 
   useEffect(() => {
-    dispatch(fetchProperties());
-  }, [dispatch]);
+    let active = true;
+    api
+      .get('/favorites')
+      .then(({ data }) => active && setFavorites((data.properties || []).map((p) => ({ ...p, dateAdded: p.savedAt }))))
+      .catch(() => active && toast.error('Could not load your wishlist'))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const handleRemoveFromFavorites = async (propertyId) => {
-    // TODO: Implement favorites functionality
-    setFavorites(prev => prev.filter(fav => fav._id !== propertyId));
-    toast.success('Removed from wishlist!');
-  };
+  // Keep the list in sync when a heart is toggled
+  useEffect(() => {
+    setFavorites((prev) => prev.filter((p) => isFavorite(p._id)));
+  }, [isFavorite]);
 
-  const handleAddToFavorites = async (propertyId) => {
-    // TODO: Implement favorites functionality
-    const property = properties.find(p => p._id === propertyId);
-    if (property && !favorites.some(fav => fav._id === propertyId)) {
-      setFavorites(prev => [...prev, { ...property, dateAdded: new Date().toISOString() }]);
-      toast.success('Added to wishlist!');
-    }
-  };
+  const handleRemoveFromFavorites = (propertyId) => toggleFavorite(propertyId);
 
   const formatPrice = (price, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -97,7 +97,7 @@ const WishlistManager = () => {
           </button>
         </div>
         <div className="absolute bottom-4 left-4">
-          <span className="bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-medium">
+          <span className="bg-brand-600 text-white px-2 py-1 rounded-full text-xs font-medium">
             {favorite.propertyType}
           </span>
         </div>
@@ -113,7 +113,7 @@ const WishlistManager = () => {
           <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
             {favorite.title}
           </h3>
-          <span className="text-xl font-bold text-blue-600">
+          <span className="text-xl font-bold text-brand-600">
             {formatPrice(favorite.price, favorite.currency)}
           </span>
         </div>
@@ -142,8 +142,8 @@ const WishlistManager = () => {
         
         <div className="flex space-x-2">
           <button
-            onClick={() => window.open(`/properties/${favorite._id}`, '_blank')}
-            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center"
+            onClick={() => navigate(`/properties/${favorite._id}`)}
+            className="flex-1 bg-brand-600 text-white py-2 px-4 rounded-md hover:bg-brand-700 transition-colors flex items-center justify-center"
           >
             <EyeIcon className="h-4 w-4 mr-2" />
             View Details
@@ -182,7 +182,7 @@ const WishlistManager = () => {
             <h3 className="text-lg font-semibold text-gray-900 truncate">
               {favorite.title}
             </h3>
-            <span className="text-xl font-bold text-blue-600 ml-4">
+            <span className="text-xl font-bold text-brand-600 ml-4">
               {formatPrice(favorite.price, favorite.currency)}
             </span>
           </div>
@@ -212,8 +212,8 @@ const WishlistManager = () => {
           
           <div className="flex space-x-2">
             <button
-              onClick={() => window.open(`/properties/${favorite._id}`, '_blank')}
-              className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center"
+              onClick={() => navigate(`/properties/${favorite._id}`)}
+              className="bg-brand-600 text-white py-2 px-4 rounded-md hover:bg-brand-700 transition-colors flex items-center"
             >
               <EyeIcon className="h-4 w-4 mr-2" />
               View Details
@@ -253,13 +253,13 @@ const WishlistManager = () => {
           <div className="flex border border-gray-300 rounded-lg">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-3 ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+              className={`p-3 ${viewMode === 'grid' ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
             >
               <HomeIcon className="h-5 w-5" />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-3 ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+              className={`p-3 ${viewMode === 'list' ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
             >
               <EyeIcon className="h-5 w-5" />
             </button>
@@ -273,13 +273,12 @@ const WishlistManager = () => {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
           >
             <option value="all">All Types</option>
             <option value="house">Houses</option>
             <option value="apartment">Apartments</option>
-            <option value="condo">Condos</option>
-            <option value="townhouse">Townhouses</option>
+            <option value="office">Offices</option>
           </select>
         </div>
         
@@ -288,7 +287,7 @@ const WishlistManager = () => {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
           >
             <option value="dateAdded">Date Added</option>
             <option value="price-low">Price: Low to High</option>
@@ -301,7 +300,7 @@ const WishlistManager = () => {
       {/* Wishlist Content */}
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
         </div>
       ) : favorites.length === 0 ? (
         <div className="text-center py-12">
@@ -311,8 +310,8 @@ const WishlistManager = () => {
             Start browsing properties and add them to your wishlist.
           </p>
           <button
-            onClick={() => window.open('/properties', '_blank')}
-            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+            onClick={() => navigate('/properties')}
+            className="mt-4 bg-brand-600 text-white px-4 py-2 rounded-md hover:bg-brand-700 transition-colors"
           >
             Browse Properties
           </button>

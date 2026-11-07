@@ -53,9 +53,25 @@ export const updateProfile = createAsyncThunk(
   }
 );
 
+// Signs out on the server (clears the cookie), then locally
+export const logoutUser = createAsyncThunk('auth/logoutUser', async (_, { dispatch }) => {
+  try {
+    await authAPI.logout();
+  } finally {
+    dispatch(authSlice.actions.logout());
+  }
+});
+
+// Remove tokens saved by older versions of the app
+try {
+  localStorage.removeItem('token');
+} catch {
+  /* storage unavailable */
+}
+
 const initialState = {
   user: null,
-  token: localStorage.getItem('token'),
+  token: null, // the session token lives in an httpOnly cookie, not in JS
   isAuthenticated: false, // Start as false, will be set after profile fetch
   loading: false,
   error: null,
@@ -71,15 +87,12 @@ const authSlice = createSlice({
       state.token = null;
       state.isAuthenticated = false;
       state.sessionInitialized = true;
-      localStorage.removeItem('token');
     },
     clearError: (state) => {
       state.error = null;
     },
     setToken: (state, action) => {
-      state.token = action.payload;
       state.isAuthenticated = true;
-      localStorage.setItem('token', action.payload);
     },
     setSessionInitialized: (state) => {
       state.sessionInitialized = true;
@@ -95,9 +108,8 @@ const authSlice = createSlice({
       .addCase(registerUser.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload.user;
-        state.token = action.payload.token;
         state.isAuthenticated = true;
-        localStorage.setItem('token', action.payload.token);
+        state.sessionInitialized = true;
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.loading = false;
@@ -111,9 +123,8 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload.user;
-        state.token = action.payload.token;
         state.isAuthenticated = true;
-        localStorage.setItem('token', action.payload.token);
+        state.sessionInitialized = true;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
@@ -130,14 +141,14 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.sessionInitialized = true;
       })
-      .addCase(getProfile.rejected, (state, action) => {
+      .addCase(getProfile.rejected, (state) => {
+        // No valid session just means "signed out"; it is not an error to show
         state.loading = false;
-        state.error = action.payload;
+        state.user = null;
         state.isAuthenticated = false;
         state.token = null;
         state.sessionInitialized = true;
-        localStorage.removeItem('token');
-      })
+        })
       // Update Profile
       .addCase(updateProfile.pending, (state) => {
         state.loading = true;

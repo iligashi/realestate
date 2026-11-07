@@ -1,5 +1,5 @@
 const Property = require('../models/Property');
-const { app, request, connect, clear, disconnect, registerUser, sampleProperty } = require('./helpers');
+const { app, request, connect, clear, disconnect, registerUser, sampleProperty, authHeaders } = require('./helpers');
 
 beforeAll(connect);
 afterEach(clear);
@@ -30,7 +30,7 @@ describe('reports API', () => {
   it('creates a report for a property', async () => {
     const res = await request(app)
       .post('/api/reports')
-      .set('Authorization', `Bearer ${reporter.token}`)
+      .set(authHeaders(reporter))
       .send(reportBody(property._id));
 
     expect(res.status).toBe(201);
@@ -42,7 +42,7 @@ describe('reports API', () => {
     const send = () =>
       request(app)
         .post('/api/reports')
-        .set('Authorization', `Bearer ${reporter.token}`)
+        .set(authHeaders(reporter))
         .send(reportBody(property._id));
 
     expect((await send()).status).toBe(201);
@@ -52,7 +52,7 @@ describe('reports API', () => {
   it('returns 404 when the reported item does not exist', async () => {
     const res = await request(app)
       .post('/api/reports')
-      .set('Authorization', `Bearer ${reporter.token}`)
+      .set(authHeaders(reporter))
       .send(reportBody('507f1f77bcf86cd799439011'));
     expect(res.status).toBe(404);
   });
@@ -60,13 +60,13 @@ describe('reports API', () => {
   it("lists the user's own reports", async () => {
     await request(app)
       .post('/api/reports')
-      .set('Authorization', `Bearer ${reporter.token}`)
+      .set(authHeaders(reporter))
       .send(reportBody(property._id))
       .expect(201);
 
     const res = await request(app)
       .get('/api/reports/my-reports')
-      .set('Authorization', `Bearer ${reporter.token}`);
+      .set(authHeaders(reporter));
 
     expect(res.status).toBe(200);
     expect(res.body.reports).toHaveLength(1);

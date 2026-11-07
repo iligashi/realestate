@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { logout } from '../../store/slices/authSlice';
+import { logoutUser } from '../../store/slices/authSlice';
 import useSessionManager from '../../hooks/useSessionManager';
 import NotificationBadge from '../NotificationBadge';
 import { 
@@ -49,7 +49,7 @@ const Header = () => {
   }, []);
 
   const handleLogout = () => {
-    dispatch(logout());
+    dispatch(logoutUser());
     navigate('/');
     setProfileDropdownOpen(false);
   };
@@ -84,21 +84,7 @@ const Header = () => {
   };
 
   // Helper function to get profile picture URL
-  const getProfilePictureUrl = (profilePicture) => {
-    if (!profilePicture) return null;
-    
-    // If it's already a full URL, return as is
-    if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) {
-      return profilePicture;
-    }
-    
-    // If it's a server path, construct the full URL
-    if (profilePicture.startsWith('uploads/')) {
-      return assetUrl(profilePicture);
-    }
-    
-    return profilePicture;
-  };
+  const getProfilePictureUrl = (profilePicture) => assetUrl(profilePicture) || null;
 
   // Helper function to get user initials
   const getInitials = (firstName, lastName) => {
@@ -161,7 +147,7 @@ const Header = () => {
                 {propertyTypeOptions.map((option) => {
                   const Icon = option.icon;
                   const colorClasses = option.color === 'blue' 
-                    ? 'text-blue-600' 
+                    ? 'text-brand-600' 
                     : 'text-green-600';
                   
                   return (
@@ -171,7 +157,7 @@ const Header = () => {
                       className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
                     >
                       <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
-                        option.color === 'blue' ? 'bg-blue-100' : 'bg-green-100'
+                        option.color === 'blue' ? 'bg-brand-100' : 'bg-green-100'
                       }`}>
                         <Icon className={`h-4 w-4 ${colorClasses}`} />
                       </div>
@@ -409,7 +395,7 @@ const Header = () => {
                     {propertyTypeOptions.map((option) => {
                       const Icon = option.icon;
                       const colorClasses = option.color === 'blue' 
-                        ? 'text-blue-600' 
+                        ? 'text-brand-600' 
                         : 'text-green-600';
                       
                       return (
@@ -422,7 +408,7 @@ const Header = () => {
                           className="-mx-3 flex items-center space-x-3 rounded-lg px-3 py-3 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50 w-full text-left"
                         >
                           <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
-                            option.color === 'blue' ? 'bg-blue-100' : 'bg-green-100'
+                            option.color === 'blue' ? 'bg-brand-100' : 'bg-green-100'
                           }`}>
                             <Icon className={`h-4 w-4 ${colorClasses}`} />
                           </div>

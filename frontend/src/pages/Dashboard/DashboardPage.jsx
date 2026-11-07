@@ -198,13 +198,13 @@ const DashboardPage = () => {
   const statsCards = getStatsCards(user?.userType);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-brand-50">
       {/* Header */}
       <div className="bg-white shadow-lg border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-8">
             <div className="flex items-center space-x-4">
-              <div className="p-3 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg">
+              <div className="p-3 bg-gradient-to-r from-brand-600 to-brand-700 rounded-xl shadow-lg">
                 <HomeIcon className="h-8 w-8 text-white" />
               </div>
               <div>
@@ -214,7 +214,7 @@ const DashboardPage = () => {
                 <p className="mt-2 text-lg text-gray-600">
                   {getWelcomeMessage(user?.userType)}
                 </p>
-                <p className="text-sm text-blue-600 font-medium">
+                <p className="text-sm text-brand-600 font-medium">
                   {getRoleDisplayName(user?.userType)}
                 </p>
               </div>
@@ -229,11 +229,11 @@ const DashboardPage = () => {
           {statsCards.map((stat, index) => {
             const Icon = stat.icon;
             const colorClasses = {
-              blue: 'from-blue-50 to-blue-100 border-blue-200 text-blue-600',
+              blue: 'from-brand-50 to-brand-100 border-brand-200 text-brand-600',
               green: 'from-green-50 to-green-100 border-green-200 text-green-600',
               red: 'from-red-50 to-red-100 border-red-200 text-red-600',
               yellow: 'from-yellow-50 to-yellow-100 border-yellow-200 text-yellow-600',
-              purple: 'from-purple-50 to-purple-100 border-purple-200 text-purple-600'
+              purple: 'from-purple-50 to-brand-300 border-purple-200 text-purple-600'
             };
             
             return (
@@ -259,7 +259,7 @@ const DashboardPage = () => {
             {quickActions.map((action, index) => {
               const Icon = action.icon;
               const colorClasses = {
-                blue: 'bg-blue-50 hover:bg-blue-100 border-blue-200',
+                blue: 'bg-brand-50 hover:bg-brand-100 border-brand-200',
                 green: 'bg-green-50 hover:bg-green-100 border-green-200',
                 red: 'bg-red-50 hover:bg-red-100 border-red-200',
                 yellow: 'bg-yellow-50 hover:bg-yellow-100 border-yellow-200',
@@ -294,7 +294,7 @@ const DashboardPage = () => {
               to="/properties"
               className="flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-all duration-200 hover:shadow-md"
             >
-              <HomeIcon className="h-6 w-6 text-blue-500 mr-3" />
+              <HomeIcon className="h-6 w-6 text-brand-500 mr-3" />
               <div>
                 <p className="font-medium text-gray-900">All Properties</p>
                 <p className="text-sm text-gray-600">View all listings</p>
@@ -338,7 +338,7 @@ const DashboardPage = () => {
           <h3 className="text-xl font-bold text-gray-900 mb-6">Recent Activity</h3>
           <div className="space-y-4">
             <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mr-4"></div>
+              <div className="w-2 h-2 bg-brand-500 rounded-full mr-4"></div>
               <div className="flex-1">
                 <p className="text-sm text-gray-900">Welcome to your dashboard!</p>
                 <p className="text-xs text-gray-500">Get started by exploring properties or managing your account.</p>

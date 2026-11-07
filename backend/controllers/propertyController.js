@@ -1,5 +1,12 @@
 const Property = require('../models/Property');
 const { searchRegex } = require('../utils/searchRegex');
+
+// Listings anyone can see. 'pending' (awaiting review) and 'inactive' are
+// only visible to their owner and admins.
+const PUBLIC_STATUSES = ['active', 'under-contract', 'sold', 'rented'];
+
+const canSeeUnlisted = (user, property) =>
+  Boolean(user) && (user.userType === 'admin' || String(property.owner?._id || property.owner) === String(user._id));
 const logger = require('../utils/logger');
 
 // Get all properties (with optional filtering)
@@ -19,8 +26,8 @@ const getProperties = async (req, res) => {
       bathrooms
     } = req.query;
 
-    // Build filter object
-    const filter = {};
+    // Build filter object: public listings only
+    const filter = { status: { $in: PUBLIC_STATUSES } };
     
     if (propertyType) filter.propertyType = propertyType;
     if (listingType) filter.listingType = listingType;
@@ -76,8 +83,16 @@ const getProperty = async (req, res) => {
       .populate('owner', 'firstName lastName email phone avatar')
       .populate('agent', 'firstName lastName email phone avatar agent');
 
-    if (!property) {
+    if (!property || (!PUBLIC_STATUSES.includes(property.status) && !canSeeUnlisted(req.user, property))) {
       return res.status(404).json({ error: 'Property not found.' });
+    }
+
+    // Count a view, but not the owner looking at their own listing
+    if (String(property.owner?._id) !== String(req.user?._id)) {
+      await Property.updateOne(
+        { _id: property._id },
+        { $inc: { 'analytics.views': 1 }, $set: { 'analytics.lastViewed': new Date() } }
+      );
     }
 
     res.json({ property });
@@ -157,7 +172,7 @@ const createProperty = async (req, res) => {
       const photos = req.files.map((file, index) => {
         logger.debug(`Processing file ${index + 1}:`, file.originalname);
         return {
-          url: `/uploads/property-images/${file.filename}`,
+          url: file.url,
           caption: file.originalname,
           isPrimary: index === 0, // First image is primary
           order: index + 1
@@ -273,7 +288,7 @@ const updateProperty = async (req, res) => {
     // Handle uploaded images
     if (req.files && req.files.length > 0) {
       const photos = req.files.map((file, index) => ({
-        url: `/uploads/property-images/${file.filename}`,
+        url: file.url,
         caption: file.originalname,
         isPrimary: index === 0, // First image is primary
         order: index + 1

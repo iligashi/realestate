@@ -39,8 +39,14 @@ const registerUser = async (overrides = {}) => {
   if (res.status !== 201) {
     throw new Error(`register failed: ${res.status} ${JSON.stringify(res.body)}`);
   }
-  return { user: res.body.user, token: res.body.token };
+  return { user: res.body.user, cookie: authCookie(res) };
 };
+
+// The session cookie from a login/register response ("token=...")
+const authCookie = (res) => (res.headers['set-cookie'] || []).find((c) => c.startsWith('token='))?.split(';')[0];
+
+// Headers a browser would send: the session cookie plus the CSRF header
+const authHeaders = (session) => ({ Cookie: session.cookie, 'X-Requested-With': 'XMLHttpRequest' });
 
 const sampleProperty = (owner, overrides = {}) => ({
   title: 'Sunny Family Home',
@@ -62,4 +68,4 @@ const sampleProperty = (owner, overrides = {}) => ({
   ...overrides
 });
 
-module.exports = { app, request, connect, clear, disconnect, newUser, registerUser, sampleProperty };
+module.exports = { app, request, connect, clear, disconnect, newUser, registerUser, sampleProperty, authCookie, authHeaders };

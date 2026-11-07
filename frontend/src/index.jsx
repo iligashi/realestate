@@ -9,6 +9,9 @@ import { HelmetProvider } from 'react-helmet-async';
 import App from './App';
 import { store } from './store';
 import './index.css';
+import { initMonitoring } from './monitoring';
+
+initMonitoring();
 
 const queryClient = new QueryClient({
   defaultOptions: {

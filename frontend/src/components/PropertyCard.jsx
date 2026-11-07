@@ -15,6 +15,8 @@ import ViewingModal from './ViewingModal';
 import ReportForm from './ReportForm';
 import rentalApplicationAPI from '../services/rentalApplicationAPI';
 import { sameId } from '../utils/ids';
+import FavoriteButton from './FavoriteButton';
+import { propertyImage } from '../config';
 
 const PropertyCard = ({ property }) => {
   const navigate = useNavigate();
@@ -28,6 +30,7 @@ const PropertyCard = ({ property }) => {
   const formatPrice = (price, currency) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
+      maximumFractionDigits: 0,
       currency: currency || 'USD'
     }).format(price);
   };
@@ -137,14 +140,16 @@ const PropertyCard = ({ property }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+    <div className="card-plain group overflow-hidden transition-shadow duration-300 hover:shadow-md">
       {/* Property Image */}
-      <div className="relative h-48 bg-gray-200">
+      <div className="relative h-48 overflow-hidden bg-gray-100">
+        <FavoriteButton propertyId={property._id || property.id} className="absolute left-3 top-3 z-10" />
         {property.photos && property.photos.length > 0 ? (
           <img
-            src={property.photos[0].url}
+            src={propertyImage(property.photos)}
             alt={property.title}
-            className="w-full h-full object-cover"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -181,7 +186,7 @@ const PropertyCard = ({ property }) => {
 
         {/* Property Type and Location */}
         <div className="flex items-center text-sm text-gray-500 mb-3">
-          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+          <span className="bg-brand-100 text-brand-800 px-2 py-1 rounded-full text-xs">
             {getPropertyTypeLabel(property.propertyType)}
           </span>
           <span className="mx-2">•</span>
@@ -242,7 +247,7 @@ const PropertyCard = ({ property }) => {
               className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md transition-colors duration-200 text-sm font-medium ${
                 isSubmittingApplication
                   ? 'bg-gray-400 text-white cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-brand-600 text-white hover:bg-brand-700'
               }`}
             >
               {isSubmittingApplication ? (

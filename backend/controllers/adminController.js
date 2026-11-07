@@ -339,8 +339,8 @@ const getDashboardAnalytics = async (req, res) => {
     // Listing statistics
     const totalListings = await Property.countDocuments();
     const pendingListings = await Property.countDocuments({ status: 'pending' });
-    const approvedListings = await Property.countDocuments({ status: 'approved' });
-    const rejectedListings = await Property.countDocuments({ status: 'rejected' });
+    const approvedListings = await Property.countDocuments({ status: 'active' });
+    const rejectedListings = await Property.countDocuments({ status: 'inactive' });
 
     // Report statistics
     const totalReports = await Report.countDocuments();
@@ -629,7 +629,7 @@ const getEnhancedAnalytics = async (req, res) => {
             $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
           },
           count: { $sum: 1 },
-          totalViews: { $sum: '$views' || 0 }
+          totalViews: { $sum: { $ifNull: ['$analytics.views', 0] } }
         }
       },
       { $sort: { _id: 1 } }

@@ -1,33 +1,33 @@
 import axios from 'axios';
 import { API_URL } from '../config';
 
-// Create axios instance
+// The session lives in an httpOnly cookie set by the API, so requests just
+// need to include credentials. X-Requested-With is required by the API for
+// cookie-authenticated writes (CSRF protection).
 const api = axios.create({
   baseURL: API_URL,
-  // Removed default Content-Type header to allow FormData to work properly
+  withCredentials: true,
+  headers: { 'X-Requested-With': 'XMLHttpRequest' }
 });
 
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+// Safety net: never send an empty or placeholder Bearer header
+const EMPTY_BEARER = /^Bearer\s*(null|undefined)?$/;
+api.interceptors.request.use((config) => {
+  const auth = config.headers?.get ? config.headers.get('Authorization') : config.headers?.Authorization;
+  if (typeof auth === 'string' && EMPTY_BEARER.test(auth)) {
+    if (config.headers.delete) config.headers.delete('Authorization');
+    else delete config.headers.Authorization;
   }
-);
+  return config;
+});
 
-// Response interceptor to handle errors
+// Let the app know when the session has expired (handled in SessionProvider)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+    const url = error.config?.url || '';
+    if (error.response?.status === 401 && !url.includes('/auth/')) {
+      window.dispatchEvent(new CustomEvent('auth:expired'));
     }
     return Promise.reject(error);
   }
@@ -37,22 +37,16 @@ api.interceptors.response.use(
 export const authAPI = {
   register: (userData) => api.post('/auth/register', userData),
   login: (credentials) => api.post('/auth/login', credentials),
-  getProfile: (token) => api.get('/auth/profile', {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
+  getProfile: (token) => api.get('/auth/profile'),
   updateProfile: (profileData, token) => {
-    const config = {
-      headers: { Authorization: `Bearer ${token}` }
-    };
+    const config = { headers: {} };
     
     // Explicitly set Content-Type based on data type
     if (profileData instanceof FormData) {
       // For FormData (file uploads), let the browser set the Content-Type with boundary
-      console.log('Sending FormData for profile update');
     } else {
       // For JSON data, set Content-Type explicitly
       config.headers['Content-Type'] = 'application/json';
-      console.log('Sending JSON for profile update');
     }
     
     return api.put('/auth/profile', profileData, config);
@@ -67,9 +61,7 @@ export const propertyAPI = {
   getProperties: (filters = {}) => api.get('/properties', { params: filters }),
   getProperty: (id) => api.get(`/properties/${id}`),
   createProperty: (propertyData, token) => {
-    const config = {
-      headers: { Authorization: `Bearer ${token}` }
-    };
+    const config = { headers: {} };
     
     // For FormData (file uploads), let the browser set the Content-Type with boundary
     if (!(propertyData instanceof FormData)) {
@@ -79,9 +71,7 @@ export const propertyAPI = {
     return api.post('/properties', propertyData, config);
   },
   updateProperty: (id, propertyData, token) => {
-    const config = {
-      headers: { Authorization: `Bearer ${token}` }
-    };
+    const config = { headers: {} };
     
     // For FormData (file uploads), let the browser set the Content-Type with boundary
     if (!(propertyData instanceof FormData)) {
@@ -90,34 +80,18 @@ export const propertyAPI = {
     
     return api.put(`/properties/${id}`, propertyData, config);
   },
-  deleteProperty: (id, token) => api.delete(`/properties/${id}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
-  getUserProperties: (token) => api.get('/properties/user/my-properties', {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
+  deleteProperty: (id, token) => api.delete(`/properties/${id}`),
+  getUserProperties: (token) => api.get('/properties/user/my-properties'),
 };
 
 // User API
 export const userAPI = {
-  getAllUsers: (token) => api.get('/users', {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
-  getUserById: (id, token) => api.get(`/users/${id}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
-  updateUser: (id, userData, token) => api.put(`/users/${id}`, userData, {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
-  deleteUser: (id, token) => api.delete(`/users/${id}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
-  toggleUserBlock: (id, token) => api.patch(`/users/${id}/toggle-block`, {}, {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
-  getUserStats: (token) => api.get('/users/stats', {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
+  getAllUsers: (token) => api.get('/users'),
+  getUserById: (id, token) => api.get(`/users/${id}`),
+  updateUser: (id, userData, token) => api.put(`/users/${id}`, userData),
+  deleteUser: (id, token) => api.delete(`/users/${id}`),
+  toggleUserBlock: (id, token) => api.patch(`/users/${id}/toggle-block`, {}),
+  getUserStats: (token) => api.get('/users/stats'),
 };
 
 export default api;

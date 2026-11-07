@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
+const { setAuthCookie, clearAuthCookie } = require('../utils/authCookie');
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -34,8 +35,8 @@ const register = async (req, res) => {
 
     await user.save();
 
-    // Generate token
-    const token = generateToken(user._id);
+    // Sign in: the token goes into an httpOnly cookie, never the response body
+    setAuthCookie(res, generateToken(user._id));
 
     // Return user data (without password) and token
     const userResponse = user.toObject();
@@ -44,7 +45,6 @@ const register = async (req, res) => {
     res.status(201).json({
       message: 'User registered successfully',
       user: userResponse,
-      token
     });
   } catch (error) {
     logger.error('Registration error:', error);
@@ -93,9 +93,11 @@ const login = async (req, res) => {
     // Update last login
     user.lastLogin = new Date();
     await user.save();
+    // Sliding session: issue a fresh cookie
+    setAuthCookie(res, generateToken(user._id));
 
-    // Generate token
-    const token = generateToken(user._id);
+    // Sign in: the token goes into an httpOnly cookie, never the response body
+    setAuthCookie(res, generateToken(user._id));
 
     // Return user data (without password) and token
     const userResponse = user.toObject();
@@ -104,7 +106,6 @@ const login = async (req, res) => {
     res.json({
       message: 'Login successful',
       user: userResponse,
-      token
     });
   } catch (error) {
     logger.error('Login error:', error);
@@ -169,9 +170,8 @@ const updateProfile = async (req, res) => {
       });
       
       // Handle profile picture file from multer - ONLY if file exists and is valid
-      if (req.file && req.file.path && typeof req.file.path === 'string') {
-        logger.debug('Adding NEW profile picture from req.file:', req.file.path);
-        updates.profilePicture = req.file.path;
+      if (req.file?.url) {
+        updates.profilePicture = req.file.url;
       } else {
         logger.debug('No valid profile picture file uploaded');
       }
@@ -289,8 +289,7 @@ const extendSession = async (req, res) => {
 // Logout (client-side token removal)
 const logout = async (req, res) => {
   try {
-    // In a real application, you might want to blacklist the token
-    // For now, we'll just return a success message
+    clearAuthCookie(res);
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     logger.error('Logout error:', error);

@@ -283,7 +283,7 @@ const BuyerMessages = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'new': return 'bg-red-100 text-red-800';
-      case 'replied': return 'bg-blue-100 text-blue-800';
+      case 'replied': return 'bg-brand-100 text-brand-800';
       case 'closed': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -320,7 +320,7 @@ const BuyerMessages = () => {
         <div className="flex space-x-2">
           <button
             onClick={() => setShowNewMessageModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center"
+            className="bg-brand-600 text-white px-4 py-2 rounded-md hover:bg-brand-700 transition-colors flex items-center"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
             New Message
@@ -360,7 +360,7 @@ const BuyerMessages = () => {
                     selectedMessage?._id === message._id
                       ? 'border-green-500 bg-green-50'
                       : 'border-gray-200 hover:border-gray-300'
-                  } ${!message.readBy?.buyer ? 'bg-blue-50 border-blue-200' : ''}`}
+                  } ${!message.readBy?.buyer ? 'bg-brand-50 border-brand-200' : ''}`}
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
@@ -370,7 +370,7 @@ const BuyerMessages = () => {
                           {message.status}
                         </span>
                         {!message.readBy?.buyer && (
-                          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                          <span className="w-2 h-2 bg-brand-500 rounded-full"></span>
                         )}
                       </div>
                       
@@ -400,7 +400,7 @@ const BuyerMessages = () => {
                             e.stopPropagation();
                             handleMarkAsRead(message._id);
                           }}
-                          className="p-1 text-blue-600 hover:text-blue-800"
+                          className="p-1 text-brand-600 hover:text-brand-800"
                           title="Mark as read"
                         >
                           <EyeIcon className="h-4 w-4" />
@@ -472,14 +472,14 @@ const BuyerMessages = () => {
                     <div
                       className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                         msg.sender?._id === user?._id
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-brand-600 text-white'
                           : 'bg-gray-200 text-gray-900'
                       }`}
                     >
                       <p className="text-sm">{msg.message}</p>
                       <p className={`text-xs mt-1 ${
                         msg.sender?._id === user?._id
-                          ? 'text-blue-100'
+                          ? 'text-brand-100'
                           : 'text-gray-500'
                       }`}>
                         {formatDate(msg.sentAt)}
@@ -530,13 +530,13 @@ const BuyerMessages = () => {
                         onBlur={handleTypingStop}
                         placeholder={isConnected ? "Type your reply..." : "Connecting..."}
                         disabled={!isConnected}
-                        className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                        className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent disabled:bg-gray-100"
                         rows={2}
                       />
                       <button
                         type="submit"
                         disabled={loading || !replyText.trim() || !isConnected}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center"
+                        className="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center"
                       >
                         <PaperAirplaneIcon className="h-4 w-4" />
                       </button>
@@ -577,7 +577,7 @@ const BuyerMessages = () => {
                   <input
                     type="text"
                     placeholder="Message subject..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
                     required
                   />
                 </div>
@@ -591,7 +591,7 @@ const BuyerMessages = () => {
                     onChange={(e) => setNewMessageText(e.target.value)}
                     placeholder="Type your message..."
                     rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
                     required
                   />
                 </div>
@@ -607,7 +607,7 @@ const BuyerMessages = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+                  className="px-4 py-2 text-sm font-medium text-white bg-brand-600 border border-transparent rounded-md hover:bg-brand-700"
                 >
                   Send Message
                 </button>

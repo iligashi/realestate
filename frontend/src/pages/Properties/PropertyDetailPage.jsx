@@ -25,6 +25,8 @@ import ReportForm from '../../components/ReportForm';
 import ViewingModal from '../../components/ViewingModal';
 import rentalApplicationAPI from '../../services/rentalApplicationAPI';
 import { sameId } from '../../utils/ids';
+import FavoriteButton from '../../components/FavoriteButton';
+import { assetUrl } from '../../config';
 
 const PropertyDetailPage = () => {
   const { id } = useParams();
@@ -344,7 +346,7 @@ const PropertyDetailPage = () => {
                     }`}
                   >
                     <img
-                      src={photo.url}
+                      src={assetUrl(photo.url)}
                       alt={photo.caption || `Property image ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
@@ -366,7 +368,7 @@ const PropertyDetailPage = () => {
               </span>
               <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                 property.status === 'active' ? 'bg-green-100 text-green-800' :
-                property.status === 'sold' ? 'bg-blue-100 text-blue-800' :
+                property.status === 'sold' ? 'bg-brand-100 text-brand-800' :
                 property.status === 'rented' ? 'bg-purple-100 text-purple-800' :
                 'bg-gray-100 text-gray-800'
               }`}>
@@ -381,6 +383,7 @@ const PropertyDetailPage = () => {
                   <div className="text-3xl font-bold text-green-600 mb-2">
                     {new Intl.NumberFormat('en-US', {
                       style: 'currency',
+      maximumFractionDigits: 0,
                       currency: property.currency || 'USD'
                     }).format(property.rentalDetails?.monthlyRent || property.price)}
                     <span className="text-lg font-normal text-gray-600">/month</span>
@@ -389,6 +392,7 @@ const PropertyDetailPage = () => {
                     <div className="text-lg text-gray-700">
                       Deposit: {new Intl.NumberFormat('en-US', {
                         style: 'currency',
+      maximumFractionDigits: 0,
                         currency: property.currency || 'USD'
                       }).format(property.rentalDetails.depositRequired)}
                     </div>
@@ -398,6 +402,7 @@ const PropertyDetailPage = () => {
                 <div className="text-3xl font-bold text-green-600">
                   {new Intl.NumberFormat('en-US', {
                     style: 'currency',
+      maximumFractionDigits: 0,
                     currency: property.currency || 'USD'
                   }).format(property.price)}
                 </div>
@@ -463,9 +468,9 @@ const PropertyDetailPage = () => {
                   </div>
 
                   {/* Lease Terms */}
-                  <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="bg-brand-50 p-4 rounded-lg">
                     <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
-                      <ClockIcon className="h-4 w-4 text-blue-600" />
+                      <ClockIcon className="h-4 w-4 text-brand-600" />
                       Lease Terms
                     </h4>
                     <div className="space-y-1 text-sm text-gray-700">
@@ -514,6 +519,7 @@ const PropertyDetailPage = () => {
                         <div className="font-medium text-lg">
                           {new Intl.NumberFormat('en-US', {
                             style: 'currency',
+      maximumFractionDigits: 0,
                             currency: property.currency || 'USD'
                           }).format(property.rentalDetails.depositRequired)}
                         </div>
@@ -574,6 +580,7 @@ const PropertyDetailPage = () => {
           <div className="bg-white rounded-lg p-6 border border-gray-200 sticky top-6">
             {/* Contact Actions */}
             <div className="space-y-3 mb-6">
+              {!sameId(property.owner, user) && <FavoriteButton propertyId={property._id} variant="button" />}
               <button 
                 type="button"
                 onClick={handleContactOwner}
@@ -592,7 +599,7 @@ const PropertyDetailPage = () => {
               {isRentalProperty && (
                 <button
                   onClick={handleApplyForRental}
-                  className="w-full border border-blue-600 text-blue-600 py-3 px-4 rounded-lg font-medium hover:bg-blue-50 transition-colors"
+                  className="w-full border border-brand-600 text-brand-600 py-3 px-4 rounded-lg font-medium hover:bg-brand-50 transition-colors"
                 >
                   Apply for Rental
                 </button>
@@ -654,7 +661,7 @@ const PropertyDetailPage = () => {
                   <span className="text-gray-600">Status:</span>
                   <span className={`font-medium ${
                     property.status === 'active' ? 'text-green-600' :
-                    property.status === 'sold' ? 'text-blue-600' :
+                    property.status === 'sold' ? 'text-brand-600' :
                     property.status === 'rented' ? 'text-purple-600' :
                     'text-gray-600'
                   }`}>

@@ -3,6 +3,8 @@ const Inquiry = require('../models/Inquiry');
 const OpenHouse = require('../models/OpenHouse');
 const ListingAnalytics = require('../models/ListingAnalytics');
 const User = require('../models/User');
+const Favorite = require('../models/Favorite');
+const Message = require('../models/Message');
 const logger = require('../utils/logger');
 
 // ===== DASHBOARD OVERVIEW =====
@@ -109,7 +111,7 @@ const createPropertyListing = async (req, res) => {
     // Handle uploaded images
     if (req.files && req.files.length > 0) {
       const photos = req.files.map((file, index) => ({
-        url: `/uploads/property-images/${file.filename}`,
+        url: file.url,
         caption: file.originalname,
         isPrimary: index === 0,
         order: index + 1
@@ -154,7 +156,7 @@ const updatePropertyListing = async (req, res) => {
     // Handle uploaded images
     if (req.files && req.files.length > 0) {
       const photos = req.files.map((file, index) => ({
-        url: `/uploads/property-images/${file.filename}`,
+        url: file.url,
         caption: file.originalname,
         isPrimary: index === 0,
         order: index + 1
@@ -341,44 +343,68 @@ const respondToInquiry = async (req, res) => {
 };
 
 // ===== LISTING ANALYTICS =====
+// Per-listing performance built from real data:
+// views are counted on each property page visit (owner visits excluded),
+// saves come from favorites, inquiries are unique people who messaged.
 const getListingAnalytics = async (req, res) => {
   try {
-    const { propertyId, period = '30d' } = req.query;
-    
-    let filter = { seller: req.user._id };
-    if (propertyId) filter.property = propertyId;
-    
-    const analytics = await ListingAnalytics.find(filter)
-      .populate('property', 'title address price status')
-      .sort({ 'views.lastUpdated': -1 });
-    
-    // Calculate period-based data
-    const periodData = analytics.map(analytic => {
-      const data = analytic.toObject();
-      
-      // Filter data based on period
-      if (period === '7d') {
-        data.views.period = data.views.thisWeek;
-        data.inquiries.period = data.inquiries.thisWeek;
-        data.saves.period = data.saves.thisWeek;
-      } else if (period === '30d') {
-        data.views.period = data.views.thisMonth;
-        data.inquiries.period = data.inquiries.thisMonth;
-        data.saves.period = data.saves.thisMonth;
-      } else {
-        data.views.period = data.views.total;
-        data.inquiries.period = data.inquiries.total;
-        data.saves.period = data.saves.total;
-      }
-      
-      return data;
+    const properties = await Property.find({ owner: req.user._id })
+      .select('title status price photos address analytics createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const ids = properties.map((p) => p._id);
+
+    const [saves, inquiries] = await Promise.all([
+      Favorite.aggregate([
+        { $match: { property: { $in: ids } } },
+        { $group: { _id: '$property', count: { $sum: 1 } } }
+      ]),
+      Message.aggregate([
+        { $match: { property: { $in: ids } } },
+        { $project: { property: 1, person: { $ifNull: ['$buyer', '$renter'] } } },
+        { $match: { person: { $ne: null } } },
+        { $group: { _id: '$property', people: { $addToSet: '$person' } } },
+        { $project: { count: { $size: '$people' } } }
+      ])
+    ]);
+
+    const countFor = (rows, id) => rows.find((r) => String(r._id) === String(id))?.count || 0;
+    const rate = (part, whole) => (whole > 0 ? Math.round((part / whole) * 1000) / 10 : 0);
+
+    const listings = properties.map((p) => {
+      const views = p.analytics?.views || 0;
+      const inquiryCount = countFor(inquiries, p._id);
+      return {
+        _id: p._id,
+        title: p.title,
+        status: p.status,
+        price: p.price,
+        city: p.address?.city,
+        photo: p.photos?.[0]?.url || null,
+        views,
+        saves: countFor(saves, p._id),
+        inquiries: inquiryCount,
+        conversionRate: rate(inquiryCount, views),
+        lastViewed: p.analytics?.lastViewed || null
+      };
     });
-    
-    res.json({ analytics: periodData });
+
+    const summary = listings.reduce(
+      (acc, l) => ({
+        listings: acc.listings + 1,
+        views: acc.views + l.views,
+        saves: acc.saves + l.saves,
+        inquiries: acc.inquiries + l.inquiries
+      }),
+      { listings: 0, views: 0, saves: 0, inquiries: 0 }
+    );
+    summary.conversionRate = rate(summary.inquiries, summary.views);
+
+    res.json({ summary, listings });
   } catch (error) {
     logger.error('Get listing analytics error:', error);
-    // Return empty data instead of error to prevent infinite loading
-    res.json({ analytics: [] });
+    res.status(500).json({ error: 'Failed to load analytics.' });
   }
 };
 

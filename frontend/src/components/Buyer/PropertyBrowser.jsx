@@ -17,6 +17,7 @@ import {
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import { propertyImage } from '../../config';
+import { useFavorites } from '../../context/FavoritesContext';
 
 const PropertyBrowser = () => {
   const dispatch = useDispatch();
@@ -53,20 +54,9 @@ const PropertyBrowser = () => {
     dispatch(fetchProperties(filters));
   };
 
-  const handleAddToFavorites = async (propertyId) => {
-    // TODO: Implement favorites functionality
-    toast.success('Added to wishlist!');
-  };
-
-  const handleRemoveFromFavorites = async (propertyId) => {
-    // TODO: Implement favorites functionality
-    toast.success('Removed from wishlist!');
-  };
-
-  const isFavorite = (propertyId) => {
-    // TODO: Implement favorites functionality
-    return false;
-  };
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const handleAddToFavorites = (propertyId) => toggleFavorite(propertyId);
+  const handleRemoveFromFavorites = (propertyId) => toggleFavorite(propertyId);
 
   const formatPrice = (price, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -104,7 +94,7 @@ const PropertyBrowser = () => {
             </button>
           </div>
           <div className="absolute bottom-4 left-4">
-            <span className="bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-medium">
+            <span className="bg-brand-600 text-white px-2 py-1 rounded-full text-xs font-medium">
               {property.propertyType || 'Property'}
             </span>
           </div>
@@ -115,7 +105,7 @@ const PropertyBrowser = () => {
             <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
               {property.title || 'Untitled Property'}
             </h3>
-            <span className="text-xl font-bold text-blue-600">
+            <span className="text-xl font-bold text-brand-600">
               {formatPrice(property.price || 0, property.currency)}
             </span>
           </div>
@@ -145,7 +135,7 @@ const PropertyBrowser = () => {
           <div className="flex space-x-2">
             <button
               onClick={() => navigate(`/properties/${property._id}`)}
-              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center"
+              className="flex-1 bg-brand-600 text-white py-2 px-4 rounded-md hover:bg-brand-700 transition-colors flex items-center justify-center"
             >
               <EyeIcon className="h-4 w-4 mr-2" />
               View Details
@@ -176,7 +166,7 @@ const PropertyBrowser = () => {
                 placeholder="Search by location, property type, or keywords..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -193,13 +183,13 @@ const PropertyBrowser = () => {
             <div className="flex border border-gray-300 rounded-lg">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-3 ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                className={`p-3 ${viewMode === 'grid' ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
               >
                 <AdjustmentsHorizontalIcon className="h-5 w-5" />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-3 ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                className={`p-3 ${viewMode === 'list' ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
               >
                 <EyeIcon className="h-5 w-5" />
               </button>
@@ -216,13 +206,12 @@ const PropertyBrowser = () => {
                 <select
                   value={filters.propertyType}
                   onChange={(e) => handleFilterChange('propertyType', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
                 >
                   <option value="">All Types</option>
                   <option value="house">House</option>
                   <option value="apartment">Apartment</option>
-                  <option value="condo">Condo</option>
-                  <option value="townhouse">Townhouse</option>
+                  <option value="office">Office</option>
                 </select>
               </div>
               
@@ -233,7 +222,7 @@ const PropertyBrowser = () => {
                   placeholder="Min price"
                   value={filters.minPrice}
                   onChange={(e) => handleFilterChange('minPrice', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
                 />
               </div>
               
@@ -244,7 +233,7 @@ const PropertyBrowser = () => {
                   placeholder="Max price"
                   value={filters.maxPrice}
                   onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
                 />
               </div>
               
@@ -253,7 +242,7 @@ const PropertyBrowser = () => {
                 <select
                   value={filters.bedrooms}
                   onChange={(e) => handleFilterChange('bedrooms', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
                 >
                   <option value="">Any</option>
                   <option value="1">1+</option>
@@ -268,7 +257,7 @@ const PropertyBrowser = () => {
             <div className="mt-4 flex justify-end">
               <button
                 onClick={handleSearch}
-                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                className="bg-brand-600 text-white px-6 py-2 rounded-md hover:bg-brand-700 transition-colors"
               >
                 Apply Filters
               </button>
@@ -287,7 +276,7 @@ const PropertyBrowser = () => {
           <select
             value={filters.sortBy}
             onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
           >
             <option value="newest">Newest First</option>
             <option value="price-low">Price: Low to High</option>
@@ -300,7 +289,7 @@ const PropertyBrowser = () => {
       {/* Properties Grid/List */}
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
         </div>
       ) : !properties || properties.length === 0 ? (
         <div className="text-center py-12">

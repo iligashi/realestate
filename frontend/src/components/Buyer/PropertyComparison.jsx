@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { propertyImage } from '../../config';
+import { useFavorites } from '../../context/FavoritesContext';
 
 const PropertyComparison = () => {
   const dispatch = useDispatch();
@@ -48,20 +49,9 @@ const PropertyComparison = () => {
     setComparisonList(prev => prev.filter(p => p._id !== propertyId));
   };
 
-  const handleAddToFavorites = async (propertyId) => {
-    // TODO: Implement favorites functionality
-    toast.success('Added to wishlist!');
-  };
-
-  const handleRemoveFromFavorites = async (propertyId) => {
-    // TODO: Implement favorites functionality
-    toast.success('Removed from wishlist!');
-  };
-
-  const isFavorite = (propertyId) => {
-    // TODO: Implement favorites functionality
-    return false;
-  };
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const handleAddToFavorites = (propertyId) => toggleFavorite(propertyId);
+  const handleRemoveFromFavorites = (propertyId) => toggleFavorite(propertyId);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', {
@@ -120,7 +110,7 @@ const PropertyComparison = () => {
             </td>
             {comparisonList.map((property) => (
               <td key={property._id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
-                <div className="text-lg font-bold text-blue-600">
+                <div className="text-lg font-bold text-brand-600">
                   {formatPrice(property.price)}
                 </div>
                 <div className="text-xs text-gray-500">
@@ -150,7 +140,7 @@ const PropertyComparison = () => {
             </td>
             {comparisonList.map((property) => (
               <td key={property._id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-100 text-brand-800">
                   {property.propertyType}
                 </span>
               </td>
@@ -224,7 +214,7 @@ const PropertyComparison = () => {
                 <div className="flex space-x-2 justify-center">
                   <button
                     onClick={() => window.open(`/properties/${property._id}`, '_blank')}
-                    className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors flex items-center"
+                    className="bg-brand-600 text-white px-3 py-1 rounded text-xs hover:bg-brand-700 transition-colors flex items-center"
                   >
                     <EyeIcon className="h-3 w-3 mr-1" />
                     View
@@ -267,7 +257,7 @@ const PropertyComparison = () => {
           <button
             onClick={() => setShowAddModal(true)}
             disabled={comparisonList.length >= 4}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+            className="bg-brand-600 text-white px-4 py-2 rounded-md hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
             Add Property
@@ -279,7 +269,7 @@ const PropertyComparison = () => {
       <div className="mb-6">
         <div className="flex items-center space-x-4">
           <div className="flex items-center">
-            <ScaleIcon className="h-5 w-5 text-blue-600 mr-2" />
+            <ScaleIcon className="h-5 w-5 text-brand-600 mr-2" />
             <span className="text-sm font-medium text-gray-900">
               {comparisonList.length} of 4 properties selected
             </span>
@@ -305,7 +295,7 @@ const PropertyComparison = () => {
           </p>
           <button
             onClick={() => setShowAddModal(true)}
-            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+            className="mt-4 bg-brand-600 text-white px-4 py-2 rounded-md hover:bg-brand-700 transition-colors"
           >
             Add Properties
           </button>
@@ -334,7 +324,7 @@ const PropertyComparison = () => {
                 placeholder="Search properties..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
               />
             </div>
 
@@ -366,7 +356,7 @@ const PropertyComparison = () => {
                       <button
                         onClick={() => handleAddToComparison(property)}
                         disabled={comparisonList.some(p => p._id === property._id)}
-                        className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="bg-brand-600 text-white px-3 py-1 rounded text-xs hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {comparisonList.some(p => p._id === property._id) ? 'Added' : 'Add'}
                       </button>

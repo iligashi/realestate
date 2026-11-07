@@ -141,7 +141,7 @@ const MortgageCalculator = () => {
                     type="number"
                     value={formData.homePrice}
                     onChange={(e) => handleInputChange('homePrice', e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
                     placeholder="500000"
                   />
                 </div>
@@ -158,7 +158,7 @@ const MortgageCalculator = () => {
                       type="number"
                       value={formData.downPayment}
                       onChange={(e) => handleInputChange('downPayment', e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
                       placeholder="100000"
                     />
                   </div>
@@ -172,7 +172,7 @@ const MortgageCalculator = () => {
                       type="number"
                       value={formData.downPaymentPercent}
                       onChange={(e) => handleInputChange('downPaymentPercent', e.target.value)}
-                      className="w-full pr-8 pl-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                      className="w-full pr-8 pl-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
                       placeholder="20"
                       step="0.01"
                     />
@@ -189,7 +189,7 @@ const MortgageCalculator = () => {
                   <select
                     value={formData.loanTerm}
                     onChange={(e) => handleInputChange('loanTerm', parseInt(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
                   >
                     <option value={15}>15 years</option>
                     <option value={20}>20 years</option>
@@ -206,7 +206,7 @@ const MortgageCalculator = () => {
                       type="number"
                       value={formData.interestRate}
                       onChange={(e) => handleInputChange('interestRate', e.target.value)}
-                      className="w-full pr-8 pl-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                      className="w-full pr-8 pl-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
                       placeholder="6.5"
                       step="0.01"
                     />
@@ -223,7 +223,7 @@ const MortgageCalculator = () => {
               <h3 className="text-lg font-semibold text-gray-900">Additional Costs</h3>
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                className="text-brand-600 hover:text-brand-800 text-sm font-medium"
               >
                 {showAdvanced ? 'Hide' : 'Show'} Advanced
               </button>
@@ -242,7 +242,7 @@ const MortgageCalculator = () => {
                         type="number"
                         value={formData.propertyTax}
                         onChange={(e) => handleInputChange('propertyTax', e.target.value)}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
                         placeholder="6000"
                       />
                     </div>
@@ -257,7 +257,7 @@ const MortgageCalculator = () => {
                         type="number"
                         value={formData.homeInsurance}
                         onChange={(e) => handleInputChange('homeInsurance', e.target.value)}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
                         placeholder="1200"
                       />
                     </div>
@@ -275,7 +275,7 @@ const MortgageCalculator = () => {
                         type="number"
                         value={formData.pmi}
                         onChange={(e) => handleInputChange('pmi', e.target.value)}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
                         placeholder="0"
                       />
                     </div>
@@ -290,7 +290,7 @@ const MortgageCalculator = () => {
                         type="number"
                         value={formData.hoa}
                         onChange={(e) => handleInputChange('hoa', e.target.value)}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
                         placeholder="0"
                       />
                     </div>
@@ -343,9 +343,9 @@ const MortgageCalculator = () => {
                     </div>
                   )}
                   
-                  <div className="flex justify-between items-center py-2 bg-blue-50 rounded-md px-3">
+                  <div className="flex justify-between items-center py-2 bg-brand-50 rounded-md px-3">
                     <span className="text-lg font-semibold text-gray-900">Total Monthly Payment</span>
-                    <span className="text-xl font-bold text-blue-600">{formatCurrency(results.totalMonthlyPayment)}</span>
+                    <span className="text-xl font-bold text-brand-600">{formatCurrency(results.totalMonthlyPayment)}</span>
                   </div>
                 </div>
               </div>
@@ -373,12 +373,12 @@ const MortgageCalculator = () => {
               </div>
 
               {/* Affordability Tips */}
-              <div className="bg-blue-50 p-6 rounded-lg">
+              <div className="bg-brand-50 p-6 rounded-lg">
                 <div className="flex items-start">
-                  <InformationCircleIcon className="h-6 w-6 text-blue-600 mt-1 mr-3 flex-shrink-0" />
+                  <InformationCircleIcon className="h-6 w-6 text-brand-600 mt-1 mr-3 flex-shrink-0" />
                   <div>
-                    <h4 className="text-sm font-semibold text-blue-900 mb-2">Affordability Tips</h4>
-                    <ul className="text-sm text-blue-800 space-y-1">
+                    <h4 className="text-sm font-semibold text-brand-900 mb-2">Affordability Tips</h4>
+                    <ul className="text-sm text-brand-800 space-y-1">
                       <li>• Aim for a monthly payment that's no more than 28% of your gross income</li>
                       <li>• Consider a 20% down payment to avoid PMI</li>
                       <li>• Shop around for the best interest rates</li>

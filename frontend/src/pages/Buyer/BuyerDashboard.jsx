@@ -113,7 +113,7 @@ const BuyerDashboard = () => {
             </div>
             <button
               onClick={() => navigate('/properties')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium flex items-center"
+              className="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 transition-colors text-sm font-medium flex items-center"
             >
               <HomeIcon className="h-4 w-4 mr-1" />
               Browse
@@ -131,7 +131,7 @@ const BuyerDashboard = () => {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => navigate('/properties')}
-                className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 font-medium flex items-center"
+                className="px-6 py-3 bg-brand-600 text-white rounded-md hover:bg-brand-700 transition-colors duration-200 font-medium flex items-center"
               >
                 <HomeIcon className="h-5 w-5 mr-2" />
                 Browse Properties
@@ -140,7 +140,7 @@ const BuyerDashboard = () => {
                 <p className="text-sm text-gray-600">Welcome back,</p>
                 <p className="text-lg font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
               </div>
-              <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <div className="h-10 w-10 bg-brand-600 rounded-full flex items-center justify-center">
                 <UserIcon className="h-6 w-6 text-white" />
               </div>
             </div>
@@ -171,7 +171,7 @@ const BuyerDashboard = () => {
                           onClick={() => setActiveTab(tab.id)}
                           className={`w-full flex items-center px-3 py-3 rounded-lg text-left transition-colors ${
                             activeTab === tab.id
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              ? 'bg-brand-50 text-brand-700 border border-brand-200'
                               : 'text-gray-700 hover:bg-gray-50'
                           }`}
                         >
@@ -204,7 +204,7 @@ const BuyerDashboard = () => {
                         onClick={() => setActiveTab(tab.id)}
                         className={`w-full flex items-center px-3 py-3 rounded-lg text-left transition-colors ${
                           activeTab === tab.id
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            ? 'bg-brand-50 text-brand-700 border border-brand-200'
                             : 'text-gray-700 hover:bg-gray-50'
                         }`}
                       >
@@ -230,7 +230,7 @@ const BuyerDashboard = () => {
                           onClick={() => setActiveTab(tab.id)}
                           className={`w-full flex items-center px-3 py-3 rounded-lg text-left transition-colors ${
                             activeTab === tab.id
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              ? 'bg-brand-50 text-brand-700 border border-brand-200'
                               : 'text-gray-700 hover:bg-gray-50'
                           }`}
                         >
@@ -257,7 +257,7 @@ const BuyerDashboard = () => {
                           onClick={() => setActiveTab(tab.id)}
                           className={`w-full flex items-center px-3 py-3 rounded-lg text-left transition-colors ${
                             activeTab === tab.id
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              ? 'bg-brand-50 text-brand-700 border border-brand-200'
                               : 'text-gray-700 hover:bg-gray-50'
                           }`}
                         >

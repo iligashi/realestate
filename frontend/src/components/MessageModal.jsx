@@ -96,7 +96,7 @@ const MessageModal = ({ isOpen, onClose, property, seller }) => {
         </div>
 
         {/* Seller Info */}
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+        <div className="mb-4 p-3 bg-brand-50 rounded-lg">
           <h4 className="font-medium text-gray-900">Property Owner</h4>
           <p className="text-sm text-gray-600">
             {seller?.firstName} {seller?.lastName}
@@ -117,7 +117,7 @@ const MessageModal = ({ isOpen, onClose, property, seller }) => {
                 value={formData.subject}
                 onChange={handleChange}
                 placeholder="e.g., Interested in viewing this property"
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 required
               />
             </div>
@@ -133,7 +133,7 @@ const MessageModal = ({ isOpen, onClose, property, seller }) => {
                 value={formData.message}
                 onChange={handleChange}
                 placeholder="Tell the owner about your interest in this property..."
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 required
               />
             </div>
@@ -150,7 +150,7 @@ const MessageModal = ({ isOpen, onClose, property, seller }) => {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 bg-brand-600 text-white px-4 py-2 rounded-md hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? 'Sending...' : 'Send Message'}
             </button>

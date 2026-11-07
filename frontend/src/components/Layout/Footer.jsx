@@ -7,7 +7,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="col-span-1 md:col-span-2">
-            <Link to="/" className="text-2xl font-bold text-blue-400">
+            <Link to="/" className="text-2xl font-bold text-brand-400">
               RealEstate
             </Link>
             <p className="mt-4 text-gray-300 max-w-md">

@@ -384,7 +384,7 @@ const RentalApplicationForm = ({ isOpen, onClose, property, onSubmit }) => {
               />
             </div>
 
-            <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="bg-brand-50 p-4 rounded-lg">
               <h4 className="font-medium text-gray-900 mb-2">Emergency Contact</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input
@@ -462,7 +462,7 @@ const RentalApplicationForm = ({ isOpen, onClose, property, onSubmit }) => {
                 ? 'bg-green-50 border-green-200 text-green-800' 
                 : submitStatus === 'error'
                 ? 'bg-red-50 border-red-200 text-red-800'
-                : 'bg-blue-50 border-blue-200 text-blue-800'
+                : 'bg-brand-50 border-brand-200 text-brand-800'
             }`}>
               <div className="flex items-center">
                 {submitStatus === 'success' && (
@@ -472,7 +472,7 @@ const RentalApplicationForm = ({ isOpen, onClose, property, onSubmit }) => {
                   <XCircleIcon className="h-5 w-5 mr-2 text-red-600" />
                 )}
                 {submitStatus === 'submitting' && (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-2"></div>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-600 mr-2"></div>
                 )}
                 <span className="font-medium">{submitMessage}</span>
               </div>

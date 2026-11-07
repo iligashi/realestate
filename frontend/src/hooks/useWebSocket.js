@@ -3,19 +3,16 @@ import { useSelector } from 'react-redux';
 import websocketService from '../services/websocketService';
 
 const useWebSocket = () => {
-  const { user, token } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
   const listenersRef = useRef(new Map());
 
   // Connect to WebSocket when user is authenticated
   useEffect(() => {
-    console.log('WebSocket hook effect triggered:', { hasToken: !!token, hasUser: !!user, tokenPreview: token ? token.substring(0, 20) + '...' : 'none' });
-    if (token && user) {
-      console.log('Connecting to WebSocket with token');
-      websocketService.connect(token);
+    if (user) {
+      websocketService.connect();
     } else {
-      console.log('Disconnecting WebSocket - no token or user');
       websocketService.disconnect();
       setIsConnected(false);
     }
@@ -23,7 +20,7 @@ const useWebSocket = () => {
     return () => {
       websocketService.disconnect();
     };
-  }, [token, user]);
+  }, [user]);
 
   // Listen for connection status changes
   useEffect(() => {
@@ -133,10 +130,8 @@ const useWebSocket = () => {
 
   // Reconnect function
   const reconnect = useCallback(() => {
-    if (token) {
-      websocketService.reconnectWithToken(token);
-    }
-  }, [token]);
+    if (user) websocketService.reconnectWithToken();
+  }, [user]);
 
   return {
     isConnected,

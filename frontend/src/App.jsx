@@ -8,6 +8,7 @@ import ProtectedRoute from './components/Auth/ProtectedRoute';
 import SellerRoute from './components/Auth/SellerRoute';
 import RenterRoute from './components/Auth/RenterRoute';
 import HomePage from './pages/HomePage';
+import { FavoritesProvider } from './context/FavoritesContext';
 
 // Pages are loaded on demand so the first visit only downloads what it needs
 const LoginPage = lazy(() => import('./pages/Auth/LoginPage'));
@@ -22,6 +23,14 @@ const PropertyListPage = lazy(() => import('./pages/Properties/PropertyListPage'
 const PropertyDetailPage = lazy(() => import('./pages/Properties/PropertyDetailPage'));
 const PropertyFormPage = lazy(() => import('./pages/Properties/PropertyFormPage'));
 const RentalPropertiesPage = lazy(() => import('./pages/Properties/RentalPropertiesPage'));
+const AboutPage = lazy(() => import('./pages/Info/AboutPage'));
+const ContactPage = lazy(() => import('./pages/Info/ContactPage'));
+const HelpPage = lazy(() => import('./pages/Info/HelpPage'));
+const TermsPage = lazy(() => import('./pages/Info/LegalPages').then((m) => ({ default: m.TermsPage })));
+const PrivacyPage = lazy(() => import('./pages/Info/LegalPages').then((m) => ({ default: m.PrivacyPage })));
+const ForgotPasswordPage = lazy(() =>
+  import('./pages/Info/LegalPages').then((m) => ({ default: m.ForgotPasswordPage }))
+);
 
 const PageLoader = () => (
   <div className="flex min-h-[50vh] items-center justify-center" role="status" aria-label="Loading">
@@ -49,6 +58,7 @@ const protectedPage = (Page) => (
 function App() {
   return (
     <SessionProvider>
+      <FavoritesProvider>
       <Layout>
         <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
@@ -99,11 +109,19 @@ function App() {
                 }
               />
 
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/help" element={<HelpPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </ErrorBoundary>
       </Layout>
+      </FavoritesProvider>
     </SessionProvider>
   );
 }

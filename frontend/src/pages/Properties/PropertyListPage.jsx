@@ -13,7 +13,7 @@ const PropertyListPage = () => {
     listingType: searchParams.get('listingType') || '',
     minPrice: '',
     maxPrice: '',
-    city: '',
+    city: searchParams.get('city') || '',
     bedrooms: ''
   });
   
@@ -22,19 +22,21 @@ const PropertyListPage = () => {
 
   // Update filters when URL params change
   useEffect(() => {
-    const typeFromUrl = searchParams.get('type');
-    const listingTypeFromUrl = searchParams.get('listingType');
-    
-    if (typeFromUrl !== filters.propertyType || listingTypeFromUrl !== filters.listingType) {
+    const typeFromUrl = searchParams.get('type') || '';
+    const listingTypeFromUrl = searchParams.get('listingType') || '';
+    const cityFromUrl = searchParams.get('city') || '';
+
+    if (typeFromUrl !== filters.propertyType || listingTypeFromUrl !== filters.listingType || cityFromUrl !== filters.city) {
       const newFilters = {
         ...filters,
-        propertyType: typeFromUrl || '',
-        listingType: listingTypeFromUrl || ''
+        propertyType: typeFromUrl,
+        listingType: listingTypeFromUrl,
+        city: cityFromUrl
       };
       setFilters(newFilters);
       setSearchFilters(newFilters);
     }
-  }, [searchParams, filters.propertyType, filters.listingType]);
+  }, [searchParams]);
 
   useEffect(() => {
     fetchProperties();
@@ -166,7 +168,7 @@ const PropertyListPage = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
             {hasUnsavedChanges && (
-              <span className="text-sm text-blue-600 font-medium">
+              <span className="text-sm text-brand-600 font-medium">
                 • You have unsaved filter changes
               </span>
             )}
@@ -254,7 +256,7 @@ const PropertyListPage = () => {
               onClick={handleSearch}
               className={`px-6 py-2 rounded-md transition-colors duration-200 font-medium ${
                 hasUnsavedChanges 
-                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  ? 'bg-brand-600 text-white hover:bg-brand-700' 
                   : 'bg-green-600 text-white hover:bg-green-700'
               }`}
             >

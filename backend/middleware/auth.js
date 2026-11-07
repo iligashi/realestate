@@ -1,9 +1,10 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { tokenFromRequest } = require('../utils/authCookie');
 
 const auth = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const token = tokenFromRequest(req);
     
     if (!token) {
       return res.status(401).json({ error: 'Access denied. No token provided.' });
@@ -35,7 +36,7 @@ const auth = async (req, res, next) => {
 
 const optionalAuth = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const token = tokenFromRequest(req);
     
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);

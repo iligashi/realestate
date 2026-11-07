@@ -42,5 +42,9 @@ module.exports = {
   debug: (...args) => write('debug', args),
   info: (...args) => write('info', args),
   warn: (...args) => write('warn', args),
-  error: (...args) => write('error', args)
+  error: (...args) => {
+    write('error', args);
+    // Lazy require avoids a circular import with utils/sentry
+    require('./sentry').captureError(args);
+  }
 };
