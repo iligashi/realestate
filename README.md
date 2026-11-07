@@ -17,9 +17,9 @@ A full-stack real estate marketplace where buyers, sellers, renters and agents l
 - **Real-time messaging:** Socket.IO conversations with typing indicators, read receipts, online status and live notifications
 - **Rentals:** rental applications that renters submit and owners review
 - **Viewings and open houses:** buyers schedule viewings and sellers manage open houses
-- **Buyer tools:** wishlist, property comparison and a mortgage calculator
+- **Buyer tools:** wishlist (saved properties), property comparison and a mortgage calculator
+- **Seller analytics:** views, saves and inquiries per listing
 - **Moderation:** users report listings, people or messages, and admins review the reports, manage users and approve listings
-- **Seller analytics:** views, inquiries and listing performance
 
 ## Screenshots
 
@@ -30,6 +30,15 @@ A full-stack real estate marketplace where buyers, sellers, renters and agents l
 | Seller dashboard | Admin dashboard |
 |---|---|
 | ![Seller dashboard](docs/screenshots/seller-dashboard.png) | ![Admin dashboard](docs/screenshots/admin-dashboard.png) |
+
+## Security
+
+- Sessions use an **httpOnly, Secure cookie**; the token is never readable by page JavaScript
+- CSRF protection on cookie-authenticated writes (`X-Requested-With` header)
+- MongoDB operator stripping on all input, escaped search patterns, page-size limits
+- Rate limits on login, registration and the contact form
+- Only JPEG, PNG, WebP and GIF uploads are accepted
+- Unlisted (pending or inactive) properties are visible only to their owner and admins
 
 ## Tech stack
 
@@ -101,6 +110,10 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 | `FRONTEND_URL` | backend | Allowed CORS origins, comma-separated |
 | `PORT` | backend | API port (default `5000`) |
 | `LOG_LEVEL` | backend | `debug`, `info`, `warn`, `error` or `silent` |
+| `CLOUDINARY_URL` | backend | Store uploads on Cloudinary instead of local disk (recommended in production) |
+| `SENTRY_DSN` | backend | Report API errors to Sentry (optional) |
+| `COOKIE_SAMESITE` | backend | Session cookie SameSite policy (default `lax` locally, `none` in production) |
+| `VITE_SENTRY_DSN` | frontend | Report browser errors to Sentry (optional) |
 | `VITE_SERVER_URL` | frontend | URL of the API server (default `http://localhost:5000`) |
 
 ### 3. Seed demo data (optional)
