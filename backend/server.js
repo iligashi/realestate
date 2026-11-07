@@ -8,6 +8,7 @@ const app = require('./app');
 const connectDB = require('./config/database');
 const SocketServer = require('./websocket/socketServer');
 const logger = require('./utils/logger');
+const bootstrapAdmin = require('./utils/bootstrapAdmin');
 
 const server = http.createServer(app);
 
@@ -18,6 +19,7 @@ global.socketServer = socketServer;
 
 const start = async () => {
   await connectDB();
+  await bootstrapAdmin().catch((err) => logger.error('Admin bootstrap failed:', err));
   server.listen(config.port, () => {
     logger.info(`API listening on http://localhost:${config.port} (${config.nodeEnv})`);
     logger.info(`Allowed CORS origins: ${config.allowedOrigins.join(', ')}`);

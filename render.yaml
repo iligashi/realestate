@@ -1,0 +1,39 @@
+# Render Blueprint for the API. In Render: New > Blueprint > pick this repo.
+# Values marked `sync: false` are asked for when you create the Blueprint.
+services:
+  - type: web
+    name: realestate-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true # Render creates a long random secret
+      - key: JWT_EXPIRE
+        value: 7d
+      # Requests arrive through the Vercel proxy, so the cookie is first-party
+      - key: COOKIE_SAMESITE
+        value: lax
+      # Vercel proxy + Render load balancer
+      - key: TRUST_PROXY
+        value: "2"
+      - key: MONGODB_URI
+        sync: false # MongoDB Atlas connection string
+      - key: FRONTEND_URL
+        sync: false # e.g. https://realestate.vercel.app
+      - key: ADMIN_EMAIL
+        sync: false # first admin account, created on startup
+      - key: ADMIN_PASSWORD
+        sync: false # at least 12 characters
+      - key: CLOUDINARY_URL
+        sync: false # optional, but Render's free disk is wiped on every deploy
+      - key: SENTRY_DSN
+        sync: false # optional

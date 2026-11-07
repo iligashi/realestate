@@ -11,6 +11,9 @@ const auth = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.purpose === 'socket') {
+      return res.status(401).json({ error: 'Invalid token.' });
+    }
     const user = await User.findById(decoded.userId).select('-password');
     
     if (!user) {
