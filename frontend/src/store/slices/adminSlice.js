@@ -216,7 +216,7 @@ export const fetchEnhancedAnalytics = createAsyncThunk(
   async (_, { rejectWithValue, getState }) => {
     try {
       const { token } = getState().auth;
-      const response = await adminAPI.getEnhancedAnalytics(token);
+      const response = await adminAPI.getEnhancedAnalytics({}, token);
       return adminAPI.handleResponse(response);
     } catch (error) {
       return rejectWithValue(adminAPI.handleError(error));
@@ -230,7 +230,7 @@ export const fetchRevenueAnalytics = createAsyncThunk(
   async (_, { rejectWithValue, getState }) => {
     try {
       const { token } = getState().auth;
-      const response = await adminAPI.getRevenueAnalytics(token);
+      const response = await adminAPI.getRevenueAnalytics({}, token);
       return adminAPI.handleResponse(response);
     } catch (error) {
       return rejectWithValue(adminAPI.handleError(error));

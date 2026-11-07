@@ -300,7 +300,7 @@ const AdminDashboard = () => {
         <StatsCard
           title="Featured Revenue"
           value={formatCurrency(revenueAnalytics?.featuredListingRevenue)}
-          subtitle={`${revenueAnalytics?.featuredListingsSold || 0} featured listings, last 30 days`}
+          subtitle={`${revenueAnalytics?.featuredListingsSold || 0} featured (30 days)`}
           icon={CurrencyDollarIcon}
           color="purple"
         />
