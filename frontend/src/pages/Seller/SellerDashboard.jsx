@@ -92,7 +92,7 @@ const SellerDashboard = () => {
   const getWorkflowStageColor = (stage) => {
     switch (stage) {
       case 'List': return 'bg-gray-100 text-gray-800';
-      case 'Market': return 'bg-blue-100 text-blue-800';
+      case 'Market': return 'bg-brand-100 text-brand-800';
       case 'Show': return 'bg-yellow-100 text-yellow-800';
       case 'Negotiate': return 'bg-orange-100 text-orange-800';
       case 'Close': return 'bg-green-100 text-green-800';
@@ -137,10 +137,12 @@ const SellerDashboard = () => {
   const mediumPriorityTabs = tabs.filter(tab => tab.priority === 'medium');
   const lowPriorityTabs = tabs.filter(tab => tab.priority === 'low');
 
-  if (loading) {
+  // Only block the page on the first dashboard load. Tabs also set 'loading';
+  // swapping the whole page for a spinner unmounted them and caused a refetch loop.
+  if (loading && !dashboard) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-600"></div>
       </div>
     );
   }
@@ -152,7 +154,7 @@ const SellerDashboard = () => {
         <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-600 rounded-lg">
+              <div className="p-2 bg-brand-600 rounded-lg">
                 <HomeIcon className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -173,7 +175,7 @@ const SellerDashboard = () => {
         <div className="hidden lg:block px-6 py-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="p-3 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg">
+              <div className="p-3 bg-gradient-to-r from-brand-600 to-brand-700 rounded-xl shadow-lg">
                 <HomeIcon className="h-8 w-8 text-white" />
               </div>
               <div>
@@ -184,7 +186,7 @@ const SellerDashboard = () => {
             <div className="flex space-x-4">
               <button 
                 onClick={() => setShowPropertyWizard(true)}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center space-x-2 font-medium"
+                className="bg-gradient-to-r from-brand-600 to-brand-700 text-white px-6 py-3 rounded-xl hover:from-brand-700 hover:to-brand-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center space-x-2 font-medium"
               >
                 <PlusIcon className="h-5 w-5" />
                 <span>New Listing</span>
@@ -219,7 +221,7 @@ const SellerDashboard = () => {
                         }}
                         className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
                           activeTab === tab.id
-                            ? 'bg-blue-100 text-blue-700'
+                            ? 'bg-brand-100 text-brand-700'
                             : 'text-gray-700 hover:bg-gray-100'
                         }`}
                       >
@@ -251,7 +253,7 @@ const SellerDashboard = () => {
                         onClick={() => handleTabChange(tab.id)}
                         className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
                           activeTab === tab.id
-                            ? 'bg-blue-100 text-blue-700'
+                            ? 'bg-brand-100 text-brand-700'
                             : 'text-gray-700 hover:bg-gray-100'
                         }`}
                       >
@@ -277,7 +279,7 @@ const SellerDashboard = () => {
                           onClick={() => handleTabChange(tab.id)}
                           className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
                             activeTab === tab.id
-                              ? 'bg-blue-100 text-blue-700'
+                              ? 'bg-brand-100 text-brand-700'
                               : 'text-gray-700 hover:bg-gray-100'
                           }`}
                         >
@@ -304,7 +306,7 @@ const SellerDashboard = () => {
                           onClick={() => handleTabChange(tab.id)}
                           className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
                             activeTab === tab.id
-                              ? 'bg-blue-100 text-blue-700'
+                              ? 'bg-brand-100 text-brand-700'
                               : 'text-gray-700 hover:bg-gray-100'
                           }`}
                         >
@@ -358,14 +360,14 @@ const SellerDashboard = () => {
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+          <div className="bg-gradient-to-br from-brand-50 to-brand-100 rounded-xl p-6 border border-brand-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-600 mb-1">Total Properties</p>
-                <p className="text-3xl font-bold text-blue-900">{dashboard?.stats?.totalProperties || 0}</p>
-                <p className="text-xs text-blue-600 mt-1">Active listings</p>
+                <p className="text-sm font-medium text-brand-600 mb-1">Total Properties</p>
+                <p className="text-3xl font-bold text-brand-900">{dashboard?.stats?.totalProperties || 0}</p>
+                <p className="text-xs text-brand-600 mt-1">Active listings</p>
               </div>
-              <div className="bg-blue-500 p-3 rounded-lg">
+              <div className="bg-brand-500 p-3 rounded-lg">
                 <BuildingOfficeIcon className="h-6 w-6 text-white" />
               </div>
             </div>
@@ -417,9 +419,9 @@ const SellerDashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button 
               onClick={() => setShowPropertyWizard(true)}
-              className="flex items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors group"
+              className="flex items-center p-4 bg-brand-50 hover:bg-brand-100 rounded-lg border border-brand-200 transition-colors group"
             >
-              <div className="bg-blue-500 p-2 rounded-lg mr-3 group-hover:bg-blue-600 transition-colors">
+              <div className="bg-brand-500 p-2 rounded-lg mr-3 group-hover:bg-brand-600 transition-colors">
                 <PlusIcon className="h-5 w-5 text-white" />
               </div>
               <div className="text-left">
@@ -462,7 +464,7 @@ const SellerDashboard = () => {
             <h3 className="text-lg font-semibold text-gray-900">Recent Properties</h3>
             <button 
               onClick={() => handleTabChange('properties')}
-              className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center"
+              className="text-brand-600 hover:text-brand-700 font-medium text-sm flex items-center"
             >
               View All
               <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -489,7 +491,7 @@ const SellerDashboard = () => {
                         `${property.address?.city || ''}, ${property.address?.state || ''}`
                       }
                     </p>
-                    <p className="text-2xl font-bold text-blue-600">
+                    <p className="text-2xl font-bold text-brand-600">
                       ${property.price?.toLocaleString() || '0'}
                     </p>
                   </div>
@@ -504,7 +506,7 @@ const SellerDashboard = () => {
                   <span className="text-gray-500">{property.daysOnMarket || 0} days on market</span>
                   <div className="flex items-center space-x-6">
                     <span className="flex items-center text-gray-600">
-                      <EyeIcon className="h-4 w-4 mr-1 text-blue-500" />
+                      <EyeIcon className="h-4 w-4 mr-1 text-brand-500" />
                       {property.analytics?.views || 0} views
                     </span>
                     <span className="flex items-center text-gray-600">
@@ -532,7 +534,7 @@ const SellerDashboard = () => {
           </div>
           <button 
             onClick={() => setShowPropertyWizard(true)}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center space-x-2 font-medium"
+            className="bg-gradient-to-r from-brand-600 to-brand-700 text-white px-6 py-3 rounded-xl hover:from-brand-700 hover:to-brand-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center space-x-2 font-medium"
           >
             <PlusIcon className="h-5 w-5" />
             <span>Add New Property</span>
@@ -581,14 +583,14 @@ const SellerDashboard = () => {
                     `${property.address?.city || ''}, ${property.address?.state || ''}`
                   }
                 </p>
-                <p className="text-2xl font-bold text-blue-600 mb-4">
+                <p className="text-2xl font-bold text-brand-600 mb-4">
                   ${property.price?.toLocaleString() || '0'}
                 </p>
                 <div className="flex items-center justify-between text-sm text-gray-500 mb-6">
                   <span>{property.daysOnMarket || 0} days on market</span>
                   <div className="flex items-center space-x-4">
                     <span className="flex items-center">
-                      <EyeIcon className="h-4 w-4 mr-1 text-blue-500" />
+                      <EyeIcon className="h-4 w-4 mr-1 text-brand-500" />
                       {property.analytics?.views || 0}
                     </span>
                     <span className="flex items-center">
@@ -607,7 +609,7 @@ const SellerDashboard = () => {
                         alert('Property ID not available. Please refresh the page.');
                       }
                     }}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-4 rounded-xl text-sm font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    className="flex-1 bg-gradient-to-r from-brand-600 to-brand-700 text-white py-3 px-4 rounded-xl text-sm font-medium hover:from-brand-700 hover:to-brand-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                   >
                     Edit Property
                   </button>
