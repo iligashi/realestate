@@ -74,6 +74,7 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/rental-applications', require('./routes/rentalApplications'));
 app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/reports', require('./routes/reports'));
+app.use('/api/contact', require('./routes/contact'));
 app.use('/api', require('./routes/public'));
 
 app.use(notFound);
