@@ -141,9 +141,10 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.sessionInitialized = true;
       })
-      .addCase(getProfile.rejected, (state, action) => {
+      .addCase(getProfile.rejected, (state) => {
+        // No valid session just means "signed out"; it is not an error to show
         state.loading = false;
-        state.error = action.payload;
+        state.user = null;
         state.isAuthenticated = false;
         state.token = null;
         state.sessionInitialized = true;

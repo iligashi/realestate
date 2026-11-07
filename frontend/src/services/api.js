@@ -10,11 +10,13 @@ const api = axios.create({
   headers: { 'X-Requested-With': 'XMLHttpRequest' }
 });
 
-// Older call sites still pass a token argument; never send an empty Bearer header
+// Safety net: never send an empty or placeholder Bearer header
+const EMPTY_BEARER = /^Bearer\s*(null|undefined)?$/;
 api.interceptors.request.use((config) => {
-  const auth = config.headers?.Authorization;
-  if (typeof auth === 'string' && /^Bearers*(null|undefined)?$/.test(auth)) {
-    delete config.headers.Authorization;
+  const auth = config.headers?.get ? config.headers.get('Authorization') : config.headers?.Authorization;
+  if (typeof auth === 'string' && EMPTY_BEARER.test(auth)) {
+    if (config.headers.delete) config.headers.delete('Authorization');
+    else delete config.headers.Authorization;
   }
   return config;
 });
@@ -35,13 +37,9 @@ api.interceptors.response.use(
 export const authAPI = {
   register: (userData) => api.post('/auth/register', userData),
   login: (credentials) => api.post('/auth/login', credentials),
-  getProfile: (token) => api.get('/auth/profile', {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
+  getProfile: (token) => api.get('/auth/profile'),
   updateProfile: (profileData, token) => {
-    const config = {
-      headers: { Authorization: `Bearer ${token}` }
-    };
+    const config = { headers: {} };
     
     // Explicitly set Content-Type based on data type
     if (profileData instanceof FormData) {
@@ -63,9 +61,7 @@ export const propertyAPI = {
   getProperties: (filters = {}) => api.get('/properties', { params: filters }),
   getProperty: (id) => api.get(`/properties/${id}`),
   createProperty: (propertyData, token) => {
-    const config = {
-      headers: { Authorization: `Bearer ${token}` }
-    };
+    const config = { headers: {} };
     
     // For FormData (file uploads), let the browser set the Content-Type with boundary
     if (!(propertyData instanceof FormData)) {
@@ -75,9 +71,7 @@ export const propertyAPI = {
     return api.post('/properties', propertyData, config);
   },
   updateProperty: (id, propertyData, token) => {
-    const config = {
-      headers: { Authorization: `Bearer ${token}` }
-    };
+    const config = { headers: {} };
     
     // For FormData (file uploads), let the browser set the Content-Type with boundary
     if (!(propertyData instanceof FormData)) {
@@ -86,34 +80,18 @@ export const propertyAPI = {
     
     return api.put(`/properties/${id}`, propertyData, config);
   },
-  deleteProperty: (id, token) => api.delete(`/properties/${id}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
-  getUserProperties: (token) => api.get('/properties/user/my-properties', {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
+  deleteProperty: (id, token) => api.delete(`/properties/${id}`),
+  getUserProperties: (token) => api.get('/properties/user/my-properties'),
 };
 
 // User API
 export const userAPI = {
-  getAllUsers: (token) => api.get('/users', {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
-  getUserById: (id, token) => api.get(`/users/${id}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
-  updateUser: (id, userData, token) => api.put(`/users/${id}`, userData, {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
-  deleteUser: (id, token) => api.delete(`/users/${id}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
-  toggleUserBlock: (id, token) => api.patch(`/users/${id}/toggle-block`, {}, {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
-  getUserStats: (token) => api.get('/users/stats', {
-    headers: { Authorization: `Bearer ${token}` }
-  }),
+  getAllUsers: (token) => api.get('/users'),
+  getUserById: (id, token) => api.get(`/users/${id}`),
+  updateUser: (id, userData, token) => api.put(`/users/${id}`, userData),
+  deleteUser: (id, token) => api.delete(`/users/${id}`),
+  toggleUserBlock: (id, token) => api.patch(`/users/${id}/toggle-block`, {}),
+  getUserStats: (token) => api.get('/users/stats'),
 };
 
 export default api;
