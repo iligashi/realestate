@@ -12,7 +12,7 @@ import {
   PlusIcon,
   ScaleIcon
 } from '@heroicons/react/24/outline';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 
 const PropertyComparison = () => {
   const dispatch = useDispatch();

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import useWebSocket from '../hooks/useWebSocket';
 import { replyToMessage } from '../services/messageAPI';
+import { sameId } from '../utils/ids';
 import './RealTimeMessaging.css';
 
 const RealTimeMessaging = ({ messageId, onMessageReceived, onTypingUpdate }) => {
@@ -54,7 +55,7 @@ const RealTimeMessaging = ({ messageId, onMessageReceived, onTypingUpdate }) => 
         content: data.message,
         sender: data.sender,
         timestamp: data.timestamp,
-        isFromCurrentUser: data.sender.id === user?.id
+        isFromCurrentUser: sameId(data.sender, user)
       }]);
 
       // Notify parent component

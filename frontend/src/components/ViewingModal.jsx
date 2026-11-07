@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSelector } from 'react-redux';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import { 
   XMarkIcon,
   CalendarIcon,
@@ -75,11 +75,11 @@ const ViewingModal = ({ isOpen, onClose, property }) => {
     });
   };
 
-  const timeSlots = [
-    '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-    '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM',
-    '5:00 PM', '6:00 PM'
-  ];
+  // The API expects 24-hour "HH:mm" values; labels stay human-friendly
+  const timeSlots = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map((hour) => ({
+    value: `${String(hour).padStart(2, '0')}:00`,
+    label: `${hour % 12 || 12}:00 ${hour < 12 ? 'AM' : 'PM'}`
+  }));
 
   if (!isOpen) return null;
 
@@ -177,7 +177,7 @@ const ViewingModal = ({ isOpen, onClose, property }) => {
               >
                 <option value="">Select a time</option>
                 {timeSlots.map(time => (
-                  <option key={time} value={time}>{time}</option>
+                  <option key={time.value} value={time.value}>{time.label}</option>
                 ))}
               </select>
             </div>

@@ -22,12 +22,9 @@ import ErrorBoundary from '../../components/ErrorBoundary';
 // Import components
 import WishlistManager from '../../components/Buyer/WishlistManager';
 import PropertyComparison from '../../components/Buyer/PropertyComparison';
-import SavedSearches from '../../components/Buyer/SavedSearches';
 import ViewingScheduler from '../../components/Buyer/ViewingScheduler';
 import MortgageCalculator from '../../components/Buyer/MortgageCalculator';
-import PropertyAlerts from '../../components/Buyer/PropertyAlerts';
 import BuyerMessages from '../../components/Buyer/BuyerMessages';
-import NotificationCenter from '../../components/Buyer/NotificationCenter';
 import ApplicantApplicationStatus from '../../components/ApplicantApplicationStatus';
 import UserReports from '../../components/Buyer/UserReports';
 
@@ -63,10 +60,7 @@ const BuyerDashboard = () => {
     { id: 'messages', name: 'Messages', icon: ChatBubbleLeftRightIcon, description: 'Chat with sellers', priority: 'high' },
     { id: 'reports', name: 'Reports', icon: ExclamationTriangleIcon, description: 'View reports against you', priority: 'medium' },
     { id: 'compare', name: 'Compare', icon: ScaleIcon, description: 'Compare properties side by side', priority: 'low' },
-    { id: 'saved-searches', name: 'Saved Searches', icon: MagnifyingGlassIcon, description: 'Manage search alerts', priority: 'low' },
-    { id: 'calculator', name: 'Mortgage Calculator', icon: CalculatorIcon, description: 'Calculate mortgage payments', priority: 'low' },
-    { id: 'alerts', name: 'Property Alerts', icon: BellIcon, description: 'New listing notifications', priority: 'low' },
-    { id: 'notifications', name: 'Notifications', icon: BellIcon, description: 'All notifications', priority: 'low' }
+    { id: 'calculator', name: 'Mortgage Calculator', icon: CalculatorIcon, description: 'Calculate mortgage payments', priority: 'low' }
   ];
 
   const renderTabContent = () => {
@@ -75,20 +69,14 @@ const BuyerDashboard = () => {
         return <WishlistManager />;
       case 'compare':
         return <PropertyComparison />;
-      case 'saved-searches':
-        return <SavedSearches />;
       case 'viewings':
         return <ViewingScheduler />;
       case 'calculator':
         return <MortgageCalculator />;
-      case 'alerts':
-        return <PropertyAlerts />;
       case 'applications':
         return <ApplicantApplicationStatus />;
       case 'messages':
         return <BuyerMessages />;
-      case 'notifications':
-        return <NotificationCenter />;
       case 'reports':
         return <UserReports />;
       default:

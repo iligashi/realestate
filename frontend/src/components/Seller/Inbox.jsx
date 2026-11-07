@@ -14,7 +14,7 @@ import {
   XMarkIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import useWebSocket from '../../hooks/useWebSocket';
 import OnlineStatus from '../OnlineStatus';
 import RealTimeNotificationCenter from '../RealTimeNotificationCenter';

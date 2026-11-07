@@ -33,8 +33,22 @@ const createViewingRequest = async (req, res) => {
       });
     }
 
-    // Parse date and time
+    // Parse date (YYYY-MM-DD) and time (HH:mm, 24-hour)
+    const validFormat =
+      /^\d{4}-\d{2}-\d{2}$/.test(String(preferredDate)) && /^\d{2}:\d{2}$/.test(String(preferredTime));
     const startDateTime = new Date(`${preferredDate}T${preferredTime}`);
+    if (!validFormat || Number.isNaN(startDateTime.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date or time. Use YYYY-MM-DD and HH:mm (24-hour).'
+      });
+    }
+    if (startDateTime <= new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please choose a date and time in the future.'
+      });
+    }
     const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
 
     // Check for conflicts
