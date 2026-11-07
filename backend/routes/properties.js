@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { auth, requireRole } = require('../middleware/auth');
+const { auth, optionalAuth, requireRole } = require('../middleware/auth');
 const { validateProperty } = require('../middleware/validation');
 const { uploadPropertyImagesWithDebug } = require('../middleware/propertyUpload');
 const parseFormData = require('../middleware/parseFormData');
@@ -20,7 +20,7 @@ const asyncHandler = (fn) => (req, res, next) => {
 
 // Public routes (no authentication required)
 router.get('/', getProperties);
-router.get('/:id', getProperty);
+router.get('/:id', optionalAuth, getProperty);
 
 // Protected routes (authentication required)
 router.get('/user/my-properties', auth, getUserProperties);
