@@ -23,6 +23,6 @@ router.get('/profile', auth, getProfile);
 router.put('/profile', auth, upload.single('profilePicture'), updateProfile);
 router.put('/change-password', auth, changePassword);
 router.post('/extend-session', auth, extendSession);
-router.post('/logout', auth, logout);
+router.post('/logout', logout);
 
 module.exports = router;

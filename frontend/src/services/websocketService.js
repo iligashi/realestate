@@ -13,7 +13,6 @@ class WebSocketService {
   }
 
   connect(token) {
-    console.log('WebSocketService.connect called with token:', !!token);
     if (this.socket && this.isConnected) {
       console.log('WebSocket already connected');
       return;
@@ -21,16 +20,10 @@ class WebSocketService {
 
     const serverUrl = SERVER_URL;
     
-    console.log('Connecting to WebSocket with token:', {
-      serverUrl,
-      hasToken: !!token,
-      tokenPreview: token ? token.substring(0, 20) + '...' : 'none'
-    });
-    
+    // The session cookie is sent with the handshake (withCredentials)
     this.socket = io(serverUrl, {
-      auth: {
-        token: token
-      },
+      ...(token && { auth: { token } }),
+      withCredentials: true,
       transports: ['websocket', 'polling'],
       timeout: 20000,
       forceNew: true

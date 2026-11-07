@@ -4,11 +4,13 @@ const helmet = require('helmet');
 const compression = require('compression');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 
 const config = require('./config/env');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const { sanitize } = require('./middleware/sanitize');
+const { requireCsrfHeader } = require('./utils/authCookie');
 
 const app = express();
 
@@ -49,9 +51,13 @@ app.use(
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
 // Strip MongoDB operators from user input and cap page sizes
 app.use(sanitize);
+
+// Cookie-authenticated writes must come from our own frontend
+app.use('/api', requireCsrfHeader);
 
 // Uploaded images (profile pictures, property photos)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

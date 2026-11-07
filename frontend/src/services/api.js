@@ -1,33 +1,31 @@
 import axios from 'axios';
 import { API_URL } from '../config';
 
-// Create axios instance
+// The session lives in an httpOnly cookie set by the API, so requests just
+// need to include credentials. X-Requested-With is required by the API for
+// cookie-authenticated writes (CSRF protection).
 const api = axios.create({
   baseURL: API_URL,
-  // Removed default Content-Type header to allow FormData to work properly
+  withCredentials: true,
+  headers: { 'X-Requested-With': 'XMLHttpRequest' }
 });
 
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+// Older call sites still pass a token argument; never send an empty Bearer header
+api.interceptors.request.use((config) => {
+  const auth = config.headers?.Authorization;
+  if (typeof auth === 'string' && /^Bearers*(null|undefined)?$/.test(auth)) {
+    delete config.headers.Authorization;
   }
-);
+  return config;
+});
 
-// Response interceptor to handle errors
+// Let the app know when the session has expired (handled in SessionProvider)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+    const url = error.config?.url || '';
+    if (error.response?.status === 401 && !url.includes('/auth/')) {
+      window.dispatchEvent(new CustomEvent('auth:expired'));
     }
     return Promise.reject(error);
   }
@@ -48,11 +46,9 @@ export const authAPI = {
     // Explicitly set Content-Type based on data type
     if (profileData instanceof FormData) {
       // For FormData (file uploads), let the browser set the Content-Type with boundary
-      console.log('Sending FormData for profile update');
     } else {
       // For JSON data, set Content-Type explicitly
       config.headers['Content-Type'] = 'application/json';
-      console.log('Sending JSON for profile update');
     }
     
     return api.put('/auth/profile', profileData, config);

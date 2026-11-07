@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { logout } from '../../store/slices/authSlice';
+import { logoutUser } from '../../store/slices/authSlice';
 import useSessionManager from '../../hooks/useSessionManager';
 import NotificationBadge from '../NotificationBadge';
 import { 
@@ -49,7 +49,7 @@ const Header = () => {
   }, []);
 
   const handleLogout = () => {
-    dispatch(logout());
+    dispatch(logoutUser());
     navigate('/');
     setProfileDropdownOpen(false);
   };

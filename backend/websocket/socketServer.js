@@ -1,5 +1,6 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
+const { tokenFromHandshake } = require('../utils/authCookie');
 const User = require('../models/User');
 const logger = require('../utils/logger');
 
@@ -32,14 +33,7 @@ class SocketServer {
     // Authentication middleware
     this.io.use(async (socket, next) => {
       try {
-        const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
-        
-        logger.debug('WebSocket authentication attempt:', {
-          hasToken: !!token,
-          authToken: !!socket.handshake.auth.token,
-          headerToken: !!socket.handshake.headers.authorization,
-          tokenPreview: token ? token.substring(0, 20) + '...' : 'none'
-        });
+        const token = tokenFromHandshake(socket.handshake);
         
         if (!token) {
           logger.debug('No token provided for WebSocket connection');
@@ -59,6 +53,7 @@ class SocketServer {
         logger.debug('WebSocket authentication successful for user:', user.name, user.email);
         socket.userId = user._id.toString();
         socket.user = user;
+        socket.displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email;
         next();
       } catch (error) {
         logger.error('Socket authentication error:', error);
@@ -69,7 +64,7 @@ class SocketServer {
 
   setupEventHandlers() {
     this.io.on('connection', (socket) => {
-      logger.debug(`User ${socket.user.name} connected with socket ${socket.id}`);
+      logger.debug(`User ${socket.displayName} connected with socket ${socket.id}`);
       
       // Store user connection
       this.connectedUsers.set(socket.userId, socket.id);
@@ -142,7 +137,7 @@ class SocketServer {
     }
     this.messageRooms.get(messageId).add(socket.userId);
 
-    logger.debug(`User ${socket.user.name} joined message thread ${messageId}`);
+    logger.debug(`User ${socket.displayName} joined message thread ${messageId}`);
   }
 
   leaveMessageThread(socket, messageId) {
@@ -157,7 +152,7 @@ class SocketServer {
       }
     }
 
-    logger.debug(`User ${socket.user.name} left message thread ${messageId}`);
+    logger.debug(`User ${socket.displayName} left message thread ${messageId}`);
   }
 
   async handleSendMessage(socket, data) {
@@ -176,7 +171,7 @@ class SocketServer {
         messageType,
         sender: {
           id: socket.userId,
-          name: socket.user.name,
+          name: socket.displayName,
           email: socket.user.email
         },
         timestamp: new Date(),
@@ -191,7 +186,7 @@ class SocketServer {
         timestamp: new Date()
       });
 
-      logger.debug(`Message sent in thread ${messageId} by ${socket.user.name}`);
+      logger.debug(`Message sent in thread ${messageId} by ${socket.displayName}`);
 
     } catch (error) {
       logger.error('Error handling send message:', error);
@@ -213,7 +208,7 @@ class SocketServer {
     socket.to(`message_${messageId}`).emit('user_typing', {
       messageId,
       userId: socket.userId,
-      userName: socket.user.name,
+      userName: socket.displayName,
       isTyping: true
     });
   }
@@ -234,7 +229,7 @@ class SocketServer {
     socket.to(`message_${messageId}`).emit('user_typing', {
       messageId,
       userId: socket.userId,
-      userName: socket.user.name,
+      userName: socket.displayName,
       isTyping: false
     });
   }
@@ -251,12 +246,12 @@ class SocketServer {
         threadMessageId,
         readBy: {
           id: socket.userId,
-          name: socket.user.name
+          name: socket.displayName
         },
         readAt: new Date()
       });
 
-      logger.debug(`Message ${messageId} marked as read by ${socket.user.name}`);
+      logger.debug(`Message ${messageId} marked as read by ${socket.displayName}`);
 
     } catch (error) {
       logger.error('Error handling mark message read:', error);

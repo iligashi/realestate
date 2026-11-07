@@ -1,12 +1,12 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { getProfile, logout } from '../store/slices/authSlice';
+import { getProfile, logout, logoutUser } from '../store/slices/authSlice';
 import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
 const useSessionManager = () => {
   const dispatch = useDispatch();
-  const { token, isAuthenticated, user } = useSelector((state) => state.auth);
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
   const inactivityTimer = useRef(null);
   const warningTimer = useRef(null);
   const lastActivity = useRef(Date.now());
@@ -19,7 +19,7 @@ const useSessionManager = () => {
   // Handle session timeout
   const handleSessionTimeout = useCallback(() => {
     toast.error('Your session has expired due to inactivity. Please log in again.');
-    dispatch(logout());
+    dispatch(logoutUser());
   }, [dispatch]);
 
   // Extend session
@@ -139,22 +139,14 @@ const useSessionManager = () => {
     }
   }, [isAuthenticated, startInactivityTimer]);
 
-  // Initialize session on app load
+  // On app load, ask the API who is signed in (the session cookie is httpOnly,
+  // so the browser can't read it). A 401 simply means "signed out".
   const initializeSession = useCallback(async () => {
-    const savedToken = localStorage.getItem('token');
-    if (savedToken) {
-      try {
-        console.log('Initializing session with token:', savedToken.substring(0, 20) + '...');
-        await dispatch(getProfile()).unwrap();
-        console.log('Session initialized successfully');
-        startInactivityTimer();
-      } catch (error) {
-        console.error('Session initialization failed:', error);
-        localStorage.removeItem('token');
-        dispatch(logout());
-      }
-    } else {
-      console.log('No token found in localStorage');
+    try {
+      await dispatch(getProfile()).unwrap();
+      startInactivityTimer();
+    } catch {
+      dispatch(logout());
     }
   }, [dispatch, startInactivityTimer]);
 
@@ -175,11 +167,19 @@ const useSessionManager = () => {
 
   // Initialize session on mount (only once)
   useEffect(() => {
-    const savedToken = localStorage.getItem('token');
-    if (savedToken) {
-      initializeSession();
-    }
-  }, [initializeSession]);
+    initializeSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Any API call that comes back 401 means the session ended
+  useEffect(() => {
+    const onExpired = () => {
+      if (isAuthenticated) toast.error('Your session has ended. Please sign in again.');
+      dispatch(logout());
+    };
+    window.addEventListener('auth:expired', onExpired);
+    return () => window.removeEventListener('auth:expired', onExpired);
+  }, [dispatch, isAuthenticated]);
 
   // Cleanup timers on unmount
   useEffect(() => {

@@ -1,5 +1,5 @@
 const Property = require('../models/Property');
-const { app, request, connect, clear, disconnect, registerUser, sampleProperty } = require('./helpers');
+const { app, request, connect, clear, disconnect, registerUser, sampleProperty, authHeaders } = require('./helpers');
 
 beforeAll(connect);
 afterEach(clear);
@@ -46,7 +46,7 @@ describe('properties API', () => {
 
     const res = await request(app)
       .delete(`/api/properties/${property._id}`)
-      .set('Authorization', `Bearer ${other.token}`);
+      .set(authHeaders(other));
 
     expect(res.status).toBe(403);
     expect(await Property.exists({ _id: property._id })).toBeTruthy();
@@ -58,7 +58,7 @@ describe('properties API', () => {
 
     const res = await request(app)
       .delete(`/api/properties/${property._id}`)
-      .set('Authorization', `Bearer ${owner.token}`);
+      .set(authHeaders(owner));
 
     expect(res.status).toBe(200);
     expect(await Property.exists({ _id: property._id })).toBeFalsy();

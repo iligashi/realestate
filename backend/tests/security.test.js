@@ -1,7 +1,7 @@
 const Property = require('../models/Property');
 const { stripOperators } = require('../middleware/sanitize');
 const { escapeRegex, searchRegex } = require('../utils/searchRegex');
-const { app, request, connect, clear, disconnect, newUser, registerUser, sampleProperty } = require('./helpers');
+const { app, request, connect, clear, disconnect, newUser, registerUser, sampleProperty, authHeaders } = require('./helpers');
 
 beforeAll(connect);
 afterEach(clear);
@@ -75,8 +75,8 @@ describe('search regex escaping', () => {
 
 describe('removed endpoints', () => {
   it('no longer exposes the unimplemented payments API', async () => {
-    const { token } = await registerUser();
-    const res = await request(app).get('/api/payments').set('Authorization', `Bearer ${token}`);
+    const session = await registerUser();
+    const res = await request(app).get('/api/payments').set(authHeaders(session));
     expect(res.status).toBe(404);
   });
 });

@@ -1,19 +1,13 @@
 import { API_URL as API_BASE_URL } from '../config';
 
-// Helper function to get auth token
-const getAuthToken = () => {
-  return localStorage.getItem('token');
-};
-
 // Helper function to make authenticated requests
 const makeAuthenticatedRequest = async (url, options = {}) => {
-  const token = getAuthToken();
-  
   const config = {
     ...options,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
+      'X-Requested-With': 'XMLHttpRequest',
       ...options.headers,
     },
   };

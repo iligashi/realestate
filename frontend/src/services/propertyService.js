@@ -3,14 +3,11 @@ import { API_URL } from '../config';
 
 const API_BASE_URL = `${API_URL}/properties`;
 
-// Helper function to get auth headers
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  };
-};
+// Requests carry the httpOnly session cookie plus the CSRF header
+const getAuthHeaders = () => ({
+  'Content-Type': 'application/json',
+  'X-Requested-With': 'XMLHttpRequest'
+});
 
 // Get all properties with optional filters
 export const getProperties = async (filters = {}) => {
@@ -52,6 +49,7 @@ export const createProperty = async (propertyData) => {
   try {
     const response = await fetch(API_BASE_URL, {
       method: 'POST',
+      credentials: 'include',
       headers: getAuthHeaders(),
       body: JSON.stringify(propertyData)
     });
@@ -73,6 +71,7 @@ export const updateProperty = async (id, propertyData) => {
   try {
     const response = await fetch(`${API_BASE_URL}/${id}`, {
       method: 'PUT',
+      credentials: 'include',
       headers: getAuthHeaders(),
       body: JSON.stringify(propertyData)
     });
@@ -94,6 +93,7 @@ export const deleteProperty = async (id) => {
   try {
     const response = await fetch(`${API_BASE_URL}/${id}`, {
       method: 'DELETE',
+      credentials: 'include',
       headers: getAuthHeaders()
     });
 
@@ -113,6 +113,7 @@ export const deleteProperty = async (id) => {
 export const getUserProperties = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/user/my-properties`, {
+      credentials: 'include',
       headers: getAuthHeaders()
     });
 
