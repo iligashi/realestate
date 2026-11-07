@@ -19,6 +19,13 @@ const timeAgo = (date) => {
   return 'just now';
 };
 
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+const reviewSummary = (listings, reports) => {
+  const parts = [listings && plural(listings, 'listing'), reports && plural(reports, 'report')].filter(Boolean);
+  return parts.length ? `${parts.join(' and ')} waiting for your review.` : 'Everything is reviewed. Nice work.';
+};
+
 const Panel = ({ title, icon: Icon, children }) => (
   <section className="card">
     <div className="mb-4 flex items-center justify-between">
@@ -55,9 +62,7 @@ const OverviewSection = ({ user, analytics, revenue }) => {
         <p className="text-sm font-medium text-brand-100">Admin overview</p>
         <h1 className="mt-1 text-2xl font-bold">Welcome back, {user?.firstName || 'Admin'}</h1>
         <p className="mt-1 text-sm text-brand-100">
-          {analytics.listings?.pending
-            ? `${analytics.listings.pending} listing${analytics.listings.pending > 1 ? 's' : ''} and ${analytics.reports?.pending || 0} report(s) need your review.`
-            : 'Everything is reviewed. Nice work.'}
+          {reviewSummary(analytics.listings?.pending || 0, analytics.reports?.pending || 0)}
         </p>
       </div>
 
