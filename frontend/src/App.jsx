@@ -7,6 +7,7 @@ import AdminRoute from './components/Auth/AdminRoute';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import SellerRoute from './components/Auth/SellerRoute';
 import RenterRoute from './components/Auth/RenterRoute';
+import AgentRoute from './components/Auth/AgentRoute';
 import HomePage from './pages/HomePage';
 import { FavoritesProvider } from './context/FavoritesContext';
 
@@ -19,6 +20,9 @@ const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard'));
 const SellerDashboard = lazy(() => import('./pages/Seller/SellerDashboard'));
 const BuyerDashboard = lazy(() => import('./pages/Buyer/BuyerDashboard'));
 const RenterDashboard = lazy(() => import('./pages/Renter/RenterDashboard'));
+const AgentDashboard = lazy(() => import('./pages/Agent/AgentDashboard'));
+const AgentsPage = lazy(() => import('./pages/Agents/AgentsPage'));
+const AgentProfilePage = lazy(() => import('./pages/Agents/AgentProfilePage'));
 const PropertyListPage = lazy(() => import('./pages/Properties/PropertyListPage'));
 const PropertyDetailPage = lazy(() => import('./pages/Properties/PropertyDetailPage'));
 const PropertyFormPage = lazy(() => import('./pages/Properties/PropertyFormPage'));
@@ -73,6 +77,16 @@ function App() {
               <Route path="/buyer" element={protectedPage(BuyerDashboard)} />
               <Route path="/renter" element={protectedPage(RenterDashboard)} />
               <Route
+                path="/agent"
+                element={
+                  <AgentRoute>
+                    <AgentDashboard />
+                  </AgentRoute>
+                }
+              />
+              <Route path="/agents" element={<AgentsPage />} />
+              <Route path="/agents/:id" element={<AgentProfilePage />} />
+              <Route
                 path="/admin"
                 element={
                   <AdminRoute>
@@ -95,7 +109,7 @@ function App() {
               <Route
                 path="/properties/:id/edit"
                 element={
-                  <SellerRoute>
+                  <SellerRoute roles={['seller', 'agent', 'admin', 'renter']}>
                     <PropertyFormPage />
                   </SellerRoute>
                 }

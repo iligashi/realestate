@@ -115,7 +115,11 @@ const platformSettingsSchema = new mongoose.Schema({
     enableVirtualTours: { type: Boolean, default: false },
     enableAIChatbot: { type: Boolean, default: false },
     maxImagesPerListing: { type: Number, default: 20, min: 1, max: 100 },
-    maxListingsPerUser: { type: Number, default: 10, min: 1, max: 100 }
+    maxListingsPerUser: { type: Number, default: 10, min: 1, max: 100 },
+    // New listings from non-admins wait for review when this is on
+    requireListingApproval: { type: Boolean, default: true },
+    // Renters may post rental listings (e.g. a room or sublet)
+    allowRenterListings: { type: Boolean, default: true }
   },
   security: {
     requireEmailVerification: { type: Boolean, default: true },

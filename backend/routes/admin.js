@@ -28,7 +28,9 @@ const {
   getEnhancedAnalytics,
   
   // NEW: Revenue Analytics
-  getRevenueAnalytics
+  getRevenueAnalytics,
+  assignListingAgent,
+  getAssignableAgents,
 } = require('../controllers/adminController');
 
 // ==================== PROTECTED ROUTES (Authentication + Admin Required) ====================
@@ -50,6 +52,8 @@ router.delete('/users/:id', deleteUser);
 router.get('/listings', getAllListings);
 router.patch('/listings/:id/status', updateListingStatus);
 router.delete('/listings/:id', deleteListing);
+router.patch('/listings/:id/agent', assignListingAgent);
+router.get('/agents', getAssignableAgents);
 
 // ==================== REPORTS & MODERATION ====================
 router.get('/reports', getAllReports);

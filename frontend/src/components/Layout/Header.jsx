@@ -13,7 +13,8 @@ import {
   BuildingOffice2Icon,
   HomeModernIcon,
   CurrencyDollarIcon,
-  KeyIcon
+  KeyIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline';
 import { assetUrl } from '../../config';
 
@@ -59,6 +60,7 @@ const Header = () => {
     { name: 'Apartments', href: '/properties?type=apartment', icon: BuildingOfficeIcon },
     { name: 'Houses', href: '/properties?type=house', icon: HomeModernIcon },
     { name: 'Offices', href: '/properties?type=office', icon: BuildingOffice2Icon },
+    { name: 'Agents', href: '/agents', icon: UserGroupIcon },
   ];
 
   const propertyTypeOptions = [
@@ -178,7 +180,7 @@ const Header = () => {
           {isAuthenticated ? (
             <>
               {/* Notification Badge - Only for buyers and sellers */}
-              {(user?.userType === 'buyer' || user?.userType === 'seller') && (
+              {(user?.userType === 'buyer' || user?.userType === 'seller' || user?.userType === 'agent') && (
                 <NotificationBadge />
               )}
               
@@ -245,9 +247,19 @@ const Header = () => {
                     </Link>
                   )}
                   
-                  {user?.userType === 'seller' && (
+                  {user?.userType === 'agent' && (
                     <Link
-                      to="/seller?tab=inbox"
+                      to="/agent"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setProfileDropdownOpen(false)}
+                    >
+                      Agent Workspace
+                    </Link>
+                  )}
+
+                  {(user?.userType === 'seller' || user?.userType === 'agent') && (
+                    <Link
+                      to={user?.userType === 'agent' ? '/agent?tab=messages' : '/seller?tab=messages'}
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       onClick={() => setProfileDropdownOpen(false)}
                     >
@@ -459,6 +471,16 @@ const Header = () => {
                           onClick={() => setMobileMenuOpen(false)}
                         >
                           Renter Dashboard
+                        </Link>
+                      )}
+
+                      {user?.userType === 'agent' && (
+                        <Link
+                          to="/agent"
+                          className="-mx-3 block rounded-lg px-3 py-2 text-base font-medium leading-7 text-gray-700 hover:bg-gray-50"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          Agent Workspace
                         </Link>
                       )}
                       

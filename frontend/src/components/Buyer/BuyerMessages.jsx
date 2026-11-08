@@ -16,6 +16,7 @@ import {
   PlusIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import NewConversationModal from '../Messages/NewConversationModal';
 import useWebSocket from '../../hooks/useWebSocket';
 import OnlineStatus from '../OnlineStatus';
 import RealTimeNotificationCenter from '../RealTimeNotificationCenter';
@@ -34,7 +35,6 @@ const BuyerMessages = () => {
   
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [replyText, setReplyText] = useState('');
-  const [newMessageText, setNewMessageText] = useState('');
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
@@ -215,21 +215,6 @@ const BuyerMessages = () => {
     } catch (error) {
       toast.error('Failed to send reply');
     }
-  };
-
-  const handleSendNewMessage = async (e) => {
-    e.preventDefault();
-    
-    if (!newMessageText.trim()) {
-      toast.error('Please enter a message');
-      return;
-    }
-
-    // This would need to be implemented in the backend
-    // For now, we'll show a placeholder
-    toast('New message feature coming soon!');
-    setNewMessageText('');
-    setShowNewMessageModal(false);
   };
 
   const handleMarkAsRead = async (messageId) => {
@@ -556,65 +541,14 @@ const BuyerMessages = () => {
 
       {/* New Message Modal */}
       {showNewMessageModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-medium text-gray-900">Send New Message</h3>
-              <button
-                onClick={() => setShowNewMessageModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSendNewMessage}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Subject
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Message subject..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Message
-                  </label>
-                  <textarea
-                    value={newMessageText}
-                    onChange={(e) => setNewMessageText(e.target.value)}
-                    placeholder="Type your message..."
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowNewMessageModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-brand-600 border border-transparent rounded-md hover:bg-brand-700"
-                >
-                  Send Message
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <NewConversationModal
+          kind="sale"
+          onClose={() => setShowNewMessageModal(false)}
+          onSent={() => {
+            setShowNewMessageModal(false);
+            dispatch(getMessages({ role: 'buyer', ...memoizedFilters }));
+          }}
+        />
       )}
     </div>
   );

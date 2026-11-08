@@ -12,9 +12,15 @@ const ALL_STATUSES = ['pending', ...OWNER_STATUSES];
 
 const isAdmin = (user) => user?.userType === 'admin';
 
-const canSeeUnlisted = (user, property) =>
-  Boolean(user) && (user.userType === 'admin' || String(property.owner?._id || property.owner) === String(user._id));
+const canSeeUnlisted = (user, property) => Boolean(user) && canManage(user, property);
 const logger = require('../utils/logger');
+const { getSettings } = require('../utils/settings');
+
+// Who may edit a listing: its owner, the agent assigned to it, or an admin.
+const canManage = (user, property) =>
+  isAdmin(user) ||
+  String(property.owner?._id || property.owner) === String(user._id) ||
+  (property.agent && String(property.agent?._id || property.agent) === String(user._id));
 
 // Get all properties (with optional filtering)
 const getProperties = async (req, res) => {
@@ -122,17 +128,48 @@ const createProperty = async (req, res) => {
       return res.status(400).json({ error: 'No request body received' });
     }
     
+    // Role rules: buyers browse only; renters may post rentals (if enabled);
+    // sellers, agents and admins may post anything.
+    const role = req.user.userType;
+    const settings = await getSettings();
+    const listingType = req.body.listingType || 'sale';
+    if (role === 'buyer') {
+      return res.status(403).json({ error: 'Buyer accounts cannot create listings. Switch to a seller account to list a property.' });
+    }
+    if (role === 'renter') {
+      if (settings.features?.allowRenterListings === false) {
+        return res.status(403).json({ error: 'Renter listings are currently disabled.' });
+      }
+      if (!['rental', 'rent'].includes(listingType)) {
+        return res.status(403).json({ error: 'Renter accounts can only post rental listings.' });
+      }
+    }
+    if (!isAdmin(req.user)) {
+      const max = settings.features?.maxListingsPerUser;
+      if (max) {
+        const count = await Property.countDocuments({ owner: req.user._id, status: { $ne: 'inactive' } });
+        if (count >= max) {
+          return res.status(403).json({ error: `You have reached the limit of ${max} listings. Deactivate or remove one to add another.` });
+        }
+      }
+    }
+    const needsReview = settings.features?.requireListingApproval !== false;
+
     // Create a clean property data object with safe defaults
     const propertyData = {
       title: req.body.title || 'Untitled Property',
       description: req.body.description || 'No description provided',
       propertyType: req.body.propertyType || 'apartment',
-      listingType: req.body.listingType || 'sale',
+      listingType,
       price: parseFloat(req.body.price) || 0,
       currency: req.body.currency || 'USD',
       // New listings wait for admin review unless an admin creates them
-      status: isAdmin(req.user) && ALL_STATUSES.includes(req.body.status) ? req.body.status : isAdmin(req.user) ? 'active' : 'pending',
+      status: isAdmin(req.user)
+        ? (ALL_STATUSES.includes(req.body.status) ? req.body.status : 'active')
+        : (needsReview ? 'pending' : 'active'),
       owner: req.user._id,
+      // An agent listing a property represents it themselves
+      ...(role === 'agent' ? { agent: req.user._id } : {}),
       address: {
         street: req.body.address?.street || '',
         city: req.body.address?.city || 'Unknown City',
@@ -273,14 +310,17 @@ const updateProperty = async (req, res) => {
       return res.status(404).json({ error: 'Property not found.' });
     }
 
-    // Check ownership
-    if (property.owner.toString() !== req.user._id.toString() && !isAdmin(req.user)) {
+    // Owner, assigned agent or admin
+    if (!canManage(req.user, property)) {
       return res.status(403).json({ error: 'Not authorized to update this property.' });
     }
 
     // Only these fields can be edited by the owner. Copying req.body wholesale
     // let owners change owner, featured status, analytics, verification, etc.
     const updateData = {};
+    if (req.user.userType === 'renter' && req.body.listingType && !['rental', 'rent'].includes(req.body.listingType)) {
+      return res.status(403).json({ error: 'Renter accounts can only post rental listings.' });
+    }
     for (const key of ['title', 'description', 'propertyType', 'listingType', 'currency', 'amenities']) {
       if (req.body[key] !== undefined) updateData[key] = req.body[key];
     }
@@ -355,8 +395,8 @@ const deleteProperty = async (req, res) => {
       return res.status(404).json({ error: 'Property not found.' });
     }
 
-    // Check ownership
-    if (property.owner.toString() !== req.user._id.toString()) {
+    // Owners and admins can delete; an assigned agent cannot
+    if (property.owner.toString() !== req.user._id.toString() && !isAdmin(req.user)) {
       return res.status(403).json({ error: 'Not authorized to delete this property.' });
     }
 

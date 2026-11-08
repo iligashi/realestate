@@ -59,6 +59,9 @@ app.use(sanitize);
 // Cookie-authenticated writes must come from our own frontend
 app.use('/api', requireCsrfHeader);
 
+// Read-only for everyone but admins while maintenance mode is on
+app.use('/api', require('./middleware/maintenance').maintenanceGuard);
+
 // Uploaded images (profile pictures, property photos)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -79,6 +82,7 @@ app.use('/api/rental-applications', require('./routes/rentalApplications'));
 app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/contact', require('./routes/contact'));
+app.use('/api/agent', require('./routes/agent'));
 app.use('/api', require('./routes/public'));
 
 app.use(notFound);

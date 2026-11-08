@@ -2,12 +2,13 @@ import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 
-const SellerRoute = ({ children }) => {
+// Listing pages: sellers, agents and admins by default. Pass `roles` to widen it.
+const SellerRoute = ({ children, roles = ['seller', 'agent', 'admin'] }) => {
   const { user } = useSelector((state) => state.auth);
 
   return (
     <ProtectedRoute>
-      {user?.userType === 'seller' || user?.userType === 'agent' || user?.userType === 'admin' ? (
+      {roles.includes(user?.userType) ? (
         children
       ) : (
         <Navigate to="/dashboard" replace />

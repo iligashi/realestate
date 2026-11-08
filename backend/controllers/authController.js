@@ -222,6 +222,25 @@ const updateProfile = async (req, res) => {
       }
     });
 
+    // Agents can edit their public professional profile (not their rating)
+    if (req.user.userType === 'agent' && updates.agent) {
+      let agentInfo = updates.agent;
+      if (typeof agentInfo === 'string') {
+        try { agentInfo = JSON.parse(agentInfo); } catch { agentInfo = null; }
+      }
+      if (agentInfo && typeof agentInfo === 'object') {
+        const toList = (v) => (Array.isArray(v) ? v : String(v || '').split(',')).map((x) => String(x).trim()).filter(Boolean).slice(0, 20);
+        if (agentInfo.agency !== undefined) sanitizedUpdates['agent.agency'] = String(agentInfo.agency).trim().slice(0, 120);
+        if (agentInfo.licenseNumber !== undefined) sanitizedUpdates['agent.licenseNumber'] = String(agentInfo.licenseNumber).trim().slice(0, 60);
+        if (agentInfo.experience !== undefined) {
+          const years = Number(agentInfo.experience);
+          if (Number.isFinite(years) && years >= 0 && years <= 80) sanitizedUpdates['agent.experience'] = Math.round(years);
+        }
+        if (agentInfo.specializations !== undefined) sanitizedUpdates['agent.specializations'] = toList(agentInfo.specializations);
+        if (agentInfo.languages !== undefined) sanitizedUpdates['agent.languages'] = toList(agentInfo.languages);
+      }
+    }
+
     logger.debug('Sanitized updates:', sanitizedUpdates);
 
     const user = await User.findByIdAndUpdate(
@@ -248,6 +267,12 @@ const updateProfile = async (req, res) => {
 const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
+    if (typeof newPassword !== 'string' || newPassword.length < 8) {
+      return res.status(400).json({ error: 'The new password must be at least 8 characters.' });
+    }
+    if (typeof currentPassword !== 'string' || !currentPassword) {
+      return res.status(400).json({ error: 'Enter your current password.' });
+    }
 
     const user = await User.findById(req.user._id);
     

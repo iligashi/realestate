@@ -22,9 +22,10 @@ import ErrorBoundary from '../../components/ErrorBoundary';
 import WishlistManager from '../../components/Buyer/WishlistManager';
 import PropertyComparison from '../../components/Buyer/PropertyComparison';
 import ViewingScheduler from '../../components/Buyer/ViewingScheduler';
-import MortgageCalculator from '../../components/Buyer/MortgageCalculator';
 import RenterApplicationManagement from '../../components/Renter/RenterApplicationManagement';
 import RenterMessages from '../../components/Renter/RenterMessages';
+import MyRentalListings from '../../components/Renter/MyRentalListings';
+import RentCalculator from '../../components/Renter/RentCalculator';
 
 const RenterDashboard = () => {
   const dispatch = useDispatch();
@@ -51,7 +52,8 @@ const RenterDashboard = () => {
     { id: 'viewings', name: 'Viewings', icon: CalendarIcon, description: 'Schedule property viewings' },
     { id: 'calculator', name: 'Rent Calculator', icon: CalculatorIcon, description: 'Calculate rental costs' },
     { id: 'applications', name: 'Rental Applications', icon: DocumentTextIcon, description: 'Manage rental applications' },
-    { id: 'messages', name: 'Messages', icon: ChatBubbleLeftRightIcon, description: 'Chat with landlords' }
+    { id: 'messages', name: 'Messages', icon: ChatBubbleLeftRightIcon, description: 'Chat with landlords' },
+    { id: 'listings', name: 'My listings', icon: BuildingOfficeIcon, description: 'Rentals you have posted' }
   ];
 
   const renderTabContent = () => {
@@ -63,11 +65,13 @@ const RenterDashboard = () => {
       case 'viewings':
         return <ViewingScheduler />;
       case 'calculator':
-        return <MortgageCalculator />;
+        return <RentCalculator />;
       case 'applications':
         return <RenterApplicationManagement />;
       case 'messages':
         return <RenterMessages />;
+      case 'listings':
+        return <MyRentalListings />;
       default:
         return <div className="p-6 text-center text-gray-500">Select a tab to get started</div>;
     }
