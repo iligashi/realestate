@@ -30,8 +30,11 @@ const createMessage = async (req, res) => {
       return res.status(404).json({ error: 'Property not found' });
     }
 
+    // When an agent is assigned, inquiries go to the agent instead of the owner
+    const contactId = property.agent || property.owner._id;
+
     // Check if buyer is not the same as seller
-    if (buyerId.toString() === property.owner._id.toString()) {
+    if (buyerId.toString() === property.owner._id.toString() || buyerId.toString() === contactId.toString()) {
       return res.status(400).json({ 
         error: 'You cannot message yourself about your own property' 
       });
@@ -41,7 +44,7 @@ const createMessage = async (req, res) => {
     const existingMessage = await Message.findOne({
       property: propertyId,
       buyer: buyerId,
-      seller: property.owner._id
+      seller: contactId
     });
 
     if (existingMessage) {
@@ -78,7 +81,7 @@ const createMessage = async (req, res) => {
     const newMessage = new Message({
       property: propertyId,
       buyer: buyerId,
-      seller: property.owner._id,
+      seller: contactId,
       subject,
       message,
       thread: [{

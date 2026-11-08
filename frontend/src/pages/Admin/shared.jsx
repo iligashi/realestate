@@ -22,7 +22,11 @@ const STATUS_STYLES = {
   rented: 'bg-violet-50 text-violet-700 ring-violet-600/20',
   blocked: 'bg-red-50 text-red-700 ring-red-600/20',
   dismissed: 'bg-gray-50 text-gray-600 ring-gray-500/20',
-  inactive: 'bg-gray-50 text-gray-600 ring-gray-500/20'
+  inactive: 'bg-gray-50 text-gray-600 ring-gray-500/20',
+  live: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+  scheduled: 'bg-sky-50 text-sky-700 ring-sky-600/20',
+  draft: 'bg-gray-50 text-gray-600 ring-gray-500/20',
+  expired: 'bg-amber-50 text-amber-700 ring-amber-600/20'
 };
 
 export const StatusBadge = ({ status }) => (
@@ -75,7 +79,7 @@ export const FilterSelect = ({ label, value, onChange, options }) => (
   </select>
 );
 
-export const Modal = ({ title, onClose, children, footer }) => {
+export const Modal = ({ title, onClose, children, footer, wide = false }) => {
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', onKey);
@@ -88,7 +92,7 @@ export const Modal = ({ title, onClose, children, footer }) => {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-md rounded-2xl bg-white shadow-xl"
+        className={`flex max-h-[92vh] w-full flex-col rounded-2xl bg-white shadow-xl ${wide ? 'max-w-2xl' : 'max-w-md'}`}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
@@ -97,7 +101,7 @@ export const Modal = ({ title, onClose, children, footer }) => {
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
-        <div className="space-y-4 px-6 py-5">{children}</div>
+        <div className="space-y-4 overflow-y-auto px-6 py-5">{children}</div>
         {footer && <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">{footer}</div>}
       </div>
     </div>

@@ -17,6 +17,8 @@ export const adminAPI = {
   }),
   updateListingStatus: (listingId, statusData, token) => api.patch(`/admin/listings/${listingId}/status`, statusData),
   deleteListing: (listingId, token) => api.delete(`/admin/listings/${listingId}`),
+  assignAgent: (listingId, agentId) => api.patch(`/admin/listings/${listingId}/agent`, { agentId }),
+  getAgents: () => api.get('/admin/agents'),
 
   // Reports & Moderation
   getAllReports: (params, token) => api.get('/admin/reports', {
@@ -33,7 +35,7 @@ export const adminAPI = {
   updateFeaturedListing: (listingId, featuredData, token) => api.patch(`/admin/listings/${listingId}/featured`, featuredData),
 
   // NEW: System Announcements
-  getAnnouncements: (token) => api.get('/admin/announcements'),
+  getAnnouncements: (params) => api.get('/admin/announcements', { params }),
   createAnnouncement: (announcementData, token) => api.post('/admin/announcements', announcementData),
   updateAnnouncement: (announcementId, announcementData, token) => api.put(`/admin/announcements/${announcementId}`, announcementData),
   deleteAnnouncement: (announcementId, token) => api.delete(`/admin/announcements/${announcementId}`),

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import { 
@@ -90,7 +90,7 @@ const PropertyDetailPage = () => {
     }
 
     // Check if user is trying to contact themselves
-    if (property && sameId(property.owner, user)) {
+    if (property && (sameId(property.owner, user) || sameId(property.agent, user))) {
       toast.error('You cannot contact yourself about your own property');
       return;
     }
@@ -613,8 +613,42 @@ const PropertyDetailPage = () => {
               </button>
             </div>
 
-            {/* Owner/Landlord Information */}
-            {property.owner && (
+            {/* Agent representing this listing (assigned by an admin) */}
+            {property.agent?._id && (
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Represented by</h3>
+                <Link to={`/agents/${property.agent._id}`} className="flex items-center gap-3 rounded-xl p-2 -m-2 hover:bg-gray-50">
+                  <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center font-semibold text-brand-700">
+                    {(property.agent.firstName?.[0] || '') + (property.agent.lastName?.[0] || '')}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900">
+                      {property.agent.firstName} {property.agent.lastName}
+                    </p>
+                    <p className="text-sm text-gray-600 truncate">
+                      {property.agent.agent?.agency || 'Real estate agent'} · View profile
+                    </p>
+                  </div>
+                </Link>
+                <div className="mt-4 space-y-2">
+                  {property.agent.phone && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <PhoneIcon className="h-4 w-4" />
+                      <span>{property.agent.phone}</span>
+                    </div>
+                  )}
+                  {property.agent.email && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <EnvelopeIcon className="h-4 w-4" />
+                      <span>{property.agent.email}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Owner/Landlord Information (the agent handles contact when assigned) */}
+            {property.owner && !property.agent?._id && (
               <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   {isRentalProperty ? 'Landlord' : 'Property Owner'}
@@ -704,7 +738,7 @@ const PropertyDetailPage = () => {
           isOpen={showMessageModal}
           onClose={() => setShowMessageModal(false)}
           property={property}
-          seller={property.owner}
+          seller={property.agent?._id ? property.agent : property.owner}
         />
       )}
 

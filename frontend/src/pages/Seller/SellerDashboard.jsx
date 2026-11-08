@@ -29,6 +29,7 @@ import PropertyListingWizard from '../../components/Seller/PropertyListingWizard
 import Inbox from '../../components/Seller/Inbox';
 import AnalyticsDashboard from '../../components/Seller/AnalyticsDashboard';
 import UserReports from '../../components/Buyer/UserReports';
+import AccountSettings from '../../components/Account/AccountSettings';
 import { assetUrl } from '../../config';
 
 const SellerDashboard = () => {
@@ -690,18 +691,12 @@ const SellerDashboard = () => {
   // Settings Panel Component
   function SettingsPanel() {
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
-          <p className="text-gray-600 mt-1">Manage your account and preferences</p>
+          <p className="text-gray-600 mt-1">Manage your account and password</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="text-center py-12">
-            <Cog6ToothIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-lg font-medium text-gray-900">Settings Panel</h3>
-            <p className="mt-1 text-sm text-gray-500">This feature will be available soon.</p>
-          </div>
-        </div>
+        <AccountSettings />
       </div>
     );
   }

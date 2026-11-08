@@ -6,6 +6,7 @@ const Announcement = require('../models/Announcement');
 const PlatformSettings = require('../models/PlatformSettings');
 const { searchRegex } = require('../utils/searchRegex');
 const logger = require('../utils/logger');
+const { clearSettingsCache } = require('../utils/settings');
 
 // ==================== USER MANAGEMENT ====================
 
@@ -147,6 +148,7 @@ const getAllListings = async (req, res) => {
 
     const listings = await Property.find(filter)
       .populate('owner', 'firstName lastName email')
+      .populate('agent', 'firstName lastName email agent.agency')
       .limit(options.limit)
       .skip((options.page - 1) * options.limit)
       .sort(options.sort);
@@ -197,7 +199,8 @@ const updateListingStatus = async (req, res) => {
         reviewedAt: new Date()
       },
       { new: true, runValidators: true }
-    ).populate('owner', 'firstName lastName email');
+    ).populate('owner', 'firstName lastName email')
+      .populate('agent', 'firstName lastName email agent.agency');
 
     if (!listing) {
       return res.status(404).json({ error: 'Listing not found.' });
@@ -392,28 +395,117 @@ const getPlatformSettings = async (req, res) => {
   }
 };
 
+// Fields an admin may change, by section. Anything else in the body is ignored.
+const SETTINGS_FIELDS = {
+  general: ['siteName', 'siteDescription', 'contactEmail', 'contactPhone', 'address', 'socialMedia'],
+  business: ['commissionRate', 'featuredListingPrice', 'currency', 'taxRate'],
+  features: [
+    'enableReviews', 'enableMessaging', 'enableNotifications', 'enableAdvancedSearch',
+    'enableVirtualTours', 'maxImagesPerListing', 'maxListingsPerUser',
+    'requireListingApproval', 'allowRenterListings',
+  ],
+  security: ['requireEmailVerification', 'maxLoginAttempts', 'sessionTimeout'],
+  maintenance: ['isMaintenanceMode', 'maintenanceMessage', 'maintenanceStartTime', 'maintenanceEndTime'],
+};
+const NESTED_SETTINGS = { address: ['street', 'city', 'state', 'zipCode', 'country'], socialMedia: ['facebook', 'twitter', 'linkedin', 'instagram'] };
+
 // Update platform settings
 const updatePlatformSettings = async (req, res) => {
   try {
-    const updateData = req.body;
+    const body = req.body || {};
     const settings = await PlatformSettings.getSettings();
-    
-    // Update the settings
-    Object.keys(updateData).forEach(section => {
-      if (settings[section] && typeof updateData[section] === 'object') {
-        settings[section] = { ...settings[section], ...updateData[section] };
+
+    for (const [section, fields] of Object.entries(SETTINGS_FIELDS)) {
+      const incoming = body[section];
+      if (!incoming || typeof incoming !== 'object') continue;
+      for (const field of fields) {
+        if (incoming[field] === undefined) continue;
+        if (NESTED_SETTINGS[field]) {
+          if (typeof incoming[field] !== 'object' || incoming[field] === null) continue;
+          for (const sub of NESTED_SETTINGS[field]) {
+            if (incoming[field][sub] !== undefined) settings.set(`${section}.${field}.${sub}`, incoming[field][sub]);
+          }
+        } else {
+          // Empty strings clear optional dates
+          const value = incoming[field] === '' && /Time$/.test(field) ? null : incoming[field];
+          settings.set(`${section}.${field}`, value);
+        }
       }
-    });
-    
+    }
+
+    const m = settings.maintenance || {};
+    if (m.maintenanceStartTime && m.maintenanceEndTime && new Date(m.maintenanceEndTime) <= new Date(m.maintenanceStartTime)) {
+      return res.status(400).json({ error: 'Maintenance end time must be after the start time.' });
+    }
+
     await settings.save();
-    
+    clearSettingsCache();
+
     res.json({
       message: 'Platform settings updated successfully',
       settings
     });
   } catch (error) {
+    if (error.name === 'ValidationError' || error.name === 'CastError') {
+      return res.status(400).json({ error: error.message });
+    }
     logger.error('Update platform settings error:', error);
     res.status(500).json({ error: 'Failed to update platform settings.' });
+  }
+};
+
+// Assign an agent to sell/rent a listing, or remove the assignment (agentId: null)
+const assignListingAgent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { agentId } = req.body || {};
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid property ID format.' });
+    }
+
+    let agent = null;
+    if (agentId) {
+      if (!mongoose.Types.ObjectId.isValid(agentId)) return res.status(400).json({ error: 'Invalid agent ID.' });
+      agent = await User.findById(agentId).select('firstName lastName email userType isActive isBlocked agent.agency');
+      if (!agent || agent.userType !== 'agent') return res.status(400).json({ error: 'The selected user is not an agent.' });
+      if (!agent.isActive || agent.isBlocked) return res.status(400).json({ error: 'This agent account is inactive or blocked.' });
+    }
+
+    const listing = await Property.findByIdAndUpdate(
+      id,
+      agent ? { agent: agent._id, agency: agent.agent?.agency || undefined } : { $unset: { agent: 1, agency: 1 } },
+      { new: true }
+    )
+      .populate('owner', 'firstName lastName email')
+      .populate('agent', 'firstName lastName email agent.agency');
+    if (!listing) return res.status(404).json({ error: 'Listing not found.' });
+
+    res.json({
+      message: agent ? `Assigned ${agent.firstName} ${agent.lastName} to this listing` : 'Agent removed from this listing',
+      listing
+    });
+  } catch (error) {
+    logger.error('Assign listing agent error:', error);
+    res.status(500).json({ error: 'Failed to assign agent.' });
+  }
+};
+
+// Agents an admin can assign, with how many listings each already handles
+const getAssignableAgents = async (req, res) => {
+  try {
+    const agents = await User.find({ userType: 'agent', isActive: true, isBlocked: { $ne: true } })
+      .select('firstName lastName email agent.agency location.city')
+      .sort({ firstName: 1 })
+      .lean();
+    const counts = await Property.aggregate([
+      { $match: { agent: { $in: agents.map((a) => a._id) } } },
+      { $group: { _id: '$agent', count: { $sum: 1 } } },
+    ]);
+    const byId = Object.fromEntries(counts.map((c) => [String(c._id), c.count]));
+    res.json({ agents: agents.map((a) => ({ ...a, listingCount: byId[String(a._id)] || 0 })) });
+  } catch (error) {
+    logger.error('Get assignable agents error:', error);
+    res.status(500).json({ error: 'Failed to fetch agents.' });
   }
 };
 
@@ -469,49 +561,112 @@ const updateFeaturedListing = async (req, res) => {
 
 // ==================== NEW: SYSTEM ANNOUNCEMENTS ====================
 
+// Draft (switched off), Scheduled (starts later), Live, or Expired (ended).
+const announcementState = (a, now = new Date()) => {
+  if (!a.isActive) return 'draft';
+  if (a.startDate && new Date(a.startDate) > now) return 'scheduled';
+  if (a.endDate && new Date(a.endDate) <= now) return 'expired';
+  return 'live';
+};
+
+const ANNOUNCEMENT_TYPES = ['general', 'maintenance', 'update', 'alert', 'promotion'];
+const ANNOUNCEMENT_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
+const ANNOUNCEMENT_AUDIENCES = ['all', 'buyers', 'sellers', 'agents', 'renters'];
+
+// Pick and check the editable announcement fields. Returns { data } or { error }.
+const announcementInput = (body, existing = null) => {
+  const data = {};
+  if (body.title !== undefined) data.title = String(body.title).trim();
+  if (body.content !== undefined) data.content = String(body.content).trim();
+  if (body.type !== undefined) {
+    if (!ANNOUNCEMENT_TYPES.includes(body.type)) return { error: 'Invalid announcement type.' };
+    data.type = body.type;
+  }
+  if (body.priority !== undefined) {
+    if (!ANNOUNCEMENT_PRIORITIES.includes(body.priority)) return { error: 'Invalid priority.' };
+    data.priority = body.priority;
+  }
+  if (body.isActive !== undefined) data.isActive = Boolean(body.isActive);
+  if (body.isPinned !== undefined) data.isPinned = Boolean(body.isPinned);
+  if (body.targetAudience !== undefined) {
+    const list = (Array.isArray(body.targetAudience) ? body.targetAudience : [body.targetAudience]).filter(Boolean);
+    if (!list.length || list.some((a) => !ANNOUNCEMENT_AUDIENCES.includes(a))) return { error: 'Invalid audience.' };
+    data.targetAudience = list.includes('all') ? ['all'] : [...new Set(list)];
+  }
+  for (const key of ['startDate', 'endDate']) {
+    if (body[key] === undefined) continue;
+    if (body[key] === null || body[key] === '') {
+      data[key] = key === 'startDate' ? new Date() : null;
+      continue;
+    }
+    const d = new Date(body[key]);
+    if (Number.isNaN(d.getTime())) return { error: `Invalid ${key === 'startDate' ? 'start' : 'end'} date.` };
+    data[key] = d;
+  }
+
+  const title = data.title ?? existing?.title;
+  const content = data.content ?? existing?.content;
+  if (!title) return { error: 'Title is required.' };
+  if (!content) return { error: 'Content is required.' };
+  const start = data.startDate !== undefined ? data.startDate : existing?.startDate;
+  const end = data.endDate !== undefined ? data.endDate : existing?.endDate;
+  if (start && end && new Date(end) <= new Date(start)) return { error: 'End date must be after the start date.' };
+  return { data };
+};
+
+const withState = (doc) => {
+  const a = doc.toObject ? doc.toObject() : doc;
+  return { ...a, state: announcementState(a) };
+};
+
 // Get all announcements
 const getAllAnnouncements = async (req, res) => {
   try {
     const {
       page = 1,
-      limit = 10,
+      limit = 20,
       search = '',
       type = '',
-      isActive = ''
+      isActive = '',
+      state = ''
     } = req.query;
 
-    // Build filter object
     const filter = {};
-    
     if (search) {
       filter.$or = [
         { title: searchRegex(search) },
         { content: searchRegex(search) }
       ];
     }
-    
     if (type) filter.type = type;
     if (isActive !== '') filter.isActive = isActive === 'true';
 
-    const options = {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      sort: { priority: -1, createdAt: -1 }
-    };
+    const now = new Date();
+    if (state === 'draft') filter.isActive = false;
+    if (state === 'scheduled') Object.assign(filter, { isActive: true, startDate: { $gt: now } });
+    if (state === 'expired') Object.assign(filter, { isActive: true, endDate: { $lte: now } });
+    if (state === 'live') {
+      Object.assign(filter, { isActive: true, startDate: { $lte: now } });
+      filter.$and = [{ $or: [{ endDate: null }, { endDate: { $exists: false } }, { endDate: { $gt: now } }] }];
+    }
 
-    const announcements = await Announcement.find(filter)
-      .populate('createdBy', 'firstName lastName')
-      .limit(options.limit)
-      .skip((options.page - 1) * options.limit)
-      .sort(options.sort);
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 20));
 
-    const total = await Announcement.countDocuments(filter);
+    const [announcements, total] = await Promise.all([
+      Announcement.find(filter)
+        .populate('createdBy', 'firstName lastName')
+        .sort({ isPinned: -1, startDate: -1, createdAt: -1 })
+        .skip((pageNum - 1) * limitNum)
+        .limit(limitNum),
+      Announcement.countDocuments(filter),
+    ]);
 
     res.json({
-      announcements,
+      announcements: announcements.map(withState),
       total,
-      totalPages: Math.ceil(total / options.limit),
-      currentPage: options.page
+      totalPages: Math.ceil(total / limitNum),
+      currentPage: pageNum
     });
   } catch (error) {
     logger.error('Get all announcements error:', error);
@@ -522,19 +677,18 @@ const getAllAnnouncements = async (req, res) => {
 // Create announcement
 const createAnnouncement = async (req, res) => {
   try {
-    const announcementData = {
-      ...req.body,
-      createdBy: req.user._id
-    };
+    const { data, error } = announcementInput(req.body || {});
+    if (error) return res.status(400).json({ error });
 
-    const announcement = await Announcement.create(announcementData);
+    const announcement = await Announcement.create({ ...data, createdBy: req.user._id });
     await announcement.populate('createdBy', 'firstName lastName');
 
     res.status(201).json({
       message: 'Announcement created successfully',
-      announcement
+      announcement: withState(announcement)
     });
   } catch (error) {
+    if (error.name === 'ValidationError') return res.status(400).json({ error: error.message });
     logger.error('Create announcement error:', error);
     res.status(500).json({ error: 'Failed to create announcement.' });
   }
@@ -544,23 +698,25 @@ const createAnnouncement = async (req, res) => {
 const updateAnnouncement = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
-
-    const announcement = await Announcement.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('createdBy', 'firstName lastName');
-
-    if (!announcement) {
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(404).json({ error: 'Announcement not found.' });
+    const existing = await Announcement.findById(id);
+    if (!existing) {
       return res.status(404).json({ error: 'Announcement not found.' });
     }
 
+    const { data, error } = announcementInput(req.body || {}, existing);
+    if (error) return res.status(400).json({ error });
+
+    existing.set(data);
+    await existing.save();
+    await existing.populate('createdBy', 'firstName lastName');
+
     res.json({
       message: 'Announcement updated successfully',
-      announcement
+      announcement: withState(existing)
     });
   } catch (error) {
+    if (error.name === 'ValidationError') return res.status(400).json({ error: error.message });
     logger.error('Update announcement error:', error);
     res.status(500).json({ error: 'Failed to update announcement.' });
   }
@@ -743,6 +899,8 @@ module.exports = {
   getAllListings,
   updateListingStatus,
   deleteListing,
+  assignListingAgent,
+  getAssignableAgents,
   
   // Reports & Moderation
   getAllReports,

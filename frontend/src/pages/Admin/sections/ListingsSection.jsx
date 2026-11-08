@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
-import { ArrowPathIcon, HomeIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, HomeIcon, PencilSquareIcon, TrashIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import { EmptyState, PageHeader, Spinner } from '../../../components/ui';
 import { propertyImage } from '../../../config';
 import { FilterSelect, SearchInput, StatusBadge, docId, formatCurrency } from '../shared';
 
-const ListingsSection = ({ listings, loading, onFilter, onReset, onEdit, onDelete }) => {
+const ListingsSection = ({ listings, loading, onFilter, onReset, onEdit, onAssign, onDelete }) => {
   const { list, filters, total } = listings;
 
   return (
@@ -54,11 +54,21 @@ const ListingsSection = ({ listings, loading, onFilter, onReset, onEdit, onDelet
                   {l.propertyType}
                   {l.address?.city ? ` · ${l.address.city}` : ''}
                 </p>
-                <div className="mt-4 flex items-center justify-between">
+                <p className="mt-2 truncate text-xs text-gray-500">
+                  {l.agent ? (
+                    <>Agent: <span className="font-medium text-gray-700">{l.agent.firstName} {l.agent.lastName}</span></>
+                  ) : (
+                    <>Owner: {l.owner ? `${l.owner.firstName} ${l.owner.lastName}` : '—'} · no agent</>
+                  )}
+                </p>
+                <div className="mt-3 flex items-center justify-between">
                   <p className="text-lg font-bold text-gray-900">{formatCurrency(l.price)}</p>
                   <div className="flex gap-1">
                     <button type="button" onClick={() => onEdit(l)} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-brand-700" aria-label={`Change status of ${l.title}`}>
                       <PencilSquareIcon className="h-4 w-4" />
+                    </button>
+                    <button type="button" onClick={() => onAssign(l)} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-brand-700" aria-label={`Assign agent to ${l.title}`} title="Assign agent">
+                      <UserPlusIcon className="h-4 w-4" />
                     </button>
                     <button type="button" onClick={() => onDelete(docId(l))} className="rounded-lg p-2 text-gray-500 hover:bg-red-50 hover:text-red-700" aria-label={`Delete ${l.title}`}>
                       <TrashIcon className="h-4 w-4" />

@@ -6,9 +6,11 @@ import {
   Bars3Icon,
   ChartBarIcon,
   ChartPieIcon,
+  Cog6ToothIcon,
   EnvelopeIcon,
   FlagIcon,
   HomeIcon,
+  MegaphoneIcon,
   UsersIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
@@ -40,7 +42,9 @@ import ListingsSection from './sections/ListingsSection';
 import ReportsSection from './sections/ReportsSection';
 import AnalyticsSection from './sections/AnalyticsSection';
 import MessagesSection from './sections/MessagesSection';
-import { EditListingModal, EditUserModal, ReviewReportModal } from './AdminModals';
+import AnnouncementsSection from './sections/AnnouncementsSection';
+import SettingsSection from './sections/SettingsSection';
+import { AssignAgentModal, EditListingModal, EditUserModal, ReviewReportModal } from './AdminModals';
 import { docId } from './shared';
 
 const NAV = [
@@ -49,7 +53,9 @@ const NAV = [
   { id: 'listings', name: 'Listings', icon: HomeIcon },
   { id: 'reports', name: 'Reports', icon: FlagIcon },
   { id: 'analytics', name: 'Analytics', icon: ChartPieIcon },
-  { id: 'messages', name: 'Messages', icon: EnvelopeIcon }
+  { id: 'announcements', name: 'Announcements', icon: MegaphoneIcon },
+  { id: 'messages', name: 'Messages', icon: EnvelopeIcon },
+  { id: 'settings', name: 'Settings', icon: Cog6ToothIcon }
 ];
 
 const AdminDashboard = () => {
@@ -63,6 +69,7 @@ const AdminDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [editingListing, setEditingListing] = useState(null);
+  const [assigningListing, setAssigningListing] = useState(null);
   const [reviewingReport, setReviewingReport] = useState(null);
   const [reportingUser, setReportingUser] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -142,6 +149,7 @@ const AdminDashboard = () => {
         onFilter={(f) => dispatch(updateListingFilters(f))}
         onReset={() => dispatch(resetListingFilters())}
         onEdit={setEditingListing}
+        onAssign={setAssigningListing}
         onDelete={(id) => confirmDelete('listing', deleteListing(id))}
       />
     ),
@@ -155,7 +163,9 @@ const AdminDashboard = () => {
       />
     ),
     analytics: <AnalyticsSection enhanced={enhancedAnalytics} revenue={revenueAnalytics} />,
-    messages: <MessagesSection />
+    announcements: <AnnouncementsSection />,
+    messages: <MessagesSection />,
+    settings: <SettingsSection />
   }[activeTab];
 
   const nav = (
@@ -227,6 +237,16 @@ const AdminDashboard = () => {
           onSave={(statusData) =>
             run(updateListingStatus({ listingId: docId(editingListing), statusData }), 'Listing updated', () => setEditingListing(null))
           }
+        />
+      )}
+      {assigningListing && (
+        <AssignAgentModal
+          listing={assigningListing}
+          onClose={() => setAssigningListing(null)}
+          onAssigned={() => {
+            setAssigningListing(null);
+            dispatch(fetchAllListings(listings.filters));
+          }}
         />
       )}
       {reviewingReport && (

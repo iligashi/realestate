@@ -28,8 +28,9 @@ const PropertyFormPage = () => {
       return;
     }
     
-    // Check if user has permission to create properties
-    if (isRentalProperty) {
+    // Check if user has permission to create properties. Editing is open to
+    // every listing role; the API checks the user owns or represents it.
+    if (isRentalProperty || isEditing) {
       // For rental properties, allow renters, sellers, agents, and admins
       if (user && !['renter', 'seller', 'agent', 'admin'].includes(user.userType)) {
         toast.error('Only renters, sellers, agents, and admins can create rental properties');
@@ -44,7 +45,7 @@ const PropertyFormPage = () => {
         return;
       }
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, isEditing, isRentalProperty]);
 
   // Fetch property data for editing
   useEffect(() => {
@@ -139,7 +140,7 @@ const PropertyFormPage = () => {
   };
 
   // Show loading or redirect if not authenticated or not authorized
-  const isAuthorized = isRentalProperty 
+  const isAuthorized = isRentalProperty || isEditing
     ? ['renter', 'seller', 'agent', 'admin'].includes(user?.userType)
     : ['seller', 'agent', 'admin'].includes(user?.userType);
     
@@ -170,7 +171,7 @@ const PropertyFormPage = () => {
 
   // New listings use the step-by-step wizard; the full form is kept for editing.
   if (!isEditing) {
-    const home = user?.userType === 'renter' ? '/renter' : ['seller', 'agent'].includes(user?.userType) ? '/seller' : '/dashboard';
+    const home = { renter: '/renter', seller: '/seller', agent: '/agent?tab=listings' }[user?.userType] || '/dashboard';
     return (
       <div className="min-h-screen bg-gray-50">
         <PropertyListingWizard

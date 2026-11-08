@@ -15,11 +15,23 @@ const {
 // All routes require authentication
 router.use(auth);
 
+// Admins can switch off new conversations from platform settings
+const { getSettings } = require('../utils/settings');
+const messagingEnabled = async (req, res, next) => {
+  try {
+    const settings = await getSettings();
+    if (settings.features?.enableMessaging === false) {
+      return res.status(403).json({ error: 'Messaging is currently disabled.' });
+    }
+  } catch { /* fall through */ }
+  next();
+};
+
 // Create a new message (buyer contacting seller)
-router.post('/', createMessage);
+router.post('/', messagingEnabled, createMessage);
 
 // Create a new rental message (renter contacting landlord)
-router.post('/rental', createRentalMessage);
+router.post('/rental', messagingEnabled, createRentalMessage);
 
 // Get messages for the authenticated user
 router.get('/', getMessages);
