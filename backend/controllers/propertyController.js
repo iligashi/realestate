@@ -4,6 +4,9 @@ const { searchRegex } = require('../utils/searchRegex');
 // Listings anyone can see. 'pending' (awaiting review) and 'inactive' are
 // only visible to their owner and admins.
 const PUBLIC_STATUSES = ['active', 'under-contract', 'sold', 'rented'];
+// "rent" and "rental" mean the same thing; new listings are stored as "rental"
+const RENTAL_TYPES = ['rental', 'rent'];
+const normalizeListingType = (type) => (type === 'rent' ? 'rental' : type);
 
 // Statuses an owner may switch between once a listing has been approved.
 // 'pending' (awaiting review) and approval itself are admin-only.
@@ -43,7 +46,10 @@ const getProperties = async (req, res) => {
     const filter = { status: { $in: PUBLIC_STATUSES } };
     
     if (propertyType) filter.propertyType = propertyType;
-    if (listingType) filter.listingType = listingType;
+    if (listingType) {
+      // Older listings were saved as "rent"; treat both spellings as rentals
+      filter.listingType = RENTAL_TYPES.includes(listingType) ? { $in: RENTAL_TYPES } : listingType;
+    }
     if (city) filter['address.city'] = searchRegex(city);
     if (state) filter['address.state'] = searchRegex(state);
     if (country) filter['address.country'] = searchRegex(country);
@@ -132,7 +138,7 @@ const createProperty = async (req, res) => {
     // sellers, agents and admins may post anything.
     const role = req.user.userType;
     const settings = await getSettings();
-    const listingType = req.body.listingType || 'sale';
+    const listingType = normalizeListingType(req.body.listingType) || 'sale';
     if (role === 'buyer') {
       return res.status(403).json({ error: 'Buyer accounts cannot create listings. Switch to a seller account to list a property.' });
     }
@@ -198,7 +204,7 @@ const createProperty = async (req, res) => {
     };
 
     // Handle rental details if it's a rental property
-    if (req.body.listingType === 'rental' && req.body.rentalDetails) {
+    if (listingType === 'rental' && req.body.rentalDetails) {
       propertyData.rentalDetails = {
         monthlyRent: parseFloat(req.body.rentalDetails.monthlyRent) || 0,
         availableFrom: req.body.rentalDetails.availableFrom ? new Date(req.body.rentalDetails.availableFrom) : null,
@@ -324,6 +330,7 @@ const updateProperty = async (req, res) => {
     for (const key of ['title', 'description', 'propertyType', 'listingType', 'currency', 'amenities']) {
       if (req.body[key] !== undefined) updateData[key] = req.body[key];
     }
+    if (updateData.listingType) updateData.listingType = normalizeListingType(updateData.listingType);
     if (req.body.price !== undefined) updateData.price = parseFloat(req.body.price);
     for (const group of ['address', 'details']) {
       if (req.body[group] && typeof req.body[group] === 'object') {
@@ -344,7 +351,7 @@ const updateProperty = async (req, res) => {
     }
 
     // Handle rental details if it's a rental property
-    if (req.body.listingType === 'rental' && req.body.rentalDetails) {
+    if (updateData.listingType === 'rental' && req.body.rentalDetails) {
       updateData.rentalDetails = {
         monthlyRent: parseFloat(req.body.rentalDetails.monthlyRent) || 0,
         availableFrom: req.body.rentalDetails.availableFrom ? new Date(req.body.rentalDetails.availableFrom) : null,

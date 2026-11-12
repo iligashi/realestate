@@ -20,6 +20,11 @@ global.socketServer = socketServer;
 const start = async () => {
   await connectDB();
   await bootstrapAdmin().catch((err) => logger.error('Admin bootstrap failed:', err));
+  // Listings saved as "rent" were invisible on the rentals page, which looks for "rental"
+  await require('./models/Property')
+    .updateMany({ listingType: 'rent' }, { $set: { listingType: 'rental' } })
+    .then((r) => r.modifiedCount && logger.info(`Renamed listing type rent -> rental on ${r.modifiedCount} listing(s)`))
+    .catch((err) => logger.error('Listing type cleanup failed:', err));
   server.listen(config.port, () => {
     logger.info(`API listening on http://localhost:${config.port} (${config.nodeEnv})`);
     logger.info(`Allowed CORS origins: ${config.allowedOrigins.join(', ')}`);

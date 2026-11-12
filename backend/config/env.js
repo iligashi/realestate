@@ -10,7 +10,7 @@ const DEFAULT_ORIGINS = [
 ];
 
 const allowedOrigins = process.env.FRONTEND_URL
-  ? process.env.FRONTEND_URL.split(',').map((url) => url.trim()).filter(Boolean)
+  ? process.env.FRONTEND_URL.split(',').map((url) => url.trim().replace(/\/+$/, '')).filter(Boolean)
   : DEFAULT_ORIGINS;
 
 // Fail fast on missing secrets instead of failing on the first login

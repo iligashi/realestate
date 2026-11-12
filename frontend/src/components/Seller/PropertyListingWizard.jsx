@@ -283,7 +283,7 @@ const PropertyListingWizard = ({ onClose, onCreated, mode = 'sale' }) => {
     }
   };
 
-  const priceLabel = isRental || data.listingType === 'rent' ? 'Monthly rent' : 'Price';
+  const priceLabel = isRental || ['rent', 'rental'].includes(data.listingType) ? 'Monthly rent' : 'Price';
   const formatMoney = (value) => {
     const n = Number(value);
     if (!n) return '-';
@@ -427,7 +427,7 @@ const PropertyListingWizard = ({ onClose, onCreated, mode = 'sale' }) => {
           <div className="space-y-5">
             <div className="grid grid-cols-[1fr_6.5rem] gap-3">
               <Field label={priceLabel} required htmlFor="w-price" error={errors.price}>
-                <input id="w-price" type="number" inputMode="decimal" min="0" value={data.price} onChange={(e) => set('price', e.target.value)} className={inputCls(errors.price)} placeholder={isRental || data.listingType === 'rent' ? '650' : '120000'} />
+                <input id="w-price" type="number" inputMode="decimal" min="0" value={data.price} onChange={(e) => set('price', e.target.value)} className={inputCls(errors.price)} placeholder={isRental || ['rent', 'rental'].includes(data.listingType) ? '650' : '120000'} />
               </Field>
               <Field label="Currency" htmlFor="w-currency">
                 <select id="w-currency" value={data.currency} onChange={(e) => set('currency', e.target.value)} className="input">
@@ -536,7 +536,7 @@ const PropertyListingWizard = ({ onClose, onCreated, mode = 'sale' }) => {
             </div>
             <p className="text-2xl font-bold text-brand-700">
               {formatMoney(data.price)}
-              {(isRental || data.listingType === 'rent') && <span className="text-base font-medium text-gray-500"> / month</span>}
+              {(isRental || ['rent', 'rental'].includes(data.listingType)) && <span className="text-base font-medium text-gray-500"> / month</span>}
             </p>
             <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
               <Summary label="Type" value={data.propertyType} />

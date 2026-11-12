@@ -29,7 +29,11 @@ app.use(
       if (!origin || config.allowedOrigins.includes(origin)) return callback(null, true);
       // Be permissive while developing locally
       if (config.isDevelopment) return callback(null, true);
-      return callback(new Error('Not allowed by CORS'));
+      // Unknown origin: answer without CORS headers and let the browser block
+      // cross-site reads. Failing the request here would also break our own
+      // frontend, because browsers send Origin on same-site POSTs that reach
+      // the API through the Vercel proxy.
+      return callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
