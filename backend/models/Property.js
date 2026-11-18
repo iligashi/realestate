@@ -67,17 +67,27 @@ const propertySchema = new mongoose.Schema({
     country: { type: String, required: true },
     neighborhood: String
   },
+  // Optional GeoJSON point. Left unset when the lister gave no coordinates,
+  // instead of storing a fake [0, 0] (which is a real place in the Atlantic).
   location: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number], // [longitude, latitude]
-      required: true,
-      index: '2dsphere'
-    }
+    type: new mongoose.Schema({
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
+        validate: {
+          validator: (c) =>
+            Array.isArray(c) && c.length === 2 &&
+            c[0] >= -180 && c[0] <= 180 && c[1] >= -90 && c[1] <= 90,
+          message: 'Coordinates must be [longitude, latitude] within valid ranges.'
+        }
+      }
+    }, { _id: false }),
+    default: undefined
   },
   mapData: {
     placeId: String,

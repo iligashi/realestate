@@ -148,20 +148,6 @@ class WebSocketService {
     console.log(`Left message thread: ${messageId}`);
   }
 
-  // Send message
-  sendMessage(messageId, message, messageType = 'text') {
-    if (!this.socket || !this.isConnected) {
-      console.warn('Cannot send message: WebSocket not connected');
-      return;
-    }
-
-    this.socket.emit('send_message', {
-      messageId,
-      message,
-      messageType
-    });
-  }
-
   // Typing indicators
   startTyping(messageId) {
     if (!this.socket || !this.isConnected) {

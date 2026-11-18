@@ -93,9 +93,6 @@ const validateProperty = [
         errors.push('Country is required');
       }
       
-      if (!partial && (!req.body.location || !req.body.location.coordinates || !Array.isArray(req.body.location.coordinates))) {
-        errors.push('Location coordinates are required');
-      }
       
       // Validate rental details if listing type is rental
       if (req.body.listingType === 'rental') {

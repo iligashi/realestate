@@ -1,7 +1,9 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const { tokenFromHandshake } = require('../utils/authCookie');
 const User = require('../models/User');
+const Message = require('../models/Message');
 const logger = require('../utils/logger');
 
 class SocketServer {
@@ -41,16 +43,15 @@ class SocketServer {
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        logger.debug('JWT decoded:', { userId: decoded.userId, exp: decoded.exp });
-        
+
         const user = await User.findById(decoded.userId).select('-password');
-        
-        if (!user) {
-          logger.debug('User not found for userId:', decoded.userId);
-          return next(new Error('User not found'));
+
+        // Same account checks as the HTTP auth middleware: a deactivated or
+        // blocked account must not keep a live real-time connection.
+        if (!user || !user.isActive || user.isBlocked) {
+          return next(new Error('Authentication failed'));
         }
 
-        logger.debug('WebSocket authentication successful for user:', user.name, user.email);
         socket.userId = user._id.toString();
         socket.user = user;
         socket.displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email;
@@ -126,8 +127,38 @@ class SocketServer {
     });
   }
 
-  joinMessageThread(socket, messageId) {
-    if (!messageId) return;
+  /**
+   * A user may only interact with a message thread they are a party to.
+   * Room names are derived from client-supplied IDs, so every room operation
+   * must be authorized against the database first.
+   */
+  async isThreadParticipant(userId, messageId) {
+    if (typeof messageId !== 'string' || !mongoose.Types.ObjectId.isValid(messageId)) {
+      return false;
+    }
+    const exists = await Message.exists({
+      _id: messageId,
+      $or: [{ buyer: userId }, { seller: userId }, { renter: userId }, { landlord: userId }]
+    });
+    return Boolean(exists);
+  }
+
+  /** Only sockets that passed joinMessageThread's authorization are in the room. */
+  isInThreadRoom(socket, messageId) {
+    return typeof messageId === 'string' && socket.rooms.has(`message_${messageId}`);
+  }
+
+  async joinMessageThread(socket, messageId) {
+    try {
+      if (!(await this.isThreadParticipant(socket.userId, messageId))) {
+        socket.emit('error', { message: 'Access denied to message thread' });
+        return;
+      }
+    } catch (error) {
+      logger.error('Error authorizing message thread join:', error);
+      socket.emit('error', { message: 'Failed to join message thread' });
+      return;
+    }
 
     socket.join(`message_${messageId}`);
     
@@ -141,7 +172,7 @@ class SocketServer {
   }
 
   leaveMessageThread(socket, messageId) {
-    if (!messageId) return;
+    if (typeof messageId !== 'string') return;
 
     socket.leave(`message_${messageId}`);
     
@@ -155,48 +186,19 @@ class SocketServer {
     logger.debug(`User ${socket.displayName} left message thread ${messageId}`);
   }
 
-  async handleSendMessage(socket, data) {
-    try {
-      const { messageId, message, messageType = 'text' } = data;
-
-      if (!messageId || !message) {
-        socket.emit('error', { message: 'Message ID and content are required' });
-        return;
-      }
-
-      // Emit message to all participants in the message thread
-      this.io.to(`message_${messageId}`).emit('new_message', {
-        messageId,
-        message,
-        messageType,
-        sender: {
-          id: socket.userId,
-          name: socket.displayName,
-          email: socket.user.email
-        },
-        timestamp: new Date(),
-        isFromCurrentUser: false // Will be true for the sender
-      });
-
-      // Send confirmation to sender
-      socket.emit('message_sent', {
-        messageId,
-        message,
-        messageType,
-        timestamp: new Date()
-      });
-
-      logger.debug(`Message sent in thread ${messageId} by ${socket.displayName}`);
-
-    } catch (error) {
-      logger.error('Error handling send message:', error);
-      socket.emit('error', { message: 'Failed to send message' });
-    }
+  /**
+   * Clients must not broadcast chat content directly: it would bypass
+   * persistence, validation and the participant check in the REST controller.
+   * Messages are sent via POST /api/messages/:id/reply, which persists the
+   * reply and then calls emitNewMessage().
+   */
+  handleSendMessage(socket) {
+    socket.emit('error', { message: 'Send messages through the messages API.' });
   }
 
   handleTypingStart(socket, data) {
-    const { messageId } = data;
-    if (!messageId) return;
+    const messageId = data?.messageId;
+    if (!this.isInThreadRoom(socket, messageId)) return;
 
     if (!this.typingUsers.has(messageId)) {
       this.typingUsers.set(messageId, new Set());
@@ -214,8 +216,8 @@ class SocketServer {
   }
 
   handleTypingStop(socket, data) {
-    const { messageId } = data;
-    if (!messageId) return;
+    const messageId = data?.messageId;
+    if (!this.isInThreadRoom(socket, messageId)) return;
 
     if (this.typingUsers.has(messageId)) {
       this.typingUsers.get(messageId).delete(socket.userId);
@@ -236,9 +238,10 @@ class SocketServer {
 
   async handleMarkMessageRead(socket, data) {
     try {
-      const { messageId, threadMessageId } = data;
+      const messageId = data?.messageId;
+      const threadMessageId = data?.threadMessageId;
 
-      if (!messageId) return;
+      if (!this.isInThreadRoom(socket, messageId)) return;
 
       // Emit read receipt to other participants
       socket.to(`message_${messageId}`).emit('message_read', {

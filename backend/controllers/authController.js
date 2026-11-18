@@ -75,6 +75,10 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Account is deactivated.' });
     }
 
+    if (user.isBlocked) {
+      return res.status(403).json({ error: 'Account is blocked.' });
+    }
+
     // Verify password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
@@ -93,9 +97,6 @@ const login = async (req, res) => {
     // Update last login
     user.lastLogin = new Date();
     await user.save();
-    // Sliding session: issue a fresh cookie
-    setAuthCookie(res, generateToken(user._id));
-
     // Sign in: the token goes into an httpOnly cookie, never the response body
     setAuthCookie(res, generateToken(user._id));
 

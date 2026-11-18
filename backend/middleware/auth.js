@@ -24,6 +24,10 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ error: 'Account is deactivated.' });
     }
 
+    if (user.isBlocked) {
+      return res.status(403).json({ error: 'Account is blocked.' });
+    }
+
     req.user = user;
     next();
   } catch (error) {
@@ -43,8 +47,10 @@ const optionalAuth = async (req, res, next) => {
     
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.userId).select('-password');
-      if (user && user.isActive) {
+      const user = decoded.purpose === 'socket'
+        ? null
+        : await User.findById(decoded.userId).select('-password');
+      if (user && user.isActive && !user.isBlocked) {
         req.user = user;
       }
     }
