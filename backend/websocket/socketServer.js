@@ -6,6 +6,8 @@ const User = require('../models/User');
 const Message = require('../models/Message');
 const logger = require('../utils/logger');
 
+const PARTICIPANT_ROLES = ['buyer', 'seller', 'renter', 'landlord'];
+
 class SocketServer {
   constructor(server) {
     this.io = new Server(server, {
@@ -22,7 +24,8 @@ class SocketServer {
       transports: ['websocket', 'polling'] // Fallback support
     });
 
-    this.connectedUsers = new Map(); // userId -> socketId mapping
+    // A user can be connected from several devices or tabs at once
+    this.connectedUsers = new Map(); // userId -> Set of socketIds
     this.userSockets = new Map(); // socketId -> user data mapping
     this.typingUsers = new Map(); // messageId -> Set of typing user IDs
     this.messageRooms = new Map(); // messageId -> Set of participant user IDs
@@ -68,7 +71,12 @@ class SocketServer {
       logger.debug(`User ${socket.displayName} connected with socket ${socket.id}`);
       
       // Store user connection
-      this.connectedUsers.set(socket.userId, socket.id);
+      if (!this.connectedUsers.has(socket.userId)) {
+        this.connectedUsers.set(socket.userId, new Set());
+      }
+      const userSocketIds = this.connectedUsers.get(socket.userId);
+      const cameOnline = userSocketIds.size === 0;
+      userSocketIds.add(socket.id);
       this.userSockets.set(socket.id, {
         userId: socket.userId,
         user: socket.user,
@@ -78,8 +86,10 @@ class SocketServer {
       // Join user to their personal room for notifications
       socket.join(`user_${socket.userId}`);
 
-      // Emit user online status to relevant contacts
-      this.emitUserOnlineStatus(socket.userId, true);
+      // Only announce presence when the first device connects
+      if (cameOnline) {
+        this.emitUserOnlineStatus(socket.userId, true);
+      }
 
       // Handle joining message thread rooms
       socket.on('join_message_thread', (messageId) => {
@@ -239,9 +249,20 @@ class SocketServer {
   async handleMarkMessageRead(socket, data) {
     try {
       const messageId = data?.messageId;
-      const threadMessageId = data?.threadMessageId;
+      const threadMessageId = data?.threadMessageId ?? null;
 
       if (!this.isInThreadRoom(socket, messageId)) return;
+
+      // A receipt may only reference a reply that belongs to this thread
+      if (threadMessageId !== null) {
+        if (typeof threadMessageId !== 'string' || !mongoose.Types.ObjectId.isValid(threadMessageId)) return;
+        const belongs = await Message.exists({ _id: messageId, 'thread._id': threadMessageId });
+        if (!belongs) return;
+      }
+
+      // Persist first: a receipt is only sent for a read state that is stored
+      const readAt = await this.persistReadState(messageId, threadMessageId, socket.userId);
+      if (!readAt) return;
 
       // Emit read receipt to other participants
       socket.to(`message_${messageId}`).emit('message_read', {
@@ -251,7 +272,7 @@ class SocketServer {
           id: socket.userId,
           name: socket.displayName
         },
-        readAt: new Date()
+        readAt
       });
 
       logger.debug(`Message ${messageId} marked as read by ${socket.displayName}`);
@@ -259,6 +280,35 @@ class SocketServer {
     } catch (error) {
       logger.error('Error handling mark message read:', error);
     }
+  }
+
+  /**
+   * Store that `userId` has read the thread (or one reply in it).
+   * Only replies from the other party are marked, so nobody can mark their
+   * own message as read. Returns the read time, or null if nothing matched.
+   */
+  async persistReadState(messageId, threadMessageId, userId) {
+    const thread = await Message.findById(messageId).select('buyer seller renter landlord').lean();
+    const role = thread && PARTICIPANT_ROLES.find((r) => thread[r] && thread[r].toString() === String(userId));
+    if (!role) return null;
+
+    const reader = new mongoose.Types.ObjectId(String(userId));
+    const readAt = new Date();
+
+    if (threadMessageId) {
+      const result = await Message.updateOne(
+        { _id: messageId, thread: { $elemMatch: { _id: threadMessageId, sender: { $ne: reader } } } },
+        { $set: { 'thread.$.isRead': true } }
+      );
+      return result.matchedCount === 1 ? readAt : null;
+    }
+
+    await Message.updateOne(
+      { _id: messageId },
+      { $set: { [`readBy.${role}`]: true, 'thread.$[reply].isRead': true } },
+      { arrayFilters: [{ 'reply.sender': { $ne: reader } }] }
+    );
+    return readAt;
   }
 
   handleStatusUpdate(socket, status) {
@@ -271,39 +321,77 @@ class SocketServer {
   }
 
   handleDisconnect(socket) {
-    logger.debug(`User ${socket.user?.name || 'Unknown'} disconnected`);
+    logger.debug(`User ${socket.displayName || 'Unknown'} disconnected socket ${socket.id}`);
 
-    // Remove from connected users
-    this.connectedUsers.delete(socket.userId);
     this.userSockets.delete(socket.id);
 
-    // Emit user offline status
+    const remaining = this.connectedUsers.get(socket.userId);
+    if (remaining) {
+      remaining.delete(socket.id);
+    }
+    const stillConnected = Boolean(remaining && remaining.size > 0);
+
+    // Thread rooms this user is still in through another device
+    const roomsStillJoined = new Set();
+    if (stillConnected) {
+      for (const otherId of remaining) {
+        const other = this.io.sockets.sockets.get(otherId);
+        other?.rooms.forEach((room) => roomsStillJoined.add(room));
+      }
+    }
+
+    for (const [messageId, participantSet] of this.messageRooms.entries()) {
+      if (roomsStillJoined.has(`message_${messageId}`)) continue;
+      participantSet.delete(socket.userId);
+      if (participantSet.size === 0) {
+        this.messageRooms.delete(messageId);
+      }
+    }
+
+    if (stillConnected) return;
+
+    // Last device gone: the user is offline
+    this.connectedUsers.delete(socket.userId);
     this.emitUserOnlineStatus(socket.userId, false);
 
-    // Clean up typing indicators
     for (const [messageId, typingSet] of this.typingUsers.entries()) {
       typingSet.delete(socket.userId);
       if (typingSet.size === 0) {
         this.typingUsers.delete(messageId);
       }
     }
-
-    // Clean up message rooms
-    for (const [messageId, participantSet] of this.messageRooms.entries()) {
-      participantSet.delete(socket.userId);
-      if (participantSet.size === 0) {
-        this.messageRooms.delete(messageId);
-      }
-    }
   }
 
-  emitUserOnlineStatus(userId, isOnline) {
-    // Emit to all connected users (you might want to limit this to contacts)
-    this.io.emit('user_status_change', {
-      userId,
-      isOnline,
-      timestamp: new Date()
-    });
+  /** Users who share at least one conversation with `userId`. */
+  async getContactIds(userId) {
+    const id = new mongoose.Types.ObjectId(String(userId));
+    const threads = await Message.find({ $or: PARTICIPANT_ROLES.map((role) => ({ [role]: id })) })
+      .select('buyer seller renter landlord')
+      .lean();
+    const contacts = new Set();
+    for (const thread of threads) {
+      for (const role of PARTICIPANT_ROLES) {
+        if (thread[role]) contacts.add(thread[role].toString());
+      }
+    }
+    contacts.delete(String(userId));
+    return [...contacts];
+  }
+
+  // Presence is only shared with people the user has a conversation with,
+  // not broadcast to every connected client.
+  async emitUserOnlineStatus(userId, isOnline) {
+    try {
+      const contacts = await this.getContactIds(userId);
+      if (contacts.length === 0) return;
+      this.io.to(contacts.map((id) => `user_${id}`)).emit('user_status_change', {
+        userId,
+        isOnline,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      logger.error('Error emitting presence:', error);
+    }
   }
 
   // Method to emit new message from API (called from message controller)
@@ -379,14 +467,20 @@ class SocketServer {
   }
 
   // Get user's socket if connected
+  // All live connections of a user (one per device or tab)
+  getUserSockets(userId) {
+    const socketIds = this.connectedUsers.get(String(userId));
+    return socketIds ? [...socketIds].map((id) => this.userSockets.get(id)).filter(Boolean) : [];
+  }
+
+  // First live connection of a user, kept for existing callers
   getUserSocket(userId) {
-    const socketId = this.connectedUsers.get(userId);
-    return socketId ? this.userSockets.get(socketId) : null;
+    return this.getUserSockets(userId)[0] || null;
   }
 
   // Check if user is online
   isUserOnline(userId) {
-    return this.connectedUsers.has(userId);
+    return (this.connectedUsers.get(String(userId))?.size || 0) > 0;
   }
 }
 
