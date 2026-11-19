@@ -57,15 +57,6 @@ const useWebSocket = () => {
     websocketService.leaveMessageThread(messageId);
   }, []);
 
-  // Message sending
-  const sendMessage = useCallback((messageId, message, messageType = 'text') => {
-    if (isConnected) {
-      websocketService.sendMessage(messageId, message, messageType);
-    } else {
-      console.warn('Cannot send message: WebSocket not connected');
-    }
-  }, [isConnected]);
-
   // Typing indicators
   const startTyping = useCallback((messageId) => {
     if (isConnected) {
@@ -138,7 +129,6 @@ const useWebSocket = () => {
     connectionError,
     joinMessageThread,
     leaveMessageThread,
-    sendMessage,
     startTyping,
     stopTyping,
     markMessageRead,

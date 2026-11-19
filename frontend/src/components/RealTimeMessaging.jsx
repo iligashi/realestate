@@ -12,7 +12,6 @@ const RealTimeMessaging = ({ messageId, onMessageReceived, onTypingUpdate }) => 
     isConnected,
     joinMessageThread,
     leaveMessageThread,
-    sendMessage: sendWebSocketMessage,
     startTyping,
     stopTyping,
     markMessageRead,
@@ -172,10 +171,7 @@ const RealTimeMessaging = ({ messageId, onMessageReceived, onTypingUpdate }) => 
     }
 
     try {
-      // Send via WebSocket for real-time delivery
-      sendWebSocketMessage(messageId, messageContent);
-
-      // Also send via API to persist the message
+      // Persist via the API; the server pushes the real-time event after saving
       await replyToMessage(messageId, { message: messageContent });
 
     } catch (error) {

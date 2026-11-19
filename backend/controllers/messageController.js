@@ -296,9 +296,6 @@ const replyToMessage = async (req, res) => {
 
     // Emit WebSocket event for real-time notification
     if (global.socketServer) {
-      const recipientId = updatedMessage.buyer ? updatedMessage.buyer._id : updatedMessage.renter._id;
-      const senderId = updatedMessage.seller ? updatedMessage.seller._id : updatedMessage.landlord._id;
-      
       global.socketServer.emitNewMessage({
         messageId: updatedMessage._id,
         buyer: updatedMessage.buyer?._id,
@@ -307,7 +304,7 @@ const replyToMessage = async (req, res) => {
         landlord: updatedMessage.landlord?._id,
         message: message.trim(),
         sender: {
-          id: senderId,
+          id: req.user._id,
           name: req.user.name,
           email: req.user.email
         }

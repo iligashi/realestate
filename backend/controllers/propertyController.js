@@ -4,6 +4,28 @@ const { searchRegex } = require('../utils/searchRegex');
 // Listings anyone can see. 'pending' (awaiting review) and 'inactive' are
 // only visible to their owner and admins.
 const PUBLIC_STATUSES = ['active', 'under-contract', 'sold', 'rented'];
+const OWNER_PUBLIC_FIELDS = 'firstName lastName avatar';
+
+const INVALID_LOCATION = Symbol('invalid-location');
+
+/**
+ * Parse a submitted GeoJSON point ({ coordinates: [lng, lat] }, possibly with
+ * string values from multipart forms).
+ * Returns the point, null when no usable coordinates were given, or
+ * INVALID_LOCATION when values were given but are malformed or out of range.
+ */
+const parseLocation = (raw) => {
+  const coords = raw?.coordinates;
+  if (coords === undefined || coords === null || coords === '') return null;
+  const list = Array.isArray(coords) ? coords : Object.values(coords);
+  if (list.length !== 2) return INVALID_LOCATION;
+  const [lng, lat] = list.map((v) => (typeof v === 'string' && v.trim() !== '' ? Number(v) : v));
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return INVALID_LOCATION;
+  if (lng < -180 || lng > 180 || lat < -90 || lat > 90) return INVALID_LOCATION;
+  // [0, 0] is the legacy placeholder the form used to send, not a real address
+  if (lng === 0 && lat === 0) return null;
+  return { type: 'Point', coordinates: [lng, lat] };
+};
 
 // Statuses an owner may switch between once a listing has been approved.
 // 'pending' (awaiting review) and approval itself are admin-only.
@@ -57,17 +79,15 @@ const getProperties = async (req, res) => {
       if (maxPrice) filter.price.$lte = parseInt(maxPrice);
     }
 
-    // Only show active, sold, and rented properties
-    filter.status = { $in: ['active', 'sold', 'rented'] };
-
     const options = {
       page: parseInt(page),
       limit: parseInt(limit),
       sort: { createdAt: -1 }
     };
 
+    // Public listing: never expose the owner's private contact details
     const properties = await Property.find(filter)
-      .populate('owner', 'firstName lastName email phone avatar')
+      .populate('owner', OWNER_PUBLIC_FIELDS)
       .limit(options.limit)
       .skip((options.page - 1) * options.limit)
       .sort(options.sort);
@@ -93,11 +113,20 @@ const getProperties = async (req, res) => {
 const getProperty = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id)
-      .populate('owner', 'firstName lastName email phone avatar')
+      .populate('owner', `${OWNER_PUBLIC_FIELDS} email phone`)
+      // Agents are listed professionals, so their business contact is public
       .populate('agent', 'firstName lastName email phone avatar agent');
 
     if (!property || (!PUBLIC_STATUSES.includes(property.status) && !canSeeUnlisted(req.user, property))) {
       return res.status(404).json({ error: 'Property not found.' });
+    }
+
+    // Owners are private individuals: their email and phone are only returned
+    // to people who manage the listing. Everyone else uses the inquiry flow.
+    const body = property.toObject();
+    if (body.owner && !(req.user && canManage(req.user, property))) {
+      delete body.owner.email;
+      delete body.owner.phone;
     }
 
     // Count a view, but not the owner looking at their own listing
@@ -108,7 +137,7 @@ const getProperty = async (req, res) => {
       );
     }
 
-    res.json({ property });
+    res.json({ property: body });
   } catch (error) {
     logger.error('Get property error:', error);
     res.status(500).json({ error: 'Failed to fetch property.' });
@@ -177,10 +206,6 @@ const createProperty = async (req, res) => {
         zipCode: req.body.address?.zipCode || '',
         country: req.body.address?.country || 'US'
       },
-      location: {
-        type: 'Point',
-        coordinates: [0, 0] // Default coordinates
-      },
       details: {
         bedrooms: parseInt(req.body.details?.bedrooms) || 0,
         bathrooms: parseFloat(req.body.details?.bathrooms) || 0,
@@ -240,12 +265,12 @@ const createProperty = async (req, res) => {
       propertyData.amenities = []; // Ensure empty array if no amenities
     }
     
-    // Ensure coordinates are numbers
-    if (propertyData.location.coordinates) {
-      propertyData.location.coordinates = propertyData.location.coordinates.map(coord => 
-        typeof coord === 'string' ? parseFloat(coord) || 0 : coord
-      );
+    // Use the coordinates the lister actually submitted; never invent them
+    const location = parseLocation(req.body.location);
+    if (location === INVALID_LOCATION) {
+      return res.status(400).json({ error: 'Location must be [longitude, latitude] within valid ranges.' });
     }
+    if (location) propertyData.location = location;
     
     // Ensure all numeric fields are actually numbers
     if (propertyData.details.bedrooms) propertyData.details.bedrooms = parseInt(propertyData.details.bedrooms) || 0;

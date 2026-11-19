@@ -49,7 +49,6 @@ const RenterMessages = () => {
     isConnected,
     joinMessageThread,
     leaveMessageThread,
-    sendMessage: sendWebSocketMessage,
     startTyping,
     stopTyping,
     markMessageRead,
@@ -192,12 +191,7 @@ const RenterMessages = () => {
     }
 
     try {
-      // Send via WebSocket for real-time delivery
-      if (isConnected) {
-        sendWebSocketMessage(selectedMessage._id, replyText.trim());
-      }
-
-      // Also send via API to persist the message
+      // Persist via the API; the server pushes the real-time event after saving
       const result = await dispatch(replyToMessage({
         messageId: selectedMessage._id,
         message: replyText.trim()

@@ -298,11 +298,6 @@ const PropertyForm = ({ onSubmit, initialData = null, isEditing = false, isSubmi
         formData.append('address[zipCode]', String(data.address?.zipCode || ''));
         formData.append('address[country]', 'US'); // Required by validation
         
-        // Add location data
-        formData.append('location[type]', 'Point');
-        formData.append('location[coordinates][0]', '0'); // Required by schema
-        formData.append('location[coordinates][1]', '0'); // Required by schema
-        
         // Add property details
         formData.append('details[bedrooms]', String(data.details?.bedrooms || '0'));
         formData.append('details[bathrooms]', String(data.details?.bathrooms || '0'));
