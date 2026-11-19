@@ -218,3 +218,89 @@ describe('real-time message thread authorization', () => {
     await expect(connectAs(buyer.user._id)).rejects.toThrow('Authentication failed');
   });
 });
+
+describe('read state and presence', () => {
+  it('persists a read receipt before relaying it', async () => {
+    const { seller, buyer, threadId } = await setupThread();
+    await (await Message.findById(threadId)).addReply(seller.user._id, 'Yes, it is');
+    const replyId = (await Message.findById(threadId)).thread[0]._id.toString();
+
+    const sellerSocket = await connectAs(seller.user._id);
+    const buyerSocket = await connectAs(buyer.user._id);
+    sellerSocket.emit('join_message_thread', threadId);
+    buyerSocket.emit('join_message_thread', threadId);
+    await settle();
+
+    const receipt = waitFor(sellerSocket, 'message_read');
+    buyerSocket.emit('mark_message_read', { messageId: threadId, threadMessageId: replyId });
+    expect(await receipt).toMatchObject({ threadMessageId: replyId });
+
+    const stored = await Message.findById(threadId);
+    expect(stored.thread.id(replyId).isRead).toBe(true);
+  });
+
+  it('does not let a user mark their own reply as read', async () => {
+    const { seller, buyer, threadId } = await setupThread();
+    await (await Message.findById(threadId)).addReply(buyer.user._id, 'Can I visit Friday?');
+    const ownReplyId = (await Message.findById(threadId)).thread[0]._id.toString();
+
+    const sellerSocket = await connectAs(seller.user._id);
+    const buyerSocket = await connectAs(buyer.user._id);
+    sellerSocket.emit('join_message_thread', threadId);
+    buyerSocket.emit('join_message_thread', threadId);
+    await settle();
+
+    const receipt = waitFor(sellerSocket, 'message_read');
+    buyerSocket.emit('mark_message_read', { messageId: threadId, threadMessageId: ownReplyId });
+    expect(await receipt).toBeNull();
+    expect((await Message.findById(threadId)).thread.id(ownReplyId).isRead).toBe(false);
+  });
+
+  it('marks the whole thread read for the reader only', async () => {
+    const { seller, buyer, threadId } = await setupThread();
+    const thread = await Message.findById(threadId);
+    await thread.addReply(seller.user._id, 'Yes, it is');
+    await (await Message.findById(threadId)).addReply(buyer.user._id, 'Great');
+
+    const buyerSocket = await connectAs(buyer.user._id);
+    buyerSocket.emit('join_message_thread', threadId);
+    await settle();
+    buyerSocket.emit('mark_message_read', { messageId: threadId });
+    await settle();
+
+    const stored = await Message.findById(threadId);
+    expect(stored.readBy.buyer).toBe(true);
+    expect(stored.readBy.seller).toBe(false);
+    const [fromSeller, fromBuyer] = stored.thread;
+    expect(fromSeller.isRead).toBe(true);
+    expect(fromBuyer.isRead).toBe(false);
+  });
+
+  it('a forged receipt changes nothing in the database', async () => {
+    const { seller, outsider, threadId } = await setupThread();
+    await (await Message.findById(threadId)).addReply(seller.user._id, 'Yes, it is');
+    const replyId = (await Message.findById(threadId)).thread[0]._id.toString();
+
+    const outsiderSocket = await connectAs(outsider.user._id);
+    outsiderSocket.emit('join_message_thread', threadId);
+    outsiderSocket.emit('mark_message_read', { messageId: threadId, threadMessageId: replyId });
+    await settle();
+
+    const stored = await Message.findById(threadId);
+    expect(stored.thread.id(replyId).isRead).toBe(false);
+    expect(stored.readBy.buyer).toBe(false);
+  });
+
+  it('only shares presence with users who have a conversation with that user', async () => {
+    const { seller, buyer, outsider } = await setupThread();
+    const sellerSocket = await connectAs(seller.user._id);
+    const outsiderSocket = await connectAs(outsider.user._id);
+
+    const contactSees = waitFor(sellerSocket, 'user_status_change');
+    const strangerSees = waitFor(outsiderSocket, 'user_status_change');
+    await connectAs(buyer.user._id);
+
+    expect(await contactSees).toMatchObject({ userId: String(buyer.user._id), isOnline: true });
+    expect(await strangerSees).toBeNull();
+  });
+});

@@ -6,6 +6,8 @@ const User = require('../models/User');
 const Message = require('../models/Message');
 const logger = require('../utils/logger');
 
+const PARTICIPANT_ROLES = ['buyer', 'seller', 'renter', 'landlord'];
+
 class SocketServer {
   constructor(server) {
     this.io = new Server(server, {
@@ -258,6 +260,10 @@ class SocketServer {
         if (!belongs) return;
       }
 
+      // Persist first: a receipt is only sent for a read state that is stored
+      const readAt = await this.persistReadState(messageId, threadMessageId, socket.userId);
+      if (!readAt) return;
+
       // Emit read receipt to other participants
       socket.to(`message_${messageId}`).emit('message_read', {
         messageId,
@@ -266,7 +272,7 @@ class SocketServer {
           id: socket.userId,
           name: socket.displayName
         },
-        readAt: new Date()
+        readAt
       });
 
       logger.debug(`Message ${messageId} marked as read by ${socket.displayName}`);
@@ -274,6 +280,35 @@ class SocketServer {
     } catch (error) {
       logger.error('Error handling mark message read:', error);
     }
+  }
+
+  /**
+   * Store that `userId` has read the thread (or one reply in it).
+   * Only replies from the other party are marked, so nobody can mark their
+   * own message as read. Returns the read time, or null if nothing matched.
+   */
+  async persistReadState(messageId, threadMessageId, userId) {
+    const thread = await Message.findById(messageId).select('buyer seller renter landlord').lean();
+    const role = thread && PARTICIPANT_ROLES.find((r) => thread[r] && thread[r].toString() === String(userId));
+    if (!role) return null;
+
+    const reader = new mongoose.Types.ObjectId(String(userId));
+    const readAt = new Date();
+
+    if (threadMessageId) {
+      const result = await Message.updateOne(
+        { _id: messageId, thread: { $elemMatch: { _id: threadMessageId, sender: { $ne: reader } } } },
+        { $set: { 'thread.$.isRead': true } }
+      );
+      return result.matchedCount === 1 ? readAt : null;
+    }
+
+    await Message.updateOne(
+      { _id: messageId },
+      { $set: { [`readBy.${role}`]: true, 'thread.$[reply].isRead': true } },
+      { arrayFilters: [{ 'reply.sender': { $ne: reader } }] }
+    );
+    return readAt;
   }
 
   handleStatusUpdate(socket, status) {
@@ -327,13 +362,36 @@ class SocketServer {
     }
   }
 
-  emitUserOnlineStatus(userId, isOnline) {
-    // Emit to all connected users (you might want to limit this to contacts)
-    this.io.emit('user_status_change', {
-      userId,
-      isOnline,
-      timestamp: new Date()
-    });
+  /** Users who share at least one conversation with `userId`. */
+  async getContactIds(userId) {
+    const id = new mongoose.Types.ObjectId(String(userId));
+    const threads = await Message.find({ $or: PARTICIPANT_ROLES.map((role) => ({ [role]: id })) })
+      .select('buyer seller renter landlord')
+      .lean();
+    const contacts = new Set();
+    for (const thread of threads) {
+      for (const role of PARTICIPANT_ROLES) {
+        if (thread[role]) contacts.add(thread[role].toString());
+      }
+    }
+    contacts.delete(String(userId));
+    return [...contacts];
+  }
+
+  // Presence is only shared with people the user has a conversation with,
+  // not broadcast to every connected client.
+  async emitUserOnlineStatus(userId, isOnline) {
+    try {
+      const contacts = await this.getContactIds(userId);
+      if (contacts.length === 0) return;
+      this.io.to(contacts.map((id) => `user_${id}`)).emit('user_status_change', {
+        userId,
+        isOnline,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      logger.error('Error emitting presence:', error);
+    }
   }
 
   // Method to emit new message from API (called from message controller)
