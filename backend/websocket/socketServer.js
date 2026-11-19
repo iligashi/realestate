@@ -22,7 +22,8 @@ class SocketServer {
       transports: ['websocket', 'polling'] // Fallback support
     });
 
-    this.connectedUsers = new Map(); // userId -> socketId mapping
+    // A user can be connected from several devices or tabs at once
+    this.connectedUsers = new Map(); // userId -> Set of socketIds
     this.userSockets = new Map(); // socketId -> user data mapping
     this.typingUsers = new Map(); // messageId -> Set of typing user IDs
     this.messageRooms = new Map(); // messageId -> Set of participant user IDs
@@ -68,7 +69,12 @@ class SocketServer {
       logger.debug(`User ${socket.displayName} connected with socket ${socket.id}`);
       
       // Store user connection
-      this.connectedUsers.set(socket.userId, socket.id);
+      if (!this.connectedUsers.has(socket.userId)) {
+        this.connectedUsers.set(socket.userId, new Set());
+      }
+      const userSocketIds = this.connectedUsers.get(socket.userId);
+      const cameOnline = userSocketIds.size === 0;
+      userSocketIds.add(socket.id);
       this.userSockets.set(socket.id, {
         userId: socket.userId,
         user: socket.user,
@@ -78,8 +84,10 @@ class SocketServer {
       // Join user to their personal room for notifications
       socket.join(`user_${socket.userId}`);
 
-      // Emit user online status to relevant contacts
-      this.emitUserOnlineStatus(socket.userId, true);
+      // Only announce presence when the first device connects
+      if (cameOnline) {
+        this.emitUserOnlineStatus(socket.userId, true);
+      }
 
       // Handle joining message thread rooms
       socket.on('join_message_thread', (messageId) => {
@@ -239,9 +247,16 @@ class SocketServer {
   async handleMarkMessageRead(socket, data) {
     try {
       const messageId = data?.messageId;
-      const threadMessageId = data?.threadMessageId;
+      const threadMessageId = data?.threadMessageId ?? null;
 
       if (!this.isInThreadRoom(socket, messageId)) return;
+
+      // A receipt may only reference a reply that belongs to this thread
+      if (threadMessageId !== null) {
+        if (typeof threadMessageId !== 'string' || !mongoose.Types.ObjectId.isValid(threadMessageId)) return;
+        const belongs = await Message.exists({ _id: messageId, 'thread._id': threadMessageId });
+        if (!belongs) return;
+      }
 
       // Emit read receipt to other participants
       socket.to(`message_${messageId}`).emit('message_read', {
@@ -271,28 +286,43 @@ class SocketServer {
   }
 
   handleDisconnect(socket) {
-    logger.debug(`User ${socket.user?.name || 'Unknown'} disconnected`);
+    logger.debug(`User ${socket.displayName || 'Unknown'} disconnected socket ${socket.id}`);
 
-    // Remove from connected users
-    this.connectedUsers.delete(socket.userId);
     this.userSockets.delete(socket.id);
 
-    // Emit user offline status
+    const remaining = this.connectedUsers.get(socket.userId);
+    if (remaining) {
+      remaining.delete(socket.id);
+    }
+    const stillConnected = Boolean(remaining && remaining.size > 0);
+
+    // Thread rooms this user is still in through another device
+    const roomsStillJoined = new Set();
+    if (stillConnected) {
+      for (const otherId of remaining) {
+        const other = this.io.sockets.sockets.get(otherId);
+        other?.rooms.forEach((room) => roomsStillJoined.add(room));
+      }
+    }
+
+    for (const [messageId, participantSet] of this.messageRooms.entries()) {
+      if (roomsStillJoined.has(`message_${messageId}`)) continue;
+      participantSet.delete(socket.userId);
+      if (participantSet.size === 0) {
+        this.messageRooms.delete(messageId);
+      }
+    }
+
+    if (stillConnected) return;
+
+    // Last device gone: the user is offline
+    this.connectedUsers.delete(socket.userId);
     this.emitUserOnlineStatus(socket.userId, false);
 
-    // Clean up typing indicators
     for (const [messageId, typingSet] of this.typingUsers.entries()) {
       typingSet.delete(socket.userId);
       if (typingSet.size === 0) {
         this.typingUsers.delete(messageId);
-      }
-    }
-
-    // Clean up message rooms
-    for (const [messageId, participantSet] of this.messageRooms.entries()) {
-      participantSet.delete(socket.userId);
-      if (participantSet.size === 0) {
-        this.messageRooms.delete(messageId);
       }
     }
   }
@@ -379,14 +409,20 @@ class SocketServer {
   }
 
   // Get user's socket if connected
+  // All live connections of a user (one per device or tab)
+  getUserSockets(userId) {
+    const socketIds = this.connectedUsers.get(String(userId));
+    return socketIds ? [...socketIds].map((id) => this.userSockets.get(id)).filter(Boolean) : [];
+  }
+
+  // First live connection of a user, kept for existing callers
   getUserSocket(userId) {
-    const socketId = this.connectedUsers.get(userId);
-    return socketId ? this.userSockets.get(socketId) : null;
+    return this.getUserSockets(userId)[0] || null;
   }
 
   // Check if user is online
   isUserOnline(userId) {
-    return this.connectedUsers.has(userId);
+    return (this.connectedUsers.get(String(userId))?.size || 0) > 0;
   }
 }
 
